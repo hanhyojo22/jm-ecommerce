@@ -115,7 +115,6 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     final barHeight = headerScaler.scale(48).clamp(48.0, 56.0);
     // Looks like the search field, but opens the full search page, as tapping search does in
     // most shopping apps; the page has the keyboard, history and suggestions.
-    final dark = scheme.brightness == Brightness.dark;
     final searchBar = Semantics(
       button: true,
       label: 'Search medicines',
@@ -124,7 +123,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
         color: scheme.surfaceContainerLowest,
         elevation: 0,
         shadowColor: Colors.transparent,
-        shape: StadiumBorder(side: BorderSide(color: scheme.outlineVariant)),
+        shape: StadiumBorder(side: BorderSide(color: scheme.outline)),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => context.push('/search'),
@@ -149,22 +148,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                     child: const _ScrollingSearchPlaceholder(),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(end: 6),
-                  child: Container(
-                    width: barHeight - 12,
-                    height: barHeight - 12,
-                    decoration: BoxDecoration(
-                      color: dark ? scheme.secondary : scheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.search_rounded,
-                      size: 22,
-                      color: dark ? scheme.onSecondary : scheme.onPrimary,
-                    ),
-                  ),
-                ),
+                const SizedBox(width: 16),
               ],
             ),
           ),
@@ -192,16 +176,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
               16,
               16,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Stock and prices are per branch, so the branch scopes the search below it.
-                BranchHeader(ink: slab.ink),
-                const SizedBox(height: 8),
-                searchBar,
-              ],
-            ),
+            child: BranchHeader(ink: slab.ink, searchBar: searchBar),
           ),
         ),
       ),
@@ -242,6 +217,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                   context: context,
                   ref: ref,
                   gridDelegate: grid.delegate,
+                  cardWidth: grid.cardWidth,
                   onClearFilters: _clearFilters,
                   onBrowseCategory: _browseCategory,
                   onBackToTop: _scrollToTop,
@@ -562,6 +538,7 @@ class _TopDeals extends StatelessWidget {
                           discovery: true,
                           showAddToCart: true,
                           fillHeight: true,
+                          stackCartControls: true,
                           onTap: () => context.push(
                             '/product/${deal.product.store?.slug ?? ''}/${deal.product.slug}',
                           ),
@@ -577,6 +554,9 @@ class _TopDeals extends StatelessWidget {
     );
   }
 }
+
+/// Wide enough for the price and cart button on one line at normal text size.
+const _railCardWidth = 180.0;
 
 /// A titled sideways row of product cards, such as "Order again"; [ranked] numbers them 1, 2, 3….
 class _ProductRail extends StatelessWidget {
@@ -626,7 +606,7 @@ class _ProductRail extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsetsDirectional.only(end: 10),
                       child: SizedBox(
-                        width: 160,
+                        width: _railCardWidth,
                         // Passthrough keeps the rail's equal heights reaching the card.
                         child: Stack(
                           fit: StackFit.passthrough,
@@ -636,6 +616,10 @@ class _ProductRail extends StatelessWidget {
                               discovery: true,
                               showAddToCart: true,
                               fillHeight: true,
+                              // Same rule as the Popular products grid: cart beside the price.
+                              stackCartControls:
+                                  _railCardWidth <
+                                  MediaQuery.textScalerOf(context).scale(180),
                               onTap: () => context.push(
                                 '/product/${product.store?.slug ?? ''}/${product.slug}',
                               ),

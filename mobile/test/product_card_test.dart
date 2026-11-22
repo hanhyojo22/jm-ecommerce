@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jmmart/src/models/models.dart';
+import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/widgets/common.dart';
 
 void main() {
@@ -142,6 +143,7 @@ Widget _card({
   bool requiresPrescription = false,
 }) {
   return MaterialApp(
+    theme: buildAppTheme(),
     home: Scaffold(
       body: Center(
         child: SizedBox(

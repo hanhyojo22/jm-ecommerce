@@ -55,9 +55,7 @@ class AddressesScreen extends ConsumerWidget {
                       address.recipientName,
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
-                    subtitle: Text(
-                      '${[address.streetLine, address.city, '${address.province} ${address.postalCode}'.trim()].where((part) => part.isNotEmpty).join(', ')}\n${address.phone}',
-                    ),
+                    subtitle: Text('${address.fullAddress}\n${address.phone}'),
                     isThreeLine: true,
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -520,6 +518,12 @@ class _AddressFormState extends ConsumerState<AddressForm> {
                     RegExp(r'^\d{4}$').hasMatch((value ?? '').trim())
                     ? null
                     : 'Use a 4-digit postal code.',
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                initialValue: Address.country,
+                readOnly: true,
+                decoration: const InputDecoration(labelText: 'Country'),
               ),
               const SizedBox(height: 18),
               FilledButton(

@@ -18,7 +18,7 @@ void main() {
     expect(find.byType(StartupSplash), findsOneWidget);
     expect(find.text('Ready to shop'), findsNothing);
 
-    await tester.pump(const Duration(milliseconds: 900));
+    await tester.pump(const Duration(milliseconds: 1400));
     await tester.pump();
 
     expect(find.text('Ready to shop'), findsOneWidget);
@@ -38,7 +38,8 @@ void main() {
     await tester.pump();
 
     expect(find.byType(StartupSplash), findsOneWidget);
-    expect(find.text('EVERYDAY\nPHARMACY'), findsOneWidget);
+    expect(find.text('EVERYDAY\nPHARMACY'), findsNothing);
+    expect(_brandWordmark, findsOneWidget);
     expect(find.text('Ready to shop'), findsNothing);
 
     application.complete(_readyApp);
@@ -78,7 +79,7 @@ void main() {
     await tester.pump();
 
     expect(completed, isTrue);
-    expect(find.text('EVERYDAY\nPHARMACY'), findsOneWidget);
+    expect(_brandWordmark, findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -102,11 +103,19 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('EVERYDAY\nPHARMACY'), findsOneWidget);
+      expect(_brandWordmark, findsOneWidget);
       expect(tester.takeException(), isNull);
     }
   });
 }
+
+final _brandWordmark = find.byWidgetPredicate(
+  (widget) =>
+      widget is Image &&
+      widget.image is AssetImage &&
+      (widget.image as AssetImage).assetName ==
+          'assets/branding/everyday-company-logo.png',
+);
 
 Future<void> _loadArtwork(WidgetTester tester) async {
   await tester.runAsync(() async {

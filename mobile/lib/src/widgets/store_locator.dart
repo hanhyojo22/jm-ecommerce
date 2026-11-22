@@ -43,9 +43,10 @@ String _feeLabel(StoreBranch branch) {
 /// The Shop header's branch line: which branch stock and prices come from.
 /// Tapping it opens the branch picker. Drawn in [ink] on the brand band.
 class BranchHeader extends ConsumerWidget {
-  const BranchHeader({super.key, required this.ink});
+  const BranchHeader({super.key, required this.ink, required this.searchBar});
 
   final Color ink;
+  final Widget searchBar;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -53,7 +54,15 @@ class BranchHeader extends ConsumerWidget {
     final locator = ref.watch(nearestStoreProvider);
     final state = locator.value;
     if (state != null && state.branches.isEmpty) {
-      return _Wordmark(ink: ink);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _Wordmark(ink: ink),
+          const SizedBox(height: 10),
+          searchBar,
+        ],
+      );
     }
 
     final active = state?.activeBranch;
@@ -61,16 +70,7 @@ class BranchHeader extends ConsumerWidget {
     final String title;
     VoidCallback? onTap = () => showBranchSelectorSheet(context);
     if (state != null && active != null) {
-      final distanceKm = active.distanceKm;
-      final opens = active.branch.isOpen ? null : active.branch.nextOpeningAt;
-      // Most important first, since a narrow screen cuts the end off. The
-      // branch name already carries the brand, so the line skips it.
-      label = [
-        if (opens != null) 'Opens ${opensLabel(opens)}',
-        if (active.isOutOfDeliveryRange) 'Pickup only',
-        if (distanceKm != null) '${distanceKm.toStringAsFixed(1)} km',
-        state.selectedBranchId != null ? 'Your branch' : 'Nearest branch',
-      ].join(' · ');
+      label = state.selectedBranchId != null ? 'Your branch' : 'Nearest branch';
       title = active.branch.name;
     } else if (state != null) {
       label = 'Everyday Pharmacy';
@@ -92,119 +92,137 @@ class BranchHeader extends ConsumerWidget {
         ? null
         : _forecast(context, active, state!.selectedBranchId != null);
 
-    return Semantics(
-      button: onTap != null,
-      label: [
-        title,
-        if (tiles != null)
-          for (final tile in tiles) '${tile.title} ${tile.detail}'
-        else
-          label,
-      ].join(', '),
-      hint: onTap == null ? null : 'Change branch',
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        splashColor: ink.withValues(alpha: 0.12),
-        highlightColor: ink.withValues(alpha: 0.08),
-        child: Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(2, 2, 2, 4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    // The caret is a font glyph after a no-break space, so it
-                    // wraps together with the last word of the name.
-                    child: Text.rich(
-                      TextSpan(
-                        text: _withoutBrand(title),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Semantics(
+          button: onTap != null,
+          label: 'Store location, $title, $label',
+          hint: onTap == null ? null : 'Change branch',
+          excludeSemantics: true,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            splashColor: ink.withValues(alpha: 0.12),
+            highlightColor: ink.withValues(alpha: 0.08),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(2, 4, 2, 4),
+                child: Row(
+                  children: [
+                    Icon(PhosphorIconsFill.mapPin, size: 20, color: ink),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (onTap == null)
-                            WidgetSpan(
-                              alignment: PlaceholderAlignment.middle,
-                              child: Padding(
-                                padding: const EdgeInsetsDirectional.only(
-                                  start: 6,
-                                ),
-                                child: SizedBox.square(
-                                  dimension: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: ink,
-                                  ),
-                                ),
-                              ),
-                            )
-                          else if (!locator.hasError)
+                          // Keep the caret with the last word when a branch wraps.
+                          Text.rich(
                             TextSpan(
-                              text:
-                                  '\u00A0${String.fromCharCode(PhosphorIconsBold.caretDown.codePoint)}',
-                              style: TextStyle(
-                                fontFamily:
-                                    PhosphorIconsBold.caretDown.fontFamily,
-                                package:
-                                    PhosphorIconsBold.caretDown.fontPackage,
-                                fontSize: 16,
-                                letterSpacing: 0,
-                              ),
+                              text: _withoutBrand(title),
+                              children: [
+                                if (onTap == null)
+                                  WidgetSpan(
+                                    alignment: PlaceholderAlignment.middle,
+                                    child: Padding(
+                                      padding: const EdgeInsetsDirectional.only(
+                                        start: 6,
+                                      ),
+                                      child: SizedBox.square(
+                                        dimension: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: ink,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                else if (!locator.hasError)
+                                  TextSpan(
+                                    text:
+                                        '\u00A0${String.fromCharCode(PhosphorIconsBold.caretDown.codePoint)}',
+                                    style: TextStyle(
+                                      fontFamily: PhosphorIconsBold
+                                          .caretDown
+                                          .fontFamily,
+                                      package: PhosphorIconsBold
+                                          .caretDown
+                                          .fontPackage,
+                                      fontSize: 12,
+                                      letterSpacing: 0,
+                                    ),
+                                  ),
+                              ],
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: ink,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.35,
+                              height: 1.15,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            label,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: ink.withValues(alpha: 0.78),
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0,
+                            ),
+                          ),
                         ],
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: ink,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
-                        height: 1.15,
+                    ),
+                    const SizedBox(width: 8),
+                    ExcludeSemantics(
+                      child: Image.asset(
+                        'assets/branding/everyday-emblem.webp',
+                        height: 28,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  // The logo's sun and cloud: today's forecast for this branch.
-                  ExcludeSemantics(
-                    child: Image.asset(
-                      'assets/branding/everyday-emblem.webp',
-                      height: 34,
-                    ),
-                  ),
-                ],
-              ),
-              if (tiles == null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: ink.withValues(alpha: 0.78),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                )
-              else
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Row(
-                    children: [
-                      for (final (index, tile) in tiles.indexed) ...[
-                        if (index > 0) const SizedBox(width: 8),
-                        Expanded(
-                          child: _ForecastTile(tile: tile, ink: tileInk),
-                        ),
-                      ],
-                    ],
-                  ),
+                  ],
                 ),
-            ],
+              ),
+            ),
           ),
         ),
-      ),
+        const SizedBox(height: 10),
+        searchBar,
+        if (tiles != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final (index, tile) in tiles.indexed) ...[
+                    if (index > 0) const SizedBox(width: 8),
+                    Expanded(
+                      child: Semantics(
+                        button: true,
+                        label: '${tile.title}, ${tile.detail}',
+                        hint: 'Change branch',
+                        excludeSemantics: true,
+                        child: InkWell(
+                          onTap: onTap,
+                          borderRadius: BorderRadius.circular(12),
+                          child: _ForecastTile(tile: tile, ink: tileInk),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -226,14 +244,13 @@ class BranchHeader extends ConsumerWidget {
     return [
       branch.isOpen
           ? _Forecast(
-              icon: PhosphorIconsFill.sun,
-              glyph: scheme.secondary,
+              icon: PhosphorIconsRegular.sun,
               title: 'Open',
               titleColour: statusColour(context, 'completed'),
               detail: branch.open24Hours ? '24 hours' : 'now',
             )
           : _Forecast(
-              icon: PhosphorIconsFill.moon,
+              icon: PhosphorIconsRegular.moon,
               glyph: scheme.error,
               title: 'Closed',
               titleColour: scheme.error,
@@ -242,23 +259,22 @@ class BranchHeader extends ConsumerWidget {
                   : 'Opens ${opensLabel(opens)}',
             ),
       _Forecast(
-        icon: PhosphorIconsFill.cloud,
-        glyph: const Color(0xFF8DB6F3),
+        icon: PhosphorIconsRegular.cloud,
         title: km == null ? which : '${km.toStringAsFixed(1)} km',
         detail: active.isOutOfDeliveryRange
             ? 'Pickup only'
             : km == null
             ? 'Distance unknown'
-            : which,
+            : 'From you',
       ),
       active.isOutOfDeliveryRange
           ? const _Forecast(
-              icon: PhosphorIconsFill.storefront,
+              icon: PhosphorIconsRegular.storefront,
               title: 'Pickup',
               detail: 'Too far to deliver',
             )
           : _Forecast(
-              icon: PhosphorIconsFill.truck,
+              icon: PhosphorIconsRegular.truck,
               title: fee > 0 ? money(branch.deliveryFee) : 'Free',
               detail: fee > 0
                   ? (minimum == null
@@ -299,39 +315,58 @@ class _ForecastTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return DecoratedBox(
+    final copy = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          tile.title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: tile.titleColour ?? ink,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          tile.detail,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+    final glyph = Icon(tile.icon, size: 22, color: tile.glyph ?? ink);
+    final largeText = MediaQuery.textScalerOf(context).scale(13) > 16;
+
+    return Ink(
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 10, 8, 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(tile.icon, size: 26, color: tile.glyph ?? ink),
-            const SizedBox(height: 6),
-            Text(
-              tile.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: tile.titleColour ?? ink,
-              ),
-            ),
-            Text(
-              tile.detail,
-              // Room for "Free over ₱500.00" or large text without cutting it.
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 52),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          child: largeText
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [glyph, const SizedBox(height: 6), copy],
+                )
+              : Row(
+                  children: [
+                    glyph,
+                    const SizedBox(width: 6),
+                    Expanded(child: copy),
+                  ],
+                ),
         ),
       ),
     );

@@ -7,9 +7,12 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/api_client.dart';
+import '../core/api_exception.dart';
 import '../core/location_service.dart';
 import '../models/store_branch.dart';
 import '../providers/store_locator_providers.dart';
+import '../providers/auth_providers.dart';
 import '../theme.dart';
 
 /// Kilometres from the branch to the pin, measured the way the API checks it.
@@ -46,6 +49,7 @@ class DeliveryPinScreen extends ConsumerStatefulWidget {
 class _DeliveryPinScreenState extends ConsumerState<DeliveryPinScreen> {
   final _map = MapController();
   late LatLng _center = widget.initial;
+  String? _selectedAddress;
 
   /// True while the map is moving; the pin lifts and the distance waits.
   bool _moving = false;
@@ -63,6 +67,9 @@ class _DeliveryPinScreenState extends ConsumerState<DeliveryPinScreen> {
     setState(() {
       _center = camera.center;
       _moving = hasGesture;
+      if (hasGesture) {
+        _selectedAddress = null;
+      }
     });
     if (hasGesture) {
       _settle = Timer(const Duration(milliseconds: 300), () {
@@ -81,7 +88,10 @@ class _DeliveryPinScreenState extends ConsumerState<DeliveryPinScreen> {
       }
       final point = LatLng(here.latitude, here.longitude);
       _map.move(point, 17);
-      setState(() => _center = point);
+      setState(() {
+        _center = point;
+        _selectedAddress = null;
+      });
     } on LocationFailure {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -91,6 +101,27 @@ class _DeliveryPinScreenState extends ConsumerState<DeliveryPinScreen> {
         );
       }
     }
+  }
+
+  Future<void> _searchAddress() async {
+    final place = await showSearch<Map<String, dynamic>?>(
+      context: context,
+      delegate: _PinAddressSearch(ref.read(apiClientProvider)),
+    );
+    if (!mounted || place == null) {
+      return;
+    }
+    final point = LatLng(
+      (place['latitude'] as num).toDouble(),
+      (place['longitude'] as num).toDouble(),
+    );
+    _settle?.cancel();
+    _map.move(point, 17);
+    setState(() {
+      _center = point;
+      _moving = false;
+      _selectedAddress = place['label'] as String;
+    });
   }
 
   /// OpenStreetMap has no street-level photos, so this hands the pin to Google Street View.
@@ -126,6 +157,7 @@ class _DeliveryPinScreenState extends ConsumerState<DeliveryPinScreen> {
     ];
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           Positioned.fill(
@@ -234,21 +266,52 @@ class _DeliveryPinScreenState extends ConsumerState<DeliveryPinScreen> {
                   ),
                   const SizedBox(width: 10),
                   Flexible(
-                    child: Container(
-                      height: 48,
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: scheme.surfaceContainerLowest,
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: floating,
                       ),
-                      child: Text(
-                        'Set your delivery pin',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
+                      child: Material(
+                        color: scheme.surfaceContainerLowest,
+                        borderRadius: BorderRadius.circular(24),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: _searchAddress,
+                          child: Semantics(
+                            button: true,
+                            label: 'Search delivery address',
+                            excludeSemantics: true,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minHeight: 56),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.search_rounded,
+                                      color: scheme.primary,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        _selectedAddress ??
+                                            'Search address or landmark',
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -263,45 +326,50 @@ class _DeliveryPinScreenState extends ConsumerState<DeliveryPinScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 14, bottom: 10),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: scheme.surfaceContainerLowest,
-                      boxShadow: floating,
-                    ),
-                    child: IconButton(
-                      tooltip: 'View street',
-                      iconSize: 24,
-                      color: scheme.primary,
-                      style: IconButton.styleFrom(
-                        fixedSize: const Size.square(52),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 14, bottom: 10),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: scheme.surfaceContainerLowest,
+                          boxShadow: floating,
+                        ),
+                        child: IconButton(
+                          tooltip: 'View street',
+                          iconSize: 24,
+                          color: scheme.primary,
+                          style: IconButton.styleFrom(
+                            fixedSize: const Size.square(52),
+                          ),
+                          onPressed: _moving ? null : _viewStreet,
+                          icon: const Icon(Icons.streetview_rounded),
+                        ),
                       ),
-                      onPressed: _moving ? null : _viewStreet,
-                      icon: const Icon(Icons.streetview_rounded),
                     ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 14, bottom: 10),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: scheme.surfaceContainerLowest,
-                      boxShadow: floating,
-                    ),
-                    child: IconButton(
-                      tooltip: 'Use my location',
-                      iconSize: 24,
-                      color: scheme.primary,
-                      style: IconButton.styleFrom(
-                        fixedSize: const Size.square(52),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 14, bottom: 10),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: scheme.surfaceContainerLowest,
+                          boxShadow: floating,
+                        ),
+                        child: IconButton(
+                          tooltip: 'Use my location',
+                          iconSize: 24,
+                          color: scheme.primary,
+                          style: IconButton.styleFrom(
+                            fixedSize: const Size.square(52),
+                          ),
+                          onPressed: _locate,
+                          icon: const Icon(Icons.my_location_rounded),
+                        ),
                       ),
-                      onPressed: _locate,
-                      icon: const Icon(Icons.my_location_rounded),
                     ),
-                  ),
+                  ],
                 ),
                 // OpenStreetMap's licence asks for this credit on the map.
                 ColoredBox(
@@ -314,7 +382,19 @@ class _DeliveryPinScreenState extends ConsumerState<DeliveryPinScreen> {
                     ),
                   ),
                 ),
-                _panel(theme, km: km, radius: radius, tooFar: tooFar),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.sizeOf(context).height * 0.52,
+                  ),
+                  child: SingleChildScrollView(
+                    child: _panel(
+                      theme,
+                      km: km,
+                      radius: radius,
+                      tooFar: tooFar,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -465,6 +545,204 @@ class _DeliveryPinScreenState extends ConsumerState<DeliveryPinScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PinAddressSearch extends SearchDelegate<Map<String, dynamic>?> {
+  _PinAddressSearch(this.api)
+    : super(
+        searchFieldLabel: 'Search address or landmark',
+        keyboardType: TextInputType.streetAddress,
+      );
+
+  final ApiClient api;
+
+  @override
+  List<Widget> buildActions(BuildContext context) => [
+    if (query.isNotEmpty)
+      IconButton(
+        tooltip: 'Clear search',
+        icon: const Icon(Icons.clear_rounded),
+        onPressed: () => query = '',
+      ),
+  ];
+
+  @override
+  Widget buildLeading(BuildContext context) => IconButton(
+    tooltip: 'Back to map',
+    icon: const BackButtonIcon(),
+    onPressed: () => close(context, null),
+  );
+
+  Widget _results(BuildContext context) => _PinAddressResults(
+    api: api,
+    query: query,
+    onSelected: (place) => close(context, place),
+  );
+
+  @override
+  Widget buildSuggestions(BuildContext context) => _results(context);
+
+  @override
+  Widget buildResults(BuildContext context) => _results(context);
+}
+
+class _PinAddressResults extends StatefulWidget {
+  const _PinAddressResults({
+    required this.api,
+    required this.query,
+    required this.onSelected,
+  });
+
+  final ApiClient api;
+  final String query;
+  final ValueChanged<Map<String, dynamic>> onSelected;
+
+  @override
+  State<_PinAddressResults> createState() => _PinAddressResultsState();
+}
+
+class _PinAddressResultsState extends State<_PinAddressResults> {
+  Timer? _debounce;
+  int _request = 0;
+  bool _loading = false;
+  bool _failed = false;
+  List<Map<String, dynamic>> _places = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _search();
+  }
+
+  @override
+  void didUpdateWidget(_PinAddressResults oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.query.trim() != oldWidget.query.trim()) {
+      _search();
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _search({bool immediate = false}) {
+    _debounce?.cancel();
+    final request = ++_request;
+    final query = widget.query.trim();
+    setState(() {
+      _failed = false;
+      _places = const [];
+      _loading = query.length >= 3;
+    });
+    if (!_loading) {
+      return;
+    }
+    _debounce = Timer(
+      immediate ? Duration.zero : const Duration(milliseconds: 350),
+      () async {
+        try {
+          final places = await widget.api.searchAddresses(query);
+          if (!mounted || request != _request) {
+            return;
+          }
+          setState(() {
+            _places = places
+                .where(
+                  (place) =>
+                      place['latitude'] is num && place['longitude'] is num,
+                )
+                .toList();
+            _loading = false;
+          });
+        } on ApiException {
+          if (mounted && request == _request) {
+            setState(() {
+              _failed = true;
+              _loading = false;
+            });
+          }
+        }
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    if (_loading) {
+      return const Center(
+        child: CircularProgressIndicator(semanticsLabel: 'Searching addresses'),
+      );
+    }
+    if (widget.query.trim().length < 3 || _failed || _places.isEmpty) {
+      return ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          Icon(
+            _failed ? Icons.wifi_off_rounded : Icons.location_on_outlined,
+            size: 40,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _failed
+                ? 'Address search is unavailable'
+                : widget.query.trim().length < 3
+                ? 'Find your delivery address'
+                : 'No matching addresses',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _failed
+                ? 'Check your connection and try again, or go back and drag the map.'
+                : widget.query.trim().length < 3
+                ? 'Enter at least 3 characters. Search by street, barangay, city, or landmark in the Philippines.'
+                : 'Try a street, barangay, city, or nearby landmark.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          if (_failed) ...[
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () => _search(immediate: true),
+              child: const Text('Try again'),
+            ),
+          ],
+        ],
+      );
+    }
+    return ListView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text(
+            'Choose an address, then adjust the pin on the map.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        for (final place in _places)
+          ListTile(
+            minTileHeight: 64,
+            leading: Icon(
+              Icons.location_on_outlined,
+              color: theme.colorScheme.primary,
+            ),
+            title: Text(place['label'] as String),
+            onTap: () => widget.onSelected(place),
+          ),
+      ],
     );
   }
 }

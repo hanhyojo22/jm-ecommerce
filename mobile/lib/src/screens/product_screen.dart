@@ -784,7 +784,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
     EdgeInsets padding = const EdgeInsets.symmetric(horizontal: 16),
   }) => SizedBox(
     // Same sizing rule as the home grid: square photo plus scaled copy.
-    height: 150 + MediaQuery.textScalerOf(context).scale(119),
+    height: 150 + MediaQuery.textScalerOf(context).scale(157),
     child: ListView.separated(
       scrollDirection: Axis.horizontal,
       padding: padding,

@@ -669,7 +669,21 @@ class Cart {
   );
 }
 
+String _fullAddress(
+  String streetLine,
+  String city,
+  String province,
+  String postalCode,
+) => [
+  streetLine,
+  city,
+  [province, postalCode].where((part) => part.isNotEmpty).join(' '),
+  Address.country,
+].where((part) => part.isNotEmpty).join(', ');
+
 class Address {
+  static const country = 'Philippines';
+
   const Address({
     this.id,
     required this.recipientName,
@@ -698,6 +712,9 @@ class Address {
     subdivision,
     barangay,
   ].where((part) => part.isNotEmpty).join(', ');
+
+  String get fullAddress =>
+      _fullAddress(streetLine, city, province, postalCode);
 
   factory Address.fromJson(Map<String, dynamic> json) => Address(
     id: json['id'] as String?,
@@ -935,6 +952,9 @@ class DeliveryInfo {
     subdivision,
     barangay,
   ].where((part) => part.isNotEmpty).join(', ');
+
+  String get fullAddress =>
+      _fullAddress(streetLine, city, province, postalCode);
 
   factory DeliveryInfo.fromJson(Map<String, dynamic> json) => DeliveryInfo(
     recipientName: str(json['recipient_name']),

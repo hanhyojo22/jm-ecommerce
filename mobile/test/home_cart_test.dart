@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -150,6 +151,41 @@ void main() {
     expect(api.updates, 0);
     expect(find.text('2'), findsOneWidget);
   });
+
+  for (final scale in [1.0, 1.3]) {
+    testWidgets('narrow cards keep prices and reviews readable at ${scale}x', (
+      tester,
+    ) async {
+      final api = _CartApi()
+        ..cartProduct = 'shirt'
+        ..startQuantity = 10;
+      await _pumpCard(tester, api, width: 139, textScale: scale);
+
+      final price = tester.renderObject<RenderBox>(find.text('₱250.00'));
+      final paintedWidth =
+          (price.localToGlobal(Offset(price.size.width, 0)) -
+                  price.localToGlobal(Offset.zero))
+              .distance;
+      expect(paintedWidth, greaterThan(50));
+      expect(
+        tester.getBottomLeft(find.text('₱250.00')).dy,
+        lessThan(tester.getTopLeft(find.byTooltip('Add to cart')).dy),
+      );
+      expect(
+        tester
+            .renderObject<RenderParagraph>(find.text('No reviews'))
+            .didExceedMaxLines,
+        isFalse,
+      );
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byTooltip('Add to cart'));
+      await _settleQuantity(tester);
+      expect(find.text('11'), findsOneWidget);
+      expect(api.updatedTo, 11);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('the badge shows the new quantity before the server answers', (
     tester,
@@ -382,6 +418,8 @@ Future<void> _pumpCard(
   VoidCallback? onTap,
   GlobalKey<CartBadgeIconState>? cartKey,
   int? stock,
+  double width = 190,
+  double textScale = 1,
 }) async {
   Widget card = Scaffold(
     body: Column(
@@ -392,11 +430,12 @@ Future<void> _pumpCard(
         ),
         if (cartKey != null) CartBadgeIcon(key: cartKey),
         SizedBox(
-          width: 190,
+          width: width,
           height: 450,
           child: ProductCard(
             discovery: true,
             showAddToCart: true,
+            stackCartControls: width < 180 * textScale,
             onTap: onTap ?? () {},
             product: Product.fromJson({
               'id': 'shirt',
@@ -424,6 +463,11 @@ Future<void> _pumpCard(
       ],
       child: MaterialApp.router(
         theme: buildAppTheme(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         routerConfig: GoRouter(
           routes: [
             GoRoute(path: '/', builder: (context, state) => card),

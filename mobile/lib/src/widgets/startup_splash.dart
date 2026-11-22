@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 const splashBackground = Color(0xFFFAFBFD);
-const _splashBlue = Color(0xFF071C94);
 const _emblemAsset = AssetImage('assets/branding/everyday-emblem.webp');
+const _logoAsset = AssetImage('assets/branding/everyday-company-logo.png');
 
 class StartupSplash extends StatefulWidget {
   const StartupSplash({super.key, required this.onComplete});
@@ -21,7 +21,7 @@ class _StartupSplashState extends State<StartupSplash>
   late final AnimationController _controller =
       AnimationController(
         vsync: this,
-        duration: const Duration(milliseconds: 1530),
+        duration: const Duration(milliseconds: 2100),
       )..addStatusListener((status) {
         if (status == AnimationStatus.completed) _finish();
       });
@@ -36,7 +36,10 @@ class _StartupSplashState extends State<StartupSplash>
     }
     if (_started) return;
     _started = true;
-    precacheImage(_emblemAsset, context).then((_) {
+    Future.wait([
+      precacheImage(_emblemAsset, context),
+      precacheImage(_logoAsset, context),
+    ]).then((_) {
       if (mounted && !_completed) _controller.forward();
     });
   }
@@ -84,19 +87,20 @@ class _StartupSplashState extends State<StartupSplash>
                         animation: _controller,
                         builder: (context, child) {
                           final time = _controller.value;
+                          // A slow rise: about 1.9 s. Sun and logo keep their earlier timing.
                           final cloud = const Interval(
-                            .05,
-                            .52,
-                            curve: Curves.easeOutCubic,
-                          ).transform(time);
-                          final sun = const Interval(
-                            .17,
+                            .057,
                             .95,
                             curve: Curves.easeOutCubic,
                           ).transform(time);
+                          final sun = const Interval(
+                            .124,
+                            .69,
+                            curve: Curves.easeOutCubic,
+                          ).transform(time);
                           final wordmark = const Interval(
-                            .575,
-                            1,
+                            .131,
+                            .67,
                             curve: Curves.easeOutCubic,
                           ).transform(time);
                           final emblemWidth = width * .76;
@@ -140,10 +144,14 @@ class _StartupSplashState extends State<StartupSplash>
                                       child: Opacity(
                                         opacity: cloud,
                                         child: Transform.translate(
-                                          offset: Offset(
-                                            reducedMotion ? 0 : 9 * (1 - cloud),
-                                            0,
-                                          ),
+                                          offset: reducedMotion
+                                              ? Offset.zero
+                                              : Offset(
+                                                  0,
+                                                  emblemHeight *
+                                                      .95 *
+                                                      (1 - cloud),
+                                                ),
                                           child: _EmblemSprite(
                                             size: emblemWidth * 1.08,
                                             alignment: Alignment.centerRight,
@@ -157,24 +165,9 @@ class _StartupSplashState extends State<StartupSplash>
                               const SizedBox(height: 26),
                               Opacity(
                                 opacity: wordmark,
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    'EVERYDAY\nPHARMACY',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontFamily: 'EverydayInter',
-                                      fontVariations: const [
-                                        FontVariation('wght', 850),
-                                      ],
-                                      fontSize: (constraints.maxWidth * .085)
-                                          .clamp(28.0, 41.0),
-                                      fontWeight: FontWeight.w800,
-                                      height: 1.1,
-                                      letterSpacing: -1.1,
-                                      color: _splashBlue,
-                                    ),
-                                  ),
+                                child: FractionalTranslation(
+                                  translation: const Offset(.1, 0),
+                                  child: _LogoWordmark(width: width * .8),
                                 ),
                               ),
                             ],
@@ -191,6 +184,35 @@ class _StartupSplashState extends State<StartupSplash>
       ),
     );
   }
+}
+
+/// Show only the yellow and blue wordmark beside the animated emblem.
+class _LogoWordmark extends StatelessWidget {
+  const _LogoWordmark({required this.width});
+
+  final double width;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: width,
+    height: width * 100 / 216,
+    child: ClipRect(
+      child: OverflowBox(
+        alignment: Alignment.centerRight,
+        minWidth: width * 341 / 216,
+        maxWidth: width * 341 / 216,
+        minHeight: width * 100 / 216,
+        maxHeight: width * 100 / 216,
+        child: Image(
+          image: _logoAsset,
+          width: width * 341 / 216,
+          height: width * 100 / 216,
+          fit: BoxFit.fill,
+          filterQuality: FilterQuality.medium,
+        ),
+      ),
+    ),
+  );
 }
 
 class _EmblemSprite extends StatelessWidget {

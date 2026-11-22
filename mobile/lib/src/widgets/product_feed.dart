@@ -38,6 +38,7 @@ class ProductFeedSlivers {
     required this.context,
     required this.ref,
     required this.gridDelegate,
+    required this.cardWidth,
     required this.onClearFilters,
     required this.onBrowseCategory,
     required this.onBackToTop,
@@ -48,6 +49,7 @@ class ProductFeedSlivers {
   final BuildContext context;
   final WidgetRef ref;
   final SliverGridDelegateWithFixedCrossAxisCount gridDelegate;
+  final double cardWidth;
   final VoidCallback onClearFilters;
   final ValueChanged<String> onBrowseCategory;
   final VoidCallback onBackToTop;
@@ -355,6 +357,9 @@ class ProductFeedSlivers {
                               discovery: true,
                               showAddToCart: true,
                               fillHeight: true,
+                              stackCartControls:
+                                  cardWidth <
+                                  MediaQuery.textScalerOf(context).scale(180),
                               onTap: () => context.push(
                                 '/product/${rowProducts[column].store?.slug ?? ''}/${rowProducts[column].slug}',
                               ),

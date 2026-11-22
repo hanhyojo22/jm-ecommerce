@@ -732,7 +732,7 @@ class ApiClient {
     final labels = <String>{};
     return [
       for (final fields in features.map(photonAddressFields))
-        if (fields['address_line'] != '' && labels.add(fields['label'])) fields,
+        if (fields['label'] != '' && labels.add(fields['label'])) fields,
     ];
   }
 
@@ -962,17 +962,37 @@ Map<String, dynamic> photonAddressFields(Map<String, dynamic> feature) {
   final addressLine = line.join(', ');
   final city = text('city') ?? text('county') ?? '';
   final postcode = text('postcode') ?? '';
+  final geometry = mapOf(feature['geometry']);
+  final coordinates = geometry['coordinates'];
+  double? latitude;
+  double? longitude;
+  if (geometry['type'] == 'Point' &&
+      coordinates is List &&
+      coordinates.length >= 2 &&
+      coordinates[0] is num &&
+      coordinates[1] is num) {
+    final lat = (coordinates[1] as num).toDouble();
+    final lng = (coordinates[0] as num).toDouble();
+    if (lat.isFinite && lng.isFinite && lat.abs() <= 90 && lng.abs() <= 180) {
+      latitude = lat;
+      longitude = lng;
+    }
+  }
 
   return {
     'label': [
       addressLine,
       barangay,
       city,
-    ].where((part) => part.isNotEmpty).join(', '),
+    ].where((part) => part.isNotEmpty).toSet().join(', '),
     'address_line': addressLine,
     'barangay': barangay,
     'city': city,
     'province': '',
     'postal_code': RegExp(r'^\d{4}$').hasMatch(postcode) ? postcode : '',
+    if (latitude != null && longitude != null) ...{
+      'latitude': latitude,
+      'longitude': longitude,
+    },
   };
 }

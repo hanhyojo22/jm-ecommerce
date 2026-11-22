@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:phosphor_icons/phosphor_icons.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/api_exception.dart';
@@ -19,8 +18,8 @@ import '../providers/checkout_providers.dart';
 import '../providers/store_locator_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
-import '../widgets/delivery_pin_map.dart';
 import 'delivery_pin_screen.dart';
+import 'checkout_success_screen.dart';
 import '../widgets/store_locator.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
@@ -32,10 +31,17 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _addressSheetFormKey = GlobalKey<FormState>();
+  final _prescriptionKey = GlobalKey();
+  final _discountKey = GlobalKey();
   final _recipient = TextEditingController();
   final _phone = TextEditingController();
   final _addressLine = TextEditingController();
+  final _subdivision = TextEditingController();
   final _barangay = TextEditingController();
+  final _city = TextEditingController();
+  final _province = TextEditingController();
+  final _postal = TextEditingController();
   final _cardNumber = TextEditingController();
   final _cardName = TextEditingController();
 
@@ -50,9 +56,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   /// Photo of the discount ID; needed unless the chosen saved ID has one on file.
   PickedAttachment? _cardPhoto;
 
-  /// The city of a reused address; a new address takes the branch's city.
-  String _savedCity = '';
-
   final _requestId = const Uuid().v4();
   String? _selectedAddressId;
   bool _useNewAddress = false;
@@ -61,6 +64,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   String _fulfillment = 'delivery';
   List<PickedAttachment> _prescriptions = const [];
   bool _placing = false;
+  int _step = 0;
+  bool _returnToReview = false;
+  bool _editingAddress = false;
+  bool _addressSheetOpen = false;
+  bool _addressAttempted = false;
+  bool _documentsAttempted = false;
+  final _stepScroll = List.generate(4, (_) => ScrollController());
 
   /// Where the rider goes. Starts at the phone's location, or at the branch
   /// when location is off, and follows the map as the customer moves it.
@@ -145,10 +155,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   @override
   void dispose() {
+    for (final controller in _stepScroll) {
+      controller.dispose();
+    }
     _recipient.dispose();
     _phone.dispose();
     _addressLine.dispose();
+    _subdivision.dispose();
     _barangay.dispose();
+    _city.dispose();
+    _province.dispose();
+    _postal.dispose();
     _cardNumber.dispose();
     _cardName.dispose();
     super.dispose();
@@ -173,6 +190,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     } else {
       _useNewAddress = true;
     }
+    _editingAddress = _useNewAddress;
+    if (_city.text.isEmpty) {
+      _city.text = quote.branchCity ?? '';
+    }
 
     _paymentMethod = quote.paymentOptions['cod']?.available == true
         ? 'cod'
@@ -196,8 +217,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _recipient.text = address.recipientName;
     _phone.text = address.phone;
     _addressLine.text = address.addressLine;
+    _subdivision.text = address.subdivision;
     _barangay.text = address.barangay;
-    _savedCity = address.city;
+    _city.text = address.city;
+    _province.text = address.province;
+    _postal.text = address.postalCode;
   }
 
   Address? _address(CheckoutQuote quote) {
@@ -215,53 +239,179 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       recipientName: _recipient.text.trim(),
       phone: _phone.text.trim(),
       addressLine: _addressLine.text.trim(),
+      subdivision: _subdivision.text.trim(),
       barangay: _barangay.text.trim(),
-      city: _savedCity.isNotEmpty ? _savedCity : (quote.branchCity ?? ''),
-      province: '',
-      postalCode: '',
+      city: _city.text.trim(),
+      province: _province.text.trim(),
+      postalCode: _postal.text.trim(),
     );
   }
 
-  Future<void> _placeOrder(CheckoutQuote quote) async {
-    final address = _address(quote);
-
-    if (address == null) {
+  bool _validateDelivery(CheckoutQuote quote) {
+    if (_address(quote) == null) {
       _snack('Choose a delivery address.');
-      return;
+      return false;
     }
 
-    if (_useNewAddress && !(_formKey.currentState?.validate() ?? false)) {
-      return;
-    }
-
-    if (quote.needsPrescription && _prescriptions.isEmpty) {
-      _snack('Add a photo of your prescription.');
-      return;
-    }
-
-    final useCard = _useCard && quote.offersSeniorPwdDiscount;
-    if (useCard &&
-        _savedCardId == null &&
-        (_cardNumber.text.trim().isEmpty || _cardName.text.trim().isEmpty)) {
-      _snack('Enter the ID number and the name on the ID for the discount.');
-      return;
-    }
-    if (useCard && _cardPhoto == null && !_savedCardHasPhoto(quote)) {
-      _snack('Add a photo of your senior citizen or PWD ID.');
-      return;
+    if (_useNewAddress && !_validateAddressForm()) {
+      return false;
     }
 
     if (_method == 'delivery') {
       if (_pin == null || !_pinConfirmed) {
         _snack('Set the delivery pin so the rider can find you.');
-        return;
+        return false;
       }
       final problem = _pinProblem;
       if (problem != null) {
         _snack(problem);
-        return;
+        return false;
       }
     }
+    return true;
+  }
+
+  void _reveal(BuildContext? contextToReveal, {GlobalKey? key}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = key?.currentContext ?? contextToReveal;
+      if (mounted && target != null && target.mounted) {
+        Scrollable.ensureVisible(
+          target,
+          alignment: 0.12,
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 200),
+        );
+      }
+    });
+  }
+
+  bool _validateAddressForm({bool inSheet = false}) {
+    setState(() {
+      _addressAttempted = true;
+    });
+    final invalid = (inSheet ? _addressSheetFormKey : _formKey).currentState
+        ?.validateGranularly();
+    if (invalid == null) {
+      return false;
+    }
+    if (invalid.isNotEmpty) {
+      if (!inSheet) {
+        setState(() => _editingAddress = true);
+      }
+      _reveal(invalid.first.context);
+      return false;
+    }
+    return true;
+  }
+
+  String? _discountError(CheckoutQuote quote) {
+    if (!_useCard || !quote.offersSeniorPwdDiscount) {
+      return null;
+    }
+    if (_savedCardId == null &&
+        (_cardNumber.text.trim().isEmpty || _cardName.text.trim().isEmpty)) {
+      return 'Enter the ID number and the name on the ID for the discount.';
+    }
+    if (_cardPhoto == null && !_savedCardHasPhoto(quote)) {
+      return 'Add a photo of your senior citizen or PWD ID.';
+    }
+    return null;
+  }
+
+  bool _validateDocuments(CheckoutQuote quote) {
+    setState(() => _documentsAttempted = true);
+    if (quote.needsPrescription && _prescriptions.isEmpty) {
+      _reveal(null, key: _prescriptionKey);
+      return false;
+    }
+    if (_discountError(quote) != null) {
+      _reveal(null, key: _discountKey);
+      return false;
+    }
+    return true;
+  }
+
+  bool _needsDocuments(CheckoutQuote quote) =>
+      quote.needsPrescription || quote.offersSeniorPwdDiscount;
+
+  void _goToStep(int step) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _step = step);
+    if (_stepScroll[step].hasClients) {
+      _stepScroll[step].jumpTo(0);
+    }
+  }
+
+  void _continue(CheckoutQuote quote) {
+    final valid = switch (_step) {
+      0 => _validateDelivery(quote),
+      1 => _validateDocuments(quote),
+      2 => _validatePayment(quote),
+      _ => false,
+    };
+    if (!valid) {
+      return;
+    }
+    final next = _returnToReview
+        ? 3
+        : _step == 0 && !_needsDocuments(quote)
+        ? 2
+        : _step + 1;
+    _returnToReview = false;
+    _goToStep(next);
+  }
+
+  void _editStep(int step) {
+    _returnToReview = true;
+    _goToStep(step);
+  }
+
+  bool _validatePayment(CheckoutQuote quote) {
+    if ((_method == 'pickup' && _paymentMethod == 'cod') ||
+        quote.paymentOptions[_paymentMethod]?.available == true) {
+      return true;
+    }
+    _snack('Choose an available payment method.');
+    return false;
+  }
+
+  void _back(CheckoutQuote? quote) {
+    if (_placing) {
+      return;
+    }
+    if (_returnToReview) {
+      _returnToReview = false;
+      _goToStep(3);
+    } else if (_step == 0) {
+      Navigator.of(context).maybePop();
+    } else {
+      _goToStep(
+        _step == 2 && (quote == null || !_needsDocuments(quote))
+            ? 0
+            : _step - 1,
+      );
+    }
+  }
+
+  Future<void> _placeOrder(CheckoutQuote quote) async {
+    if (_placing) {
+      return;
+    }
+    if (!_validateDelivery(quote)) {
+      _editStep(0);
+      return;
+    }
+    if (!_validateDocuments(quote)) {
+      _editStep(1);
+      return;
+    }
+    if (!_validatePayment(quote)) {
+      _editStep(2);
+      return;
+    }
+    final address = _address(quote)!;
+    final useCard = _useCard && quote.offersSeniorPwdDiscount;
 
     setState(() => _placing = true);
 
@@ -290,32 +440,37 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             discountDocument: useCard ? _cardPhoto : null,
           );
 
-      await ref.read(cartProvider.notifier).refresh();
+      if (!mounted) {
+        return;
+      }
+      try {
+        await ref.read(cartProvider.notifier).refresh();
+      } on ApiException {
+        // The order already exists; a cart refresh must not invite a second submission.
+        if (mounted) {
+          ref.invalidate(cartProvider);
+        }
+      }
 
       if (!mounted) {
         return;
       }
 
-      if (placed.paymentUrl != null) {
-        final uri = Uri.tryParse(placed.paymentUrl!);
-
-        if (uri != null) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        }
-      }
-
-      if (placed.paymentError != null && mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(placed.paymentError!)));
-      }
-
-      if (mounted) {
-        context.pushReplacement('/orders/${placed.order.id}');
-      }
+      context.pushReplacement(
+        '/checkout/success',
+        extra: CheckoutSuccessDetails(
+          placed: placed,
+          branchName: quote.branchName,
+          paymentMethod: _paymentMethod,
+          fulfillmentMethod: method,
+          needsPrescription: quote.needsPrescription,
+        ),
+      );
     } on ApiException catch (error) {
       if (mounted) {
         // The saved ID may have been deleted on another device; fall back to typing it.
         final lostSavedCard =
+            useCard &&
             _savedCardId != null &&
             (error.statusCode == 404 ||
                 (error.statusCode == 422 &&
@@ -323,6 +478,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
         if (lostSavedCard) {
           setState(() => _savedCardId = null);
+          _editStep(1);
         }
 
         _snack(
@@ -561,160 +717,640 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final quote = ref.watch(checkoutQuoteProvider);
-    // Delivery depends on where the phone is relative to the branch.
     ref.watch(nearestStoreProvider);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final currentQuote = quote.hasError ? null : quote.value;
+    if (currentQuote != null) {
+      _initialise(currentQuote);
+    }
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Checkout')),
-      body: AsyncView(
-        value: quote,
-        onRetry: () {
-          _initialised = false;
-          ref.invalidate(checkoutQuoteProvider);
-        },
-        builder: (value) {
-          _initialise(value);
-
-          return Column(
-            children: [
-              Expanded(
-                child: Form(
-                  key: _formKey,
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
-                    children: [
-                      _fulfillmentCard(value),
-                      const SizedBox(height: 12),
-                      _addressCard(value),
-                      if (value.needsPrescription) ...[
-                        const SizedBox(height: 12),
-                        _prescriptionCard(value),
-                      ],
-                      if (value.offersSeniorPwdDiscount) ...[
-                        const SizedBox(height: 12),
-                        _discountCardSection(value),
-                      ],
-                      const SizedBox(height: 12),
-                      _paymentCard(value),
-                      const SizedBox(height: 12),
-                      _summaryCard(value),
-                    ],
-                  ),
+    return PopScope(
+      canPop: _step == 0 && !_placing && !_returnToReview,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          _back(quote.value);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: scheme.surfaceContainerLowest,
+        appBar: AppBar(
+          backgroundColor: scheme.surfaceContainerLowest,
+          surfaceTintColor: Colors.transparent,
+          centerTitle: true,
+          leading: BackButton(
+            onPressed: _placing ? null : () => _back(quote.value),
+          ),
+          title: Text(
+            'Checkout',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        bottomNavigationBar:
+            currentQuote != null && MediaQuery.viewInsetsOf(context).bottom == 0
+            ? Align(
+                heightFactor: 1,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 640),
+                  child: _checkoutFooter(currentQuote),
                 ),
-              ),
-              SafeArea(
-                top: false,
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerLowest,
-                    border: Border(
-                      top: BorderSide(
-                        color: Theme.of(context).colorScheme.outlineVariant,
-                      ),
+              )
+            : null,
+        body: AsyncView(
+          value: quote,
+          onRetry: () {
+            _initialised = false;
+            ref.invalidate(checkoutQuoteProvider);
+          },
+          builder: (value) {
+            _initialise(value);
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxHeight < 420;
+                return Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 640),
+                    child: Column(
+                      children: [
+                        _progress(
+                          value,
+                          compact:
+                              compact ||
+                              (constraints.maxWidth < 480 &&
+                                  MediaQuery.textScalerOf(context).scale(14) >
+                                      16.8),
+                        ),
+                        Expanded(
+                          child: Form(
+                            key: _formKey,
+                            autovalidateMode: _addressAttempted
+                                ? AutovalidateMode.onUserInteraction
+                                : AutovalidateMode.disabled,
+                            child: IndexedStack(
+                              index: _step,
+                              children: [
+                                _stepPage(0, [
+                                  _pageHeading(
+                                    'Delivery or pickup',
+                                    'Your medicines, from ${value.branchName ?? 'your branch'}.',
+                                  ),
+                                  _fulfillmentCard(value),
+                                  const SizedBox(height: 24),
+                                  _addressCard(value),
+                                ]),
+                                _stepPage(1, [
+                                  _pageHeading(
+                                    value.needsPrescription
+                                        ? value.offersSeniorPwdDiscount
+                                              ? 'Prescription & ID'
+                                              : 'Prescription'
+                                        : 'Discount ID',
+                                    value.needsPrescription
+                                        ? 'For the medicines in your order.'
+                                        : 'Use your senior citizen or PWD ID, if eligible.',
+                                  ),
+                                  if (value.needsPrescription)
+                                    _prescriptionCard(value),
+                                  if (value.needsPrescription &&
+                                      value.offersSeniorPwdDiscount)
+                                    const Divider(height: 40),
+                                  if (value.offersSeniorPwdDiscount)
+                                    _discountCardSection(value),
+                                ]),
+                                _stepPage(2, [
+                                  _pageHeading(
+                                    'Payment method',
+                                    'Choose how you would like to pay.',
+                                  ),
+                                  _paymentCard(value),
+                                  const Divider(height: 40),
+                                  _paymentSummary(value),
+                                ]),
+                                _stepPage(3, [
+                                  _pageHeading('Review your order', null),
+                                  _summaryCard(value),
+                                  const SizedBox(height: 12),
+                                  _reviewDetails(value),
+                                ]),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Builder(
-                    builder: (context) {
-                      final theme = Theme.of(context);
-                      final largeText =
-                          MediaQuery.textScalerOf(context).scale(14) > 18;
-                      final total = Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Total',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              money(_total(value)),
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                      final button = FilledButton(
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size.fromHeight(54),
-                          shape: const StadiumBorder(),
-                        ),
-                        onPressed: _placing ? null : () => _placeOrder(value),
-                        child: _placing
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text('Place order'),
-                      );
-
-                      // Large text needs the button's full width; otherwise they share a row.
-                      return largeText
-                          ? Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                total,
-                                const SizedBox(height: 10),
-                                button,
-                              ],
-                            )
-                          : Row(
-                              children: [
-                                ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 140,
-                                  ),
-                                  child: total,
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(child: button),
-                              ],
-                            );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
 
-  /// One card per checkout step, headed by an inline icon and title, with an
-  /// optional status tag at the right.
+  Widget _stepPage(int step, List<Widget> children) => ListView(
+    key: PageStorageKey('checkout-step-$step'),
+    controller: _stepScroll[step],
+    padding: EdgeInsets.fromLTRB(20, _shortViewport ? 12 : 22, 20, 24),
+    children: children,
+  );
+
+  Widget _pageHeading(String title, String? description) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.only(bottom: _shortViewport ? 14 : 22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Semantics(
+            header: true,
+            child: Text(
+              title,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+                height: 1.2,
+              ),
+            ),
+          ),
+          if (description != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              description,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _progress(CheckoutQuote quote, {required bool compact}) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final steps = [
+      (index: 0, label: 'Delivery'),
+      if (_needsDocuments(quote)) (index: 1, label: 'Documents'),
+      (index: 2, label: 'Payment'),
+      (index: 3, label: 'Review'),
+    ];
+    final position = steps.indexWhere((step) => step.index == _step);
+    final current = steps[position < 0 ? 0 : position];
+    if (compact) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+        child: Semantics(
+          label: 'Step ${position + 1} of ${steps.length}, ${current.label}',
+          excludeSemantics: true,
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  current.label,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: scheme.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              Text(
+                '${position + 1}/${steps.length}',
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final (index, step) in steps.indexed)
+              Expanded(
+                child: Semantics(
+                  label:
+                      'Step ${index + 1} of ${steps.length}, ${step.label}${step.index == _step
+                          ? ', current'
+                          : step.index < _step
+                          ? ', completed'
+                          : ''}',
+                  selected: step.index == _step,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(appDetailRadius),
+                    onTap: step.index < _step && !_placing
+                        ? () => _step == 3
+                              ? _editStep(step.index)
+                              : _goToStep(step.index)
+                        : null,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 6,
+                      ),
+                      child: ExcludeSemantics(
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: step.index == _step
+                                    ? scheme.primary
+                                    : step.index < _step
+                                    ? scheme.primaryContainer
+                                    : scheme.surfaceContainerLowest,
+                                border: Border.all(
+                                  color: step.index <= _step
+                                      ? Colors.transparent
+                                      : scheme.outline,
+                                ),
+                              ),
+                              alignment: Alignment.center,
+                              child: step.index < _step
+                                  ? Icon(
+                                      Icons.check_rounded,
+                                      size: 16,
+                                      color: scheme.onPrimaryContainer,
+                                    )
+                                  : Text(
+                                      '${index + 1}',
+                                      textScaler: TextScaler.noScaling,
+                                      style: theme.textTheme.labelSmall
+                                          ?.copyWith(
+                                            color: step.index == _step
+                                                ? scheme.onPrimary
+                                                : scheme.onSurfaceVariant,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              step.label,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: step.index <= _step
+                                    ? scheme.primary
+                                    : scheme.onSurfaceVariant,
+                                fontWeight: step.index == _step
+                                    ? FontWeight.w800
+                                    : FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Container(
+                              height: 3,
+                              decoration: BoxDecoration(
+                                color: step.index <= _step
+                                    ? scheme.primary
+                                    : scheme.outlineVariant,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool get _shortViewport => MediaQuery.sizeOf(context).height < 500;
+
+  Widget _checkoutFooter(CheckoutQuote quote) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final review = _step == 3;
+    final compact = _shortViewport;
+    final label = review
+        ? 'Place order'
+        : _returnToReview
+        ? 'Save & return to review'
+        : _step == 0 && _needsDocuments(quote)
+        ? 'Continue to documents'
+        : _step < 2
+        ? 'Continue to payment'
+        : 'Continue to review';
+    final totalLabel = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: Text(
+            'Order total',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Icon(
+          Icons.expand_more_rounded,
+          size: 16,
+          color: scheme.onSurfaceVariant,
+        ),
+      ],
+    );
+    final amount = Text(
+      money(_total(quote)),
+      style: theme.textTheme.titleLarge?.copyWith(
+        fontSize: compact ? 22 : 24,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.5,
+      ),
+    );
+    final total = Semantics(
+      liveRegion: true,
+      label: 'Order total ${money(_total(quote))}. View order summary',
+      button: true,
+      onTap: _placing ? null : () => _showOrderSummary(quote),
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: _placing ? null : () => _showOrderSummary(quote),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: compact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [totalLabel, amount],
+                )
+              : Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 16,
+                  runSpacing: 4,
+                  children: [totalLabel, amount],
+                ),
+        ),
+      ),
+    );
+    final action = FilledButton(
+      style: FilledButton.styleFrom(
+        minimumSize: Size.fromHeight(compact ? 48 : 54),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+        shape: const StadiumBorder(),
+      ),
+      onPressed: _placing
+          ? null
+          : review
+          ? () => _placeOrder(quote)
+          : () => _continue(quote),
+      child: _placing
+          ? SizedBox.square(
+              dimension: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: scheme.primary,
+                semanticsLabel: 'Placing your order',
+              ),
+            )
+          : Text(label, textAlign: TextAlign.center),
+    );
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          compact ? 8 : 12,
+          20,
+          compact ? 8 : 16,
+        ),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerLowest,
+          border: Border(top: BorderSide(color: scheme.outlineVariant)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (compact)
+              Row(
+                children: [
+                  Expanded(flex: 2, child: total),
+                  const SizedBox(width: 16),
+                  Expanded(flex: 3, child: action),
+                ],
+              )
+            else ...[
+              total,
+              const SizedBox(height: 12),
+              action,
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showOrderSummary(CheckoutQuote quote) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (sheetContext) => ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.8,
+          maxWidth: 640,
+        ),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Order summary',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Close order summary',
+                      onPressed: () => Navigator.pop(sheetContext),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _summaryCard(quote, inSheet: true),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _inlineError(String message, {Key? key}) => Padding(
+    key: key,
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Semantics(
+      liveRegion: true,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.error_outline_rounded,
+            size: 20,
+            color: Theme.of(context).colorScheme.error,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _reviewDetails(CheckoutQuote quote) {
+    final address = _address(quote);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Divider(),
+        _reviewDetail(
+          icon: _method == 'pickup'
+              ? Icons.storefront_outlined
+              : Icons.location_on_outlined,
+          title: _method == 'pickup'
+              ? 'Pickup at ${quote.branchName ?? 'your branch'}'
+              : address?.recipientName ?? 'Delivery details',
+          detail: [
+            if (_method == 'pickup') ...[
+              quote.branchAddress ?? '',
+              address?.recipientName ?? '',
+            ] else
+              address?.fullAddress ?? '',
+            address?.phone ?? '',
+          ].where((part) => part.isNotEmpty).join('\n'),
+          editLabel: 'Edit contact details',
+          onEdit: () {
+            _editStep(0);
+            _openAddressEditor(quote);
+          },
+        ),
+        if (quote.needsPrescription)
+          _reviewDetail(
+            icon: Icons.description_outlined,
+            title: 'Prescription',
+            detail:
+                '${_prescriptions.length} ${_prescriptions.length == 1 ? 'page' : 'pages'} added',
+            onEdit: () => _editStep(1),
+          ),
+        if (_useCard && quote.offersSeniorPwdDiscount)
+          _reviewDetail(
+            icon: Icons.badge_outlined,
+            title: 'Senior citizen / PWD',
+            detail: 'Discount ID added',
+            onEdit: () => _editStep(1),
+          ),
+        _reviewDetail(
+          icon: Icons.payments_outlined,
+          title: _paymentLabel,
+          detail: _paymentTiming,
+          editLabel: 'Edit payment method',
+          onEdit: () => _editStep(2),
+        ),
+      ],
+    );
+  }
+
+  Widget _reviewDetail({
+    required IconData icon,
+    required String title,
+    required String detail,
+    required VoidCallback onEdit,
+    String? editLabel,
+  }) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Icon(icon, size: 20, color: theme.colorScheme.primary),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  detail,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: _placing ? null : onEdit,
+            child: Text('Edit', semanticsLabel: editLabel ?? 'Edit $title'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// A flat checkout section, with optional status or edit controls.
   Widget _section({
     required IconData icon,
     required String title,
     required List<Widget> children,
     Widget? trailing,
+    bool showHeading = true,
   }) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 20, color: scheme.primary),
-                const SizedBox(width: 8),
-                Expanded(
+    final stackHeading =
+        MediaQuery.sizeOf(context).width < 400 &&
+        MediaQuery.textScalerOf(context).scale(16) > 24;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (showHeading) ...[
+          Row(
+            children: [
+              Icon(icon, size: 20, color: scheme.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Semantics(
+                  header: true,
                   child: Text(
                     title,
                     style: theme.textTheme.titleMedium?.copyWith(
@@ -722,14 +1358,21 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     ),
                   ),
                 ),
-                if (trailing != null) ...[const SizedBox(width: 8), trailing],
+              ),
+              if (trailing != null && !stackHeading) ...[
+                const SizedBox(width: 8),
+                trailing,
               ],
-            ),
-            const SizedBox(height: 12),
-            ...children,
+            ],
+          ),
+          if (trailing != null && stackHeading) ...[
+            const SizedBox(height: 8),
+            Align(alignment: Alignment.centerLeft, child: trailing),
           ],
-        ),
-      ),
+          const SizedBox(height: 12),
+        ],
+        ...children,
+      ],
     );
   }
 
@@ -745,74 +1388,91 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Widget _summaryCard(CheckoutQuote quote) {
+  Widget _summaryCard(CheckoutQuote quote, {bool inSheet = false}) {
     final theme = Theme.of(context);
-    final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
-    final fee = _paymentFee(quote, _paymentMethod) ?? '0.00';
-    final deliveryFee = quote.fulfillment[_method]?.fee ?? '0.00';
+    final largeText =
+        MediaQuery.textScalerOf(context).scale(14) > 18 &&
+        MediaQuery.sizeOf(context).width < 600;
     final count = quote.lines.length;
 
     return _section(
       icon: Icons.receipt_long_outlined,
       title: 'Order summary',
+      showHeading: false,
       children: [
-        Text(
-          '$count ${count == 1 ? 'item' : 'items'} from ${quote.branchName ?? 'your branch'}',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 6),
-        ...quote.lines.map(
-          (line) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                NetworkThumb(
-                  url: line.imageUrl,
-                  width: 48,
-                  height: 48,
-                  radius: 10,
-                  placeholderIcon: PhosphorIconsRegular.pill,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        line.productName,
-                        maxLines: largeText ? 2 : 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      Text(
-                        '${line.quantity} × ${money(line.unitPrice)}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      if (largeText) ...[
-                        const SizedBox(height: 4),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            money(line.lineTotal),
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                if (!largeText)
-                  Text(
-                    money(line.lineTotal),
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-              ],
+        ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          childrenPadding: const EdgeInsets.only(top: 4),
+          initiallyExpanded: true,
+          shape: const Border(),
+          collapsedShape: const Border(),
+          title: Text(
+            inSheet ? 'Items' : 'Order summary',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w800,
             ),
           ),
+          subtitle: Text(
+            '$count ${count == 1 ? 'item' : 'items'} from ${quote.branchName ?? 'your branch'}',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          children: [
+            ...quote.lines.map(
+              (line) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    NetworkThumb(
+                      url: line.imageUrl,
+                      width: 48,
+                      height: 48,
+                      radius: 10,
+                      placeholderIcon: PhosphorIconsRegular.pill,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            line.productName,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          Text(
+                            '${line.quantity} × ${money(line.unitPrice)}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          if (largeText) ...[
+                            const SizedBox(height: 4),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                money(line.lineTotal),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (!largeText)
+                      Text(
+                        money(line.lineTotal),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
         const Divider(height: 24),
         // One branch's total would only repeat the subtotal.
@@ -827,6 +1487,32 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ),
           ),
         ],
+        _paymentSummary(quote),
+      ],
+    );
+  }
+
+  String get _paymentLabel => switch (_paymentMethod) {
+    'cod' => _method == 'pickup' ? 'Pay at the counter' : 'Cash on delivery',
+    'gcash' => 'GCash',
+    'maya' => 'Maya',
+    'card' => 'Card',
+    _ => _paymentMethod,
+  };
+
+  String get _paymentTiming => _paymentMethod == 'cod'
+      ? _method == 'pickup'
+            ? 'Pay at the counter when collecting.'
+            : 'Pay cash when your order arrives.'
+      : 'Continue to your payment provider after placing your order.';
+
+  Widget _paymentSummary(CheckoutQuote quote) {
+    final theme = Theme.of(context);
+    final fee = _paymentFee(quote, _paymentMethod) ?? '0.00';
+    final deliveryFee = quote.fulfillment[_method]?.fee ?? '0.00';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
         _amountRow(
           label: const Text('Subtotal'),
           amount: Text(money(quote.subtotal)),
@@ -884,198 +1570,201 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final scheme = theme.colorScheme;
     final ok = statusColour(context, 'completed');
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Heading and switch are one row, so the card stays one line while off.
-            MergeSemantics(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(appSurfaceRadius),
-                onTap: () => setState(() => _useCard = !_useCard),
-                child: Row(
-                  children: [
-                    Icon(Icons.badge_outlined, size: 20, color: scheme.primary),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Senior citizen / PWD',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          Text(
-                            '${_useCard ? 'Saving' : 'Save'} ${money(quote.seniorPwdDiscount)} on medicines',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: ok,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Switch(
-                      value: _useCard,
-                      onChanged: (value) => setState(() => _useCard = value),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (_useCard) ...[
-              const SizedBox(height: 12),
-              if (quote.discountCards.isNotEmpty)
-                RadioGroup<String>(
-                  groupValue: _savedCardId ?? '__typed__',
-                  onChanged: (value) => setState(
-                    () => _savedCardId = value == null || value == '__typed__'
-                        ? null
-                        : value,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      for (final card in quote.discountCards)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: RadioListTile<String>(
-                            contentPadding: const EdgeInsets.fromLTRB(
-                              4,
-                              4,
-                              8,
-                              4,
-                            ),
-                            value: card.id,
-                            selected: _savedCardId == card.id,
-                            shape: _choiceShape(_savedCardId == card.id),
-                            selectedTileColor: scheme.primaryContainer
-                                .withValues(alpha: 0.35),
-                            title: Text(
-                              card.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  '${card.typeLabel} ID · ${card.idNumberMasked}',
-                                ),
-                                if (_savedCardId == card.id && card.hasDocument)
-                                  _savedPhotoLine(theme),
-                              ],
-                            ),
-                          ),
-                        ),
-                      RadioListTile<String>(
-                        contentPadding: const EdgeInsets.fromLTRB(4, 0, 8, 0),
-                        value: '__typed__',
-                        selected: _savedCardId == null,
-                        shape: _choiceShape(_savedCardId == null),
-                        selectedTileColor: scheme.primaryContainer.withValues(
-                          alpha: 0.35,
-                        ),
-                        title: const Text(
-                          'Use a different ID',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              if (_savedCardId == null) ...[
-                if (quote.discountCards.isNotEmpty) const SizedBox(height: 12),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(
-                      value: 'senior',
-                      label: Text('Senior citizen'),
-                    ),
-                    ButtonSegment(value: 'pwd', label: Text('PWD')),
-                  ],
-                  selected: {_cardType},
-                  onSelectionChanged: (value) =>
-                      setState(() => _cardType = value.first),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _cardNumber,
-                  maxLength: 40,
-                  decoration: const InputDecoration(
-                    labelText: 'ID number',
-                    counterText: '',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _cardName,
-                  maxLength: 120,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Name on the ID',
-                    hintText: 'As printed on the card',
-                    counterText: '',
-                  ),
-                ),
-              ],
-              if (!_savedCardHasPhoto(quote)) ...[
-                const SizedBox(height: 12),
-                _idPhotoSlot(theme),
-              ],
-              if (_savedCardId == null && quote.discountCards.length < 3)
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _saveCard,
-                  onChanged: (value) =>
-                      setState(() => _saveCard = value ?? false),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  title: const Text('Save this ID for next time'),
-                ),
-              const SizedBox(height: 12),
-              Divider(height: 1, color: scheme.outlineVariant),
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Heading and switch are one row, so the card stays one line while off.
+          MergeSemantics(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(appSurfaceRadius),
+              onTap: () => setState(() => _useCard = !_useCard),
+              child: Row(
                 children: [
-                  Icon(
-                    Icons.front_hand_outlined,
-                    size: 20,
-                    color: scheme.primary,
-                  ),
-                  const SizedBox(width: 10),
+                  Icon(Icons.badge_outlined, size: 20, color: scheme.primary),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'Show this ID when you receive your order. ',
-                            style: TextStyle(
-                              color: scheme.onSurface,
-                              fontWeight: FontWeight.w800,
-                            ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Senior citizen / PWD',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
                           ),
-                          const TextSpan(
-                            text: 'Without it the discount can’t be given. For medicines only.',
+                        ),
+                        Text(
+                          '${_useCard ? 'Saving' : 'Save'} ${money(quote.seniorPwdDiscount)} on medicines',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: ok,
+                            fontWeight: FontWeight.w700,
                           ),
-                        ],
-                      ),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                        ),
+                      ],
                     ),
+                  ),
+                  Switch(
+                    value: _useCard,
+                    onChanged: (value) => setState(() => _useCard = value),
                   ),
                 ],
               ),
+            ),
+          ),
+          if (_useCard) ...[
+            const SizedBox(height: 12),
+            if (_documentsAttempted && _discountError(quote) != null)
+              _inlineError(_discountError(quote)!, key: _discountKey),
+            if (quote.discountCards.isNotEmpty)
+              RadioGroup<String>(
+                groupValue: _savedCardId ?? '__typed__',
+                onChanged: (value) => setState(
+                  () => _savedCardId = value == null || value == '__typed__'
+                      ? null
+                      : value,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final card in quote.discountCards)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: RadioListTile<String>(
+                          contentPadding: const EdgeInsets.fromLTRB(4, 4, 8, 4),
+                          value: card.id,
+                          selected: _savedCardId == card.id,
+                          shape: _choiceShape(_savedCardId == card.id),
+                          selectedTileColor: scheme.primaryContainer.withValues(
+                            alpha: 0.35,
+                          ),
+                          title: Text(
+                            card.name,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${card.typeLabel} ID · ${card.idNumberMasked}',
+                              ),
+                              if (_savedCardId == card.id && card.hasDocument)
+                                _savedPhotoLine(theme),
+                            ],
+                          ),
+                        ),
+                      ),
+                    RadioListTile<String>(
+                      contentPadding: const EdgeInsets.fromLTRB(4, 0, 8, 0),
+                      value: '__typed__',
+                      selected: _savedCardId == null,
+                      shape: _choiceShape(_savedCardId == null),
+                      selectedTileColor: scheme.primaryContainer.withValues(
+                        alpha: 0.35,
+                      ),
+                      title: const Text(
+                        'Use a different ID',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (_savedCardId == null) ...[
+              if (quote.discountCards.isNotEmpty) const SizedBox(height: 12),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'senior', label: Text('Senior citizen')),
+                  ButtonSegment(value: 'pwd', label: Text('PWD')),
+                ],
+                selected: {_cardType},
+                onSelectionChanged: (value) =>
+                    setState(() => _cardType = value.first),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _cardNumber,
+                textInputAction: TextInputAction.next,
+                onChanged: (_) {
+                  if (_documentsAttempted) {
+                    setState(() {});
+                  }
+                },
+                maxLength: 40,
+                decoration: const InputDecoration(
+                  labelText: 'ID number',
+                  counterText: '',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _cardName,
+                textInputAction: TextInputAction.done,
+                onChanged: (_) {
+                  if (_documentsAttempted) {
+                    setState(() {});
+                  }
+                },
+                maxLength: 120,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Name on the ID',
+                  hintText: 'As printed on the card',
+                  counterText: '',
+                ),
+              ),
             ],
+            if (!_savedCardHasPhoto(quote)) ...[
+              const SizedBox(height: 12),
+              _idPhotoSlot(theme),
+            ],
+            if (_savedCardId == null && quote.discountCards.length < 3)
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _saveCard,
+                onChanged: (value) =>
+                    setState(() => _saveCard = value ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
+                title: const Text('Save this ID for next time'),
+              ),
+            const SizedBox(height: 12),
+            Divider(height: 1, color: scheme.outlineVariant),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.front_hand_outlined,
+                  size: 20,
+                  color: scheme.primary,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: 'Show this ID when you receive your order. ',
+                          style: TextStyle(
+                            color: scheme.onSurface,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const TextSpan(
+                          text: 'Without it the discount can’t be given. For medicines only.',
+                        ),
+                      ],
+                    ),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -1200,141 +1889,393 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   Widget _addressCard(CheckoutQuote quote) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final address = _address(quote);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (!_editingAddress) ...[
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _method == 'pickup' ? 'Contact details' : 'Deliver to',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                onPressed: () => _openAddressEditor(quote),
+                child: const Text(
+                  'Edit',
+                  semanticsLabel: 'Edit contact details',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.home_outlined, color: scheme.primary, size: 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      address?.recipientName ?? 'Choose an address',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    if (address != null) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        address.phone,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      if (_method == 'delivery') ...[
+                        const SizedBox(height: 5),
+                        Text(
+                          address.fullAddress,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+        // Keep validators mounted when the summary replaces the address editor.
+        Visibility(
+          visible: _editingAddress && !_addressSheetOpen,
+          maintainState: true,
+          child: _addressEditor(quote),
+        ),
+        if (_method == 'delivery') ...[
+          const SizedBox(height: 16),
+          _pinSection(theme),
+        ],
+      ],
+    );
+  }
 
+  Future<void> _openAddressEditor(CheckoutQuote quote) async {
+    setState(() => _addressSheetOpen = true);
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, updateSheet) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.85,
+              maxWidth: 640,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 12, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _method == 'pickup'
+                              ? 'Contact details'
+                              : 'Delivery address',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Close address editor',
+                        onPressed: () => Navigator.pop(sheetContext, false),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                    child: Form(
+                      key: _addressSheetFormKey,
+                      autovalidateMode: _addressAttempted
+                          ? AutovalidateMode.onUserInteraction
+                          : AutovalidateMode.disabled,
+                      child: _addressEditor(
+                        quote,
+                        inSheet: true,
+                        update: (change) {
+                          setState(change);
+                          updateSheet(() {});
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                    child: FilledButton(
+                      onPressed: () {
+                        if (!_useNewAddress ||
+                            _validateAddressForm(inSheet: true)) {
+                          setState(() => _editingAddress = false);
+                          Navigator.pop(sheetContext, true);
+                        } else {
+                          updateSheet(() {});
+                        }
+                      },
+                      child: const Text('Save address'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() => _addressSheetOpen = false);
+    if (saved == true && _returnToReview) {
+      _continue(quote);
+    }
+  }
+
+  Widget _addressEditor(
+    CheckoutQuote quote, {
+    bool inSheet = false,
+    StateSetter? update,
+  }) {
+    final theme = Theme.of(context);
+    final updateState = update ?? setState;
     final scheme = theme.colorScheme;
     final selectedValue = _useNewAddress ? '__new__' : _selectedAddressId;
 
-    return _section(
-      icon: _method == 'pickup'
-          ? Icons.person_outline_rounded
-          : Icons.location_on_outlined,
-      title: _method == 'pickup' ? 'Contact details' : 'Deliver to',
-      children: [
-        if (_method == 'delivery') ...[
-          _pinSection(theme),
-          const SizedBox(height: 12),
-        ],
-        RadioGroup<String>(
-          groupValue: _useNewAddress ? '__new__' : _selectedAddressId,
-          onChanged: (value) {
-            if (value == null) {
-              return;
-            }
-
-            if (value == '__new__') {
-              setState(() {
-                _useNewAddress = true;
-
-                if (_recipient.text.isEmpty && quote.preferredAddress != null) {
-                  _fill(quote.preferredAddress!);
-                }
-              });
-            } else {
-              setState(() {
-                _useNewAddress = false;
-                _selectedAddressId = value;
-              });
+    return AutofillGroup(
+      child: _section(
+        icon: _method == 'pickup'
+            ? Icons.person_outline_rounded
+            : Icons.location_on_outlined,
+        title: _method == 'pickup' ? 'Contact details' : 'Deliver to',
+        showHeading: !inSheet,
+        trailing: TextButton(
+          style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+          onPressed: () {
+            if (!_useNewAddress || _validateAddressForm()) {
+              FocusManager.instance.primaryFocus?.unfocus();
+              updateState(() => _editingAddress = false);
             }
           },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (final address in quote.addresses) ...[
-                RadioListTile<String>(
-                  contentPadding: const EdgeInsets.fromLTRB(4, 4, 14, 4),
-                  value: address.id ?? address.addressLine,
-                  selected:
+          child: const Text('Done'),
+        ),
+        children: [
+          RadioGroup<String>(
+            groupValue: _useNewAddress ? '__new__' : _selectedAddressId,
+            onChanged: (value) {
+              if (value == null) {
+                return;
+              }
+
+              if (value == '__new__') {
+                updateState(() {
+                  _useNewAddress = true;
+
+                  if (_recipient.text.isEmpty &&
+                      quote.preferredAddress != null) {
+                    _fill(quote.preferredAddress!);
+                  }
+                });
+              } else {
+                updateState(() {
+                  _useNewAddress = false;
+                  _selectedAddressId = value;
+                });
+              }
+            },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final address in quote.addresses) ...[
+                  RadioListTile<String>(
+                    contentPadding: const EdgeInsets.fromLTRB(4, 4, 14, 4),
+                    value: address.id ?? address.addressLine,
+                    selected:
+                        selectedValue == (address.id ?? address.addressLine),
+                    shape: _choiceShape(
                       selectedValue == (address.id ?? address.addressLine),
-                  shape: _choiceShape(
-                    selectedValue == (address.id ?? address.addressLine),
+                    ),
+                    tileColor: scheme.surfaceContainerLowest,
+                    selectedTileColor: scheme.primaryContainer.withValues(
+                      alpha: 0.35,
+                    ),
+                    title: Text(
+                      address.recipientName,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: Text(
+                      '${address.fullAddress}\n${address.phone}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    isThreeLine: true,
                   ),
+                  const SizedBox(height: 8),
+                ],
+                RadioListTile<String>(
+                  contentPadding: const EdgeInsets.fromLTRB(4, 0, 14, 0),
+                  value: '__new__',
+                  selected: selectedValue == '__new__',
+                  shape: _choiceShape(selectedValue == '__new__'),
                   tileColor: scheme.surfaceContainerLowest,
                   selectedTileColor: scheme.primaryContainer.withValues(
                     alpha: 0.35,
                   ),
-                  title: Text(
-                    address.recipientName,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  title: const Text(
+                    'Use a new address',
+                    style: TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  subtitle: Text(
-                    '${[address.streetLine, address.city].where((part) => part.isNotEmpty).join(', ')}\n${address.phone}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                  secondary: Icon(
+                    Icons.add_location_alt_outlined,
+                    color: scheme.primary,
                   ),
-                  isThreeLine: true,
+                  controlAffinity: ListTileControlAffinity.leading,
                 ),
-                const SizedBox(height: 8),
               ],
-              RadioListTile<String>(
-                contentPadding: const EdgeInsets.fromLTRB(4, 0, 14, 0),
-                value: '__new__',
-                selected: selectedValue == '__new__',
-                shape: _choiceShape(selectedValue == '__new__'),
-                tileColor: scheme.surfaceContainerLowest,
-                selectedTileColor: scheme.primaryContainer.withValues(
-                  alpha: 0.35,
-                ),
-                title: const Text(
-                  'Use a new address',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                secondary: Icon(
-                  Icons.add_location_alt_outlined,
-                  color: scheme.primary,
-                ),
-                controlAffinity: ListTileControlAffinity.leading,
-              ),
-            ],
-          ),
-        ),
-        if (_useNewAddress) ...[
-          const SizedBox(height: 14),
-          TextFormField(
-            controller: _recipient,
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(labelText: 'Recipient name'),
-            validator: (value) => (value ?? '').trim().isEmpty
-                ? 'Enter the recipient name.'
-                : null,
-          ),
-          const SizedBox(height: 10),
-          TextFormField(
-            controller: _phone,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-              labelText: 'Phone',
-              hintText: '09xxxxxxxxx',
             ),
-            validator: (value) =>
-                RegExp(r'^(?:\+63|0)9\d{9}$').hasMatch((value ?? '').trim())
-                ? null
-                : 'Use a valid PH mobile number.',
           ),
-          if (_method == 'delivery') ...[
-            const SizedBox(height: 10),
+          if (_useNewAddress) ...[
+            const SizedBox(height: 14),
             TextFormField(
-              controller: _addressLine,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'House no., street, landmark',
-                hintText: 'Blue gate beside the sari-sari store',
-              ),
+              controller: _recipient,
+              textInputAction: TextInputAction.next,
+              autofillHints: const [AutofillHints.name],
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(labelText: 'Recipient name'),
               validator: (value) => (value ?? '').trim().isEmpty
-                  ? 'Tell the rider how to find you.'
+                  ? 'Enter the recipient name.'
                   : null,
             ),
             const SizedBox(height: 10),
             TextFormField(
-              controller: _barangay,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(labelText: 'Barangay'),
+              controller: _phone,
+              textInputAction: _method == 'delivery'
+                  ? TextInputAction.next
+                  : TextInputAction.done,
+              autofillHints: const [AutofillHints.telephoneNumber],
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Phone',
+                hintText: '09xxxxxxxxx',
+              ),
               validator: (value) =>
-                  (value ?? '').trim().isEmpty ? 'Enter the barangay.' : null,
+                  RegExp(r'^(?:\+63|0)9\d{9}$').hasMatch((value ?? '').trim())
+                  ? null
+                  : 'Use a valid PH mobile number.',
             ),
+            if (_method == 'delivery') ...[
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _addressLine,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.streetAddressLine1],
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  labelText: 'House no., street, landmark',
+                  hintText: 'Blue gate beside the sari-sari store',
+                ),
+                validator: (value) => (value ?? '').trim().isEmpty
+                    ? 'Tell the rider how to find you.'
+                    : null,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _subdivision,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.streetAddressLine2],
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Subdivision / building (optional)',
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _barangay,
+                textInputAction: TextInputAction.next,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(labelText: 'Barangay'),
+                validator: (value) =>
+                    (value ?? '').trim().isEmpty ? 'Enter the barangay.' : null,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _city,
+                textInputAction: TextInputAction.next,
+                textCapitalization: TextCapitalization.words,
+                autofillHints: const [AutofillHints.addressCity],
+                decoration: const InputDecoration(
+                  labelText: 'City / municipality',
+                ),
+                validator: (value) => (value ?? '').trim().isEmpty
+                    ? 'Enter the city or municipality.'
+                    : null,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _province,
+                textInputAction: TextInputAction.next,
+                textCapitalization: TextCapitalization.words,
+                autofillHints: const [AutofillHints.addressState],
+                decoration: const InputDecoration(labelText: 'Province'),
+                validator: (value) =>
+                    (value ?? '').trim().isEmpty ? 'Enter the province.' : null,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _postal,
+                textInputAction: TextInputAction.done,
+                keyboardType: TextInputType.number,
+                autofillHints: const [AutofillHints.postalCode],
+                decoration: const InputDecoration(labelText: 'ZIP code'),
+                validator: (value) =>
+                    RegExp(r'^\d{4}$').hasMatch((value ?? '').trim())
+                    ? null
+                    : 'Use a 4-digit ZIP code.',
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                initialValue: Address.country,
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Country',
+                  helperMaxLines: 3,
+                  helperText:
+                      'Delivery is currently available in the Philippines.',
+                ),
+              ),
+            ],
           ],
         ],
-      ],
+      ),
     );
   }
 
@@ -1394,44 +2335,68 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     final km = branch == null ? null : pinDistanceKm(branch, pin);
     final ok = statusColour(context, 'completed');
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final text = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DeliveryPinMap(
-          pin: pin,
-          branch: branch == null
-              ? null
-              : LatLng(branch.latitude, branch.longitude),
-          onTap: _openPinPicker,
+        Icon(
+          problem == null ? Icons.location_on_outlined : Icons.error_outline,
+          color: problem == null ? scheme.primary : scheme.error,
         ),
-        if (problem != null || km != null) ...[
-          const SizedBox(height: 10),
-          Row(
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
+              Text(
                 problem == null
-                    ? Icons.check_circle_rounded
-                    : Icons.error_rounded,
-                size: 18,
-                color: problem == null ? ok : scheme.error,
+                    ? 'Delivery pin confirmed'
+                    : 'Outside the delivery area',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: problem == null ? scheme.onSurface : scheme.error,
+                ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  problem ??
-                      '${km!.toStringAsFixed(1)} km from ${branch!.name}${branch.maxDeliveryRadiusKm == null ? '' : ' · inside the delivery area'}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: problem == null ? ok : scheme.error,
-                    fontWeight: FontWeight.w600,
-                  ),
+              const SizedBox(height: 5),
+              Text(
+                problem ??
+                    (km == null
+                        ? 'Your rider will use this location.'
+                        : '${km.toStringAsFixed(1)} km from ${branch!.name}${branch.maxDeliveryRadiusKm == null ? '' : ' · inside the delivery area'}'),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: problem == null
+                      ? scheme.onSurfaceVariant
+                      : scheme.error,
                 ),
               ),
             ],
           ),
+        ),
+        if (problem == null) ...[
+          const SizedBox(width: 6),
+          Icon(Icons.check_rounded, size: 18, color: ok),
         ],
       ],
+    );
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 14, 8, 6),
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          text,
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: TextButton(
+              style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+              onPressed: _openPinPicker,
+              child: const Text('Adjust pin'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1479,6 +2444,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     return _section(
       icon: Icons.payments_outlined,
       title: 'Payment',
+      showHeading: false,
       children: [
         RadioGroup<String>(
           groupValue: _paymentMethod,
@@ -1497,6 +2463,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 child: RadioListTile<String>(
                   contentPadding: const EdgeInsets.fromLTRB(4, 0, 14, 0),
                   value: entry.key,
+                  controlAffinity: ListTileControlAffinity.trailing,
+                  secondary: Icon(
+                    entry.key == 'cod'
+                        ? Icons.payments_outlined
+                        : entry.key == 'card'
+                        ? Icons.credit_card_rounded
+                        : Icons.account_balance_wallet_outlined,
+                    color: option.available
+                        ? scheme.primary
+                        : scheme.onSurfaceVariant,
+                  ),
                   enabled: option.available,
                   selected: _paymentMethod == entry.key,
                   shape: _choiceShape(_paymentMethod == entry.key),
@@ -1553,6 +2530,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             }).toList(),
           ),
         ),
+        const SizedBox(height: 4),
+        Text(
+          _paymentTiming,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
         for (final group in unavailableByReason.entries)
           Padding(
             padding: const EdgeInsets.only(top: 2),
@@ -1587,7 +2571,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final branchAddress = quote.branchAddress ?? '';
     final closedUntil = quote.fulfillment['delivery']?.closedUntil;
 
-    final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
+    final largeText =
+        MediaQuery.textScalerOf(context).scale(14) > 18 &&
+        MediaQuery.sizeOf(context).width < 600;
     final delivery = _fulfillmentOption(
       value: 'delivery',
       icon: Icons.delivery_dining_outlined,
@@ -1608,6 +2594,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     return _section(
       icon: Icons.local_mall_outlined,
       title: 'How to get it',
+      showHeading: false,
       children: [
         if (largeText) ...[
           delivery,
@@ -1650,7 +2637,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  /// A selectable delivery or pickup tile; a closed option cannot be tapped.
+  /// A selectable delivery or pickup segment; closed delivery cannot be tapped.
   Widget _fulfillmentOption({
     required String value,
     required IconData icon,
@@ -1661,57 +2648,46 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final selected = _method == value;
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(14),
-      side: BorderSide(
-        color: selected ? scheme.primary : scheme.outlineVariant,
-        width: selected ? 1.6 : 1.2,
-      ),
-    );
-
+    final foreground = selected ? scheme.onPrimary : scheme.onSurface;
     return Semantics(
       selected: selected,
+      button: true,
+      enabled: enabled,
       inMutuallyExclusiveGroup: true,
       child: Material(
-        color: selected
-            ? scheme.primaryContainer.withValues(alpha: 0.35)
-            : scheme.surfaceContainerLowest,
-        shape: shape,
+        color: selected ? scheme.primary : scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: enabled ? () => setState(() => _fulfillment = value) : null,
           child: Opacity(
             opacity: enabled ? 1 : 0.45,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Icon(icon, color: scheme.primary),
-                      const Spacer(),
-                      Icon(
-                        selected
-                            ? Icons.check_circle_rounded
-                            : Icons.circle_outlined,
-                        size: 20,
-                        color: selected ? scheme.primary : scheme.outline,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    label,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    detail,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
+                  Icon(icon, color: foreground, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          label,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: foreground,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          detail,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: foreground,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -1731,233 +2707,129 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       for (final line in quote.lines)
         if (line.requiresPrescription) line.productName,
     }.toList();
-    final muted = theme.textTheme.bodySmall?.copyWith(
-      color: scheme.onSurfaceVariant,
-    );
-
-    return _section(
-      icon: Icons.medication_outlined,
-      title: 'Prescription',
-      trailing: pages.isEmpty
-          ? _tag('Needed', statusColour(context, 'pending'))
-          : _tag(
-              '${pages.length} ${pages.length == 1 ? 'page' : 'pages'}',
-              statusColour(context, 'completed'),
-              icon: Icons.check_circle_rounded,
-            ),
-      children: [
-        Text.rich(
-          TextSpan(
-            children: [
-              if (names.isNotEmpty) ...[
-                const TextSpan(text: 'For '),
-                TextSpan(
-                  text: _joinNames(names),
-                  style: TextStyle(
-                    color: scheme.onSurface,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const TextSpan(text: '. '),
-              ],
-              const TextSpan(
-                text: 'A pharmacist checks it before your order is prepared.',
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
+      ),
+      child: _section(
+        icon: Icons.medication_outlined,
+        title: 'Prescription',
+        trailing: pages.isEmpty
+            ? _tag('Required', statusColour(context, 'pending'))
+            : _tag(
+                '${pages.length} ${pages.length == 1 ? 'page' : 'pages'}',
+                statusColour(context, 'completed'),
+                icon: Icons.check_circle_rounded,
               ),
-            ],
-          ),
-          style: muted,
-        ),
-        const SizedBox(height: 12),
-        if (pages.isEmpty)
-          Material(
-            color: scheme.surfaceContainerLow,
-            clipBehavior: Clip.antiAlias,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(appSurfaceRadius),
-              side: BorderSide(color: scheme.outline, width: 1.2),
-            ),
-            child: InkWell(
-              onTap: () => _pickPrescription(photo: true),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 22,
-                      backgroundColor: scheme.primary,
-                      child: Icon(
-                        Icons.photo_camera_outlined,
-                        color: scheme.onPrimary,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Take photos of every page',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          Text(
-                            'Up to 10 pages · sharp and readable',
-                            style: muted,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          )
-        else ...[
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              for (final (index, page) in pages.indexed)
-                _pageThumb(index, page),
-              if (pages.length < 10)
-                Material(
-                  color: scheme.surfaceContainerLow,
-                  clipBehavior: Clip.antiAlias,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(color: scheme.outline, width: 1.2),
-                  ),
-                  child: InkWell(
-                    onTap: () => _pickPrescription(photo: true),
-                    child: SizedBox(
-                      width: 76,
-                      height: 100,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.add_a_photo_outlined,
-                            color: scheme.primary,
-                          ),
-                          const SizedBox(height: 4),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              'Add page',
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: scheme.primary,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
+        children: [
           Text(
-            'Include every page, front and back. ${pages.length} of 10 used.',
-            style: muted,
+            '${names.isEmpty ? '' : 'For ${_joinNames(names)}. '}A pharmacist checks it before your order is prepared.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (_documentsAttempted && pages.isEmpty)
+            _inlineError(
+              'Add a photo of your prescription.',
+              key: _prescriptionKey,
+            ),
+          for (final (index, page) in pages.indexed) ...[
+            _pageThumb(index, page),
+            const SizedBox(height: 12),
+          ],
+          if (pages.length < 10)
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(48, 48),
+                  ),
+                  onPressed: () => _pickPrescription(photo: true),
+                  icon: const Icon(Icons.photo_camera_outlined, size: 20),
+                  label: Text(pages.isEmpty ? 'Take photos' : 'Add photo'),
+                ),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(48, 48),
+                  ),
+                  onPressed: () => _pickPrescription(photo: false),
+                  icon: const Icon(Icons.upload_file_outlined, size: 20),
+                  label: const Text('Upload file'),
+                ),
+              ],
+            ),
+          const SizedBox(height: 12),
+          Text(
+            'Include every page, front and back. Up to 10 pages, 5 MB each.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
           ),
         ],
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            style: TextButton.styleFrom(minimumSize: const Size(0, 44)),
-            onPressed: () => _pickPrescription(photo: false),
-            icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-            label: Text(pages.isEmpty ? 'Upload a PDF instead' : 'Add a PDF'),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  /// One prescription page: its photo (or a PDF face), its number, and a remove button.
   Widget _pageThumb(int index, PickedAttachment page) {
-    final scheme = Theme.of(context).colorScheme;
-    final face = ColoredBox(
-      color: scheme.surfaceContainerLowest,
-      child: Center(
-        child: Icon(
-          page.isImage ? Icons.image_outlined : Icons.picture_as_pdf_outlined,
-          color: scheme.primary,
-        ),
-      ),
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final placeholder = Icon(
+      page.isImage ? Icons.image_outlined : Icons.picture_as_pdf_outlined,
+      color: scheme.primary,
     );
-
-    return SizedBox(
-      width: 76,
-      height: 100,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: DecoratedBox(
-              position: DecorationPosition.foreground,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: scheme.outlineVariant),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: page.isImage
-                    ? Image.memory(
-                        page.bytes,
-                        fit: BoxFit.cover,
-                        cacheWidth: 228,
-                        errorBuilder: (_, _, _) => face,
-                      )
-                    : face,
-              ),
+    return Row(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: SizedBox.square(
+            dimension: 44,
+            child: ColoredBox(
+              color: scheme.surfaceContainerLow,
+              child: page.isImage
+                  ? Image.memory(
+                      page.bytes,
+                      fit: BoxFit.cover,
+                      cacheWidth: 132,
+                      errorBuilder: (_, _, _) => placeholder,
+                    )
+                  : placeholder,
             ),
           ),
-          Positioned(
-            left: 5,
-            bottom: 5,
-            child: Container(
-              constraints: const BoxConstraints(minWidth: 20),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.72),
-                borderRadius: BorderRadius.circular(10),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                page.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
-              child: Text(
-                '${index + 1}',
-                textAlign: TextAlign.center,
-                textScaler: TextScaler.noScaling,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
+              Text(
+                'Page ${index + 1} added',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
-            ),
+            ],
           ),
-          Positioned(
-            top: 0,
-            right: 0,
-            child: IconButton(
-              tooltip: 'Remove page ${index + 1}',
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.black.withValues(alpha: 0.65),
-                foregroundColor: Colors.white,
-                fixedSize: const Size.square(32),
-                minimumSize: const Size.square(32),
-                padding: EdgeInsets.zero,
-              ),
-              iconSize: 18,
-              onPressed: () => setState(
-                () => _prescriptions = [..._prescriptions]..removeAt(index),
-              ),
-              icon: const Icon(Icons.close_rounded),
-            ),
+        ),
+        IconButton(
+          tooltip: 'Remove page ${index + 1}',
+          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+          onPressed: () => setState(
+            () => _prescriptions = [..._prescriptions]..removeAt(index),
           ),
-        ],
-      ),
+          icon: const Icon(Icons.close_rounded),
+        ),
+      ],
     );
   }
 
@@ -2003,33 +2875,36 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Widget _amountRow({required Widget label, required Widget amount}) {
-    if (MediaQuery.textScalerOf(context).scale(14) <= 18) {
-      return Row(
-        children: [
-          Expanded(child: label),
-          const SizedBox(width: 8),
-          amount,
-        ],
+  Widget _amountRow({required Widget label, required Widget amount}) =>
+      LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth >= 500 ||
+              MediaQuery.textScalerOf(context).scale(14) <= 18) {
+            return Row(
+              children: [
+                Expanded(child: label),
+                const SizedBox(width: 8),
+                amount,
+              ],
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              label,
+              const SizedBox(height: 2),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: amount,
+                ),
+              ),
+            ],
+          );
+        },
       );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        label,
-        const SizedBox(height: 2),
-        Align(
-          alignment: Alignment.centerRight,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerRight,
-            child: amount,
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 /// "A", "A and B", "A, B and C".

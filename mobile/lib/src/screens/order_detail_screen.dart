@@ -677,12 +677,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                           ),
                       ] else
                         Text(
-                          [
-                            order.delivery.streetLine,
-                            order.delivery.city,
-                            '${order.delivery.province} ${order.delivery.postalCode}'
-                                .trim(),
-                          ].where((part) => part.isNotEmpty).join(', '),
+                          order.delivery.fullAddress,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                             fontSize: 13,
@@ -1354,14 +1349,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                 'Recipient: ${order.delivery.recipientName} (${order.delivery.phone})',
               ),
               const SizedBox(height: 4),
-              Text(
-                [
-                  order.delivery.streetLine,
-                  order.delivery.city,
-                  '${order.delivery.province} ${order.delivery.postalCode}'
-                      .trim(),
-                ].where((part) => part.isNotEmpty).join(', '),
-              ),
+              Text(order.delivery.fullAddress),
               const SizedBox(height: 6),
               Text(
                 'Placed: ${dateTime(order.createdAt)}',

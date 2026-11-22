@@ -13,6 +13,39 @@ Map<String, dynamic> _feature(Map<String, dynamic> properties) => {
 };
 
 void main() {
+  test('a point exposes latitude and longitude in the correct order', () {
+    final fields = photonAddressFields({
+      ..._feature({'osm_key': 'place', 'name': 'Makati', 'city': 'Makati'}),
+      'geometry': {
+        'type': 'Point',
+        'coordinates': [121.0244, 14.5547],
+      },
+    });
+    expect(fields['latitude'], 14.5547);
+    expect(fields['longitude'], 121.0244);
+    expect(fields['label'], 'Makati');
+  });
+
+  for (final coordinates in <Object?>[
+    null,
+    [],
+    [121],
+    ['121', 14],
+    [121, 91],
+    [181, 14],
+    [double.nan, 14],
+  ]) {
+    test('invalid coordinates $coordinates cannot become a pin', () {
+      final fields = photonAddressFields({
+        ..._feature({'osm_key': 'building', 'name': 'Sample building'}),
+        'geometry': {'type': 'Point', 'coordinates': coordinates},
+      });
+      expect(fields.containsKey('latitude'), isFalse);
+      expect(fields.containsKey('longitude'), isFalse);
+      expect(fields['label'], 'Sample building');
+    });
+  }
+
   test('a street reads as street and barangay', () {
     expect(
       photonAddressFields(

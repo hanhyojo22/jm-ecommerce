@@ -2,8 +2,8 @@ import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
 
 /// Everyday Pharmacy logo colours: "PHARMACY" navy, "EVERYDAY" sun yellow.
-const _brand = Color(0xFF071C94);
-const _accent = Color(0xFFF8B800);
+const _brand = Color(0xFF000B88);
+const _accent = Color(0xFFF8BF0B);
 
 /// Static weights cut from the variable font: Flutter's fontWeight does not
 /// reliably drive a variable font's weight axis on Android. Chosen for a plain
@@ -45,23 +45,23 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
           primary: _brand,
           onPrimary: Colors.white,
           // The logo's cloud blue.
-          primaryContainer: const Color(0xFFDCEBFA),
-          onPrimaryContainer: const Color(0xFF05105C),
+          primaryContainer: const Color(0xFFE4F2FD),
+          onPrimaryContainer: _brand,
           // Tonal buttons and chips stay in the navy family; yellow is for fills
           // with navy ink and stars only, since yellow text fails on white.
-          secondaryContainer: const Color(0xFFE6EEFB),
-          onSecondaryContainer: const Color(0xFF0B1E73),
+          secondaryContainer: const Color(0xFFE4F2FD),
+          onSecondaryContainer: _brand,
           // Rx and caution notes: the logo's sun, deepened for readable text.
           tertiary: const Color(0xFF9A5B00),
           onTertiary: Colors.white,
           tertiaryContainer: const Color(0xFFFFEDB8),
           onTertiaryContainer: const Color(0xFF4A2C00),
-          surface: const Color(0xFFF3F6FB),
+          surface: const Color(0xFFF4F8FC),
           surfaceContainerLowest: Colors.white,
-          surfaceContainerLow: const Color(0xFFF8FAFD),
-          surfaceContainer: const Color(0xFFEDF1F8),
-          surfaceContainerHigh: const Color(0xFFE7ECF5),
-          surfaceContainerHighest: const Color(0xFFE0E6F1),
+          surfaceContainerLow: Colors.white,
+          surfaceContainer: const Color(0xFFF0F6FC),
+          surfaceContainerHigh: const Color(0xFFEAF3FB),
+          surfaceContainerHighest: const Color(0xFFE4F2FD),
           onSurface: const Color(0xFF111A33),
           onSurfaceVariant: const Color(0xFF525D78),
           outline: const Color(0xFF8790A8),

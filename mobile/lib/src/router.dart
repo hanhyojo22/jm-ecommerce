@@ -6,6 +6,7 @@ import 'screens/addresses_screen.dart';
 import 'screens/cart_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/checkout_screen.dart';
+import 'screens/checkout_success_screen.dart';
 import 'screens/order_detail_screen.dart';
 import 'screens/product_screen.dart';
 import 'screens/profile_screen.dart';
@@ -38,6 +39,14 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/checkout',
       builder: (context, state) => const CheckoutScreen(),
+    ),
+    GoRoute(
+      path: '/checkout/success',
+      redirect: (context, state) =>
+          state.extra is CheckoutSuccessDetails ? null : '/',
+      builder: (context, state) => CheckoutSuccessScreen(
+        details: state.extra! as CheckoutSuccessDetails,
+      ),
     ),
     GoRoute(
       path: '/orders/:id',

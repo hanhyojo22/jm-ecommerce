@@ -1319,6 +1319,7 @@ class _ResultsView extends ConsumerWidget {
           context: context,
           ref: ref,
           gridDelegate: grid.delegate,
+          cardWidth: grid.cardWidth,
           onClearFilters: onClearFilters,
           onBrowseCategory: onBrowseCategory,
           onBackToTop: () => scroll.hasClients ? scroll.jumpTo(0) : null,

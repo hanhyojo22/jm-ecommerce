@@ -422,6 +422,7 @@ class ProductCard extends StatelessWidget {
     this.discovery = false,
     this.showAddToCart = false,
     this.fillHeight = false,
+    this.stackCartControls = false,
   });
 
   final Product product;
@@ -432,13 +433,14 @@ class ProductCard extends StatelessWidget {
   /// Stretch to the row's height with the cart button pinned to the bottom,
   /// so cards side by side line up.
   final bool fillHeight;
+  final bool stackCartControls;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final titleStyle = theme.textTheme.bodyMedium?.copyWith(
-      fontSize: discovery ? 13.5 : null,
-      fontWeight: FontWeight.w600,
+      fontSize: discovery ? 14 : null,
+      fontWeight: discovery ? FontWeight.w700 : FontWeight.w600,
       height: 1.3,
     );
     final discount = discountPercent(
@@ -468,17 +470,18 @@ class ProductCard extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text(money(product.effectivePrice), style: salePriceStyle),
-        ),
-        if (onSale) ...[
-          const SizedBox(height: 1),
+        if (discovery)
+          Text(money(product.effectivePrice), style: salePriceStyle)
+        else
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(
+            child: Text(money(product.effectivePrice), style: salePriceStyle),
+          ),
+        if (onSale) ...[
+          const SizedBox(height: 1),
+          if (discovery)
+            Text(
               money(product.compareAtPrice),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
@@ -487,8 +490,22 @@ class ProductCard extends StatelessWidget {
                 decorationThickness: 1.5,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
+            )
+          else
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                money(product.compareAtPrice),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  decoration: TextDecoration.lineThrough,
+                  decorationColor: theme.colorScheme.onSurfaceVariant,
+                  decorationThickness: 1.5,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
             ),
-          ),
         ],
       ],
     );
@@ -578,39 +595,61 @@ class ProductCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (product.genericNameLabel != null)
+                    if (product.genericNameLabel != null) ...[
                       Text(
                         product.genericNameLabel!.toUpperCase(),
-                        maxLines: 1,
+                        maxLines: discovery ? 2 : 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.4,
+                          fontWeight: discovery
+                              ? FontWeight.w500
+                              : FontWeight.w700,
+                          letterSpacing: discovery ? 0 : 0.4,
+                          height: discovery ? 1.35 : null,
                         ),
                       ),
+                      if (discovery) const SizedBox(height: 3),
+                    ],
                     Text(
                       product.name,
-                      maxLines: 2,
+                      maxLines: discovery ? 3 : 2,
                       overflow: TextOverflow.ellipsis,
                       style: titleStyle,
                     ),
                     if (discovery) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       _StarRating(product: product),
                       if (fillHeight) const Spacer(),
-                      const SizedBox(height: 4),
-                      // Price and a plain cart icon share the last line, like the nav bar's Cart.
-                      Row(
-                        children: [
-                          Expanded(child: price),
-                          if (showAddToCart && product.inStock)
-                            _ProductCartButton(
-                              product: product,
-                              onChooseOptions: onTap,
-                            ),
-                        ],
-                      ),
+                      const SizedBox(height: 8),
+                      if (stackCartControls)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            price,
+                            if (showAddToCart && product.inStock) ...[
+                              const SizedBox(height: 4),
+                              Align(
+                                alignment: AlignmentDirectional.centerEnd,
+                                child: _ProductCartButton(
+                                  product: product,
+                                  onChooseOptions: onTap,
+                                ),
+                              ),
+                            ],
+                          ],
+                        )
+                      else
+                        Row(
+                          children: [
+                            Expanded(child: price),
+                            if (showAddToCart && product.inStock)
+                              _ProductCartButton(
+                                product: product,
+                                onChooseOptions: onTap,
+                              ),
+                          ],
+                        ),
                     ] else ...[
                       const SizedBox(height: 12),
                       price,
@@ -655,46 +694,48 @@ class _StarRating extends StatelessWidget {
           ? 'Rated ${average.toStringAsFixed(1)} out of 5, ${product.ratingCount} reviews'
           : 'No reviews yet',
       excludeSemantics: true,
-      child: Row(
+      child: Wrap(
+        spacing: 4,
+        runSpacing: 3,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          for (var star = 1; star <= 5; star++)
-            Icon(
-              !rated
-                  ? Icons.star_outline_rounded
-                  : average >= star
-                  ? Icons.star_rounded
-                  : average >= star - 0.5
-                  ? Icons.star_half_rounded
-                  : Icons.star_rounded,
-              size: 14,
-              color: rated && average >= star - 0.5
-                  ? scheme.secondary
-                  : scheme.outline.withValues(alpha: rated ? 0.45 : 0.8),
-            ),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text.rich(
-              rated
-                  ? TextSpan(
-                      children: [
-                        TextSpan(
-                          text: average.toStringAsFixed(1),
-                          style: TextStyle(
-                            color: scheme.onSurface,
-                            fontWeight: FontWeight.w800,
-                          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var star = 1; star <= 5; star++)
+                Icon(
+                  !rated
+                      ? Icons.star_outline_rounded
+                      : average >= star
+                      ? Icons.star_rounded
+                      : average >= star - 0.5
+                      ? Icons.star_half_rounded
+                      : Icons.star_rounded,
+                  size: 14,
+                  color: rated && average >= star - 0.5
+                      ? scheme.secondary
+                      : scheme.outline.withValues(alpha: rated ? 0.45 : 0.8),
+                ),
+            ],
+          ),
+          Text.rich(
+            rated
+                ? TextSpan(
+                    children: [
+                      TextSpan(
+                        text: average.toStringAsFixed(1),
+                        style: TextStyle(
+                          color: scheme.onSurface,
+                          fontWeight: FontWeight.w800,
                         ),
-                        TextSpan(text: ' (${product.ratingCount})'),
-                      ],
-                    )
-                  // Short enough for a 160 dp card at large text; TalkBack hears "No reviews yet".
-                  : const TextSpan(text: 'No reviews'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+                      ),
+                      TextSpan(text: ' (${product.ratingCount})'),
+                    ],
+                  )
+                : const TextSpan(text: 'No reviews'),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
         ],
