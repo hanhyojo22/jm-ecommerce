@@ -538,7 +538,10 @@ class _TopDeals extends StatelessWidget {
                           discovery: true,
                           showAddToCart: true,
                           fillHeight: true,
-                          stackCartControls: true,
+                          stackCartControls: ProductCard.stacksCartAt(
+                            context,
+                            160,
+                          ),
                           onTap: () => context.push(
                             '/product/${deal.product.store?.slug ?? ''}/${deal.product.slug}',
                           ),
@@ -617,9 +620,10 @@ class _ProductRail extends StatelessWidget {
                               showAddToCart: true,
                               fillHeight: true,
                               // Same rule as the Popular products grid: cart beside the price.
-                              stackCartControls:
-                                  _railCardWidth <
-                                  MediaQuery.textScalerOf(context).scale(180),
+                              stackCartControls: ProductCard.stacksCartAt(
+                                context,
+                                _railCardWidth,
+                              ),
                               onTap: () => context.push(
                                 '/product/${product.store?.slug ?? ''}/${product.slug}',
                               ),

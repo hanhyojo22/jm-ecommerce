@@ -357,9 +357,10 @@ class ProductFeedSlivers {
                               discovery: true,
                               showAddToCart: true,
                               fillHeight: true,
-                              stackCartControls:
-                                  cardWidth <
-                                  MediaQuery.textScalerOf(context).scale(180),
+                              stackCartControls: ProductCard.stacksCartAt(
+                                context,
+                                cardWidth,
+                              ),
                               onTap: () => context.push(
                                 '/product/${rowProducts[column].store?.slug ?? ''}/${rowProducts[column].slug}',
                               ),

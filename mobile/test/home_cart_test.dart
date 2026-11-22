@@ -438,7 +438,7 @@ Future<void> _pumpCard(
           child: ProductCard(
             discovery: true,
             showAddToCart: true,
-            stackCartControls: width < 180 * textScale,
+            stackCartControls: width < 150 * textScale,
             onTap: onTap ?? () {},
             product: Product.fromJson({
               'id': 'shirt',

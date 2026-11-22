@@ -435,6 +435,11 @@ class ProductCard extends StatelessWidget {
   final bool fillHeight;
   final bool stackCartControls;
 
+  /// Whether a card [width] wide drops the cart button under the price. A two-column
+  /// phone grid (about 166 wide on a 375 screen) keeps it beside the price.
+  static bool stacksCartAt(BuildContext context, double width) =>
+      width < MediaQuery.textScalerOf(context).scale(150);
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -470,14 +475,12 @@ class ProductCard extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (discovery)
-          Text(money(product.effectivePrice), style: salePriceStyle)
-        else
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(money(product.effectivePrice), style: salePriceStyle),
-          ),
+        // A long price shrinks beside the cart button instead of wrapping.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(money(product.effectivePrice), style: salePriceStyle),
+        ),
         if (onSale) ...[
           const SizedBox(height: 1),
           if (discovery)

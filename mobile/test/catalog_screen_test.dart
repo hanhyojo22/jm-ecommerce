@@ -568,6 +568,33 @@ void main() {
     );
   });
 
+  testWidgets('a 375-wide phone keeps the cart button beside the price', (
+    tester,
+  ) async {
+    await _pumpCatalog(tester, _CatalogApi(), width: 375);
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
+    await tester.pumpAndSettle();
+
+    final cards = find.byType(ProductCard);
+    expect(cards, findsWidgets);
+    for (var index = 0; index < cards.evaluate().length; index++) {
+      final card = cards.at(index);
+      final cart = find.descendant(
+        of: card,
+        matching: find.byTooltip('Add to cart'),
+      );
+      final price = find.descendant(
+        of: card,
+        matching: find.textContaining('₱'),
+      );
+      expect(
+        (tester.getCenter(cart).dy - tester.getCenter(price.first).dy).abs(),
+        lessThan(12),
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('an empty marketplace offers refresh and recovers', (
     tester,
   ) async {
