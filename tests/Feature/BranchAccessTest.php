@@ -132,6 +132,22 @@ class BranchAccessTest extends TestCase
         $this->actingAs($staff)->get(route('seller.dashboard'))->assertRedirect(route('home'));
     }
 
+    public function test_branch_directory_shows_today_map_attention_and_suspension(): void
+    {
+        [$tenant, $makati, $cebu] = $this->pharmacy();
+        $headOffice = $this->member($tenant, 'owner');
+        $this->travelTo(now('Asia/Manila')->setTime(21, 30));
+        $makati->update(['opening_time' => '08:00', 'closing_time' => '21:00', 'latitude' => 14.55, 'longitude' => 121.02, 'delivery_radius_km' => 8]);
+        $cebu->update(['status' => 'suspended']);
+
+        $this->actingAs($headOffice)->get(route('seller.branches.index'))
+            ->assertOk()
+            ->assertSeeInOrder(['Botika Plus Makati', 'Closed now', 'Opens tomorrow, 8:00 AM', 'Pinned · 8 km', 'Close branch'])
+            ->assertSee('<strong>Botika Plus Cebu</strong> <span>has no map pin', false)
+            ->assertSeeInOrder(['Botika Plus Cebu', 'Suspended by the platform', 'No map pin yet', 'Only the platform can lift a suspension'])
+            ->assertDontSee('Open branch');
+    }
+
     public function test_head_office_adds_a_branch_that_starts_closed(): void
     {
         [$tenant] = $this->pharmacy();
