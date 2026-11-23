@@ -13,6 +13,9 @@ class DeliveryPinMap extends StatelessWidget {
     required this.onTap,
     this.branch,
     this.height = 124,
+    this.showAdjustButton = true,
+    this.borderRadius,
+    this.pinColor,
   });
 
   final LatLng pin;
@@ -22,12 +25,22 @@ class DeliveryPinMap extends StatelessWidget {
   final LatLng? branch;
   final double height;
 
+  /// Whether to overlay the floating "Adjust pin" pill on the map.
+  final bool showAdjustButton;
+
+  /// Custom clip radius; defaults to [appSurfaceRadius].
+  final BorderRadius? borderRadius;
+
+  /// Custom pin tint; defaults to the theme primary colour.
+  final Color? pinColor;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final pinSize = height < 96 ? 30.0 : 40.0;
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(appSurfaceRadius),
+      borderRadius: borderRadius ?? BorderRadius.circular(appSurfaceRadius),
       child: SizedBox(
         height: height,
         child: Stack(
@@ -71,11 +84,11 @@ class DeliveryPinMap extends StatelessWidget {
               child: Center(
                 child: Padding(
                   // Lifts the pin so its tip, not its middle, marks the spot.
-                  padding: const EdgeInsets.only(bottom: 40),
+                  padding: EdgeInsets.only(bottom: pinSize),
                   child: Icon(
                     Icons.location_on_rounded,
-                    size: 40,
-                    color: scheme.primary,
+                    size: pinSize,
+                    color: pinColor ?? scheme.primary,
                     semanticLabel: 'Delivery pin',
                   ),
                 ),
@@ -105,23 +118,24 @@ class DeliveryPinMap extends StatelessWidget {
                 ),
               ),
             ),
-            Positioned(
-              right: 8,
-              bottom: 8,
-              child: FilledButton.tonalIcon(
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, 40),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  backgroundColor: scheme.surfaceContainerLowest,
-                  foregroundColor: scheme.primary,
-                  elevation: 2,
-                  shape: const StadiumBorder(),
+            if (showAdjustButton)
+              Positioned(
+                right: 8,
+                bottom: 8,
+                child: FilledButton.tonalIcon(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    backgroundColor: scheme.surfaceContainerLowest,
+                    foregroundColor: scheme.primary,
+                    elevation: 2,
+                    shape: const StadiumBorder(),
+                  ),
+                  onPressed: onTap,
+                  icon: const Icon(Icons.edit_location_alt_outlined, size: 18),
+                  label: const Text('Adjust pin'),
                 ),
-                onPressed: onTap,
-                icon: const Icon(Icons.edit_location_alt_outlined, size: 18),
-                label: const Text('Adjust pin'),
               ),
-            ),
           ],
         ),
       ),

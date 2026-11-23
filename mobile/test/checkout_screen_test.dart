@@ -36,16 +36,115 @@ void main() {
   testWidgets('checkout shows the complete order on one page', (tester) async {
     final api = _CheckoutApi(rx: true, online: true, seniorPwd: '20.00');
     await _pump(tester, api, locator: locator);
-    expect(find.text('Order summary'), findsWidgets);
+    expect(find.text('Checkout'), findsOneWidget);
+    expect(find.text('Order summary'), findsNothing);
     expect(find.text('Deliver to'), findsOneWidget);
     expect(find.text('Items'), findsOneWidget);
-    expect(find.text('Amoxicillin 500mg'), findsOneWidget);
+    expect(find.textContaining('Amoxicillin 500mg'), findsOneWidget);
+    expect(find.text('Rx'), findsOneWidget);
+    expect(find.text('Pharmacy & discounts'), findsOneWidget);
     expect(find.text('Prescription'), findsOneWidget);
     expect(find.text('Senior citizen / PWD'), findsOneWidget);
     expect(find.text('Payment method'), findsOneWidget);
+    expect(find.text('Price breakdown'), findsOneWidget);
     expect(find.text('Place order'), findsOneWidget);
     expect(find.textContaining('Continue to'), findsNothing);
     expect(api.orderAttempts, 0);
+  });
+
+  testWidgets('items card collapses after 3 lines and expands on tap', (
+    tester,
+  ) async {
+    final api = _CheckoutApi(rx: false, itemCount: 5);
+    await _pump(tester, api, locator: locator);
+    expect(find.text('Amoxicillin 500mg'), findsOneWidget);
+    expect(find.text('Medicine 4'), findsNothing);
+    expect(find.text('Show 2 more items'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Show 2 more items'));
+    await tester.tap(find.text('Show 2 more items'));
+    await tester.pumpAndSettle();
+    expect(find.text('Medicine 4'), findsOneWidget);
+    expect(find.text('Medicine 5'), findsOneWidget);
+    expect(find.text('Show fewer items'), findsOneWidget);
+
+    await tester.tap(find.text('Show fewer items'));
+    await tester.pumpAndSettle();
+    expect(find.text('Medicine 4'), findsNothing);
+  });
+
+  testWidgets(
+    'pure OTC cart hides Pharmacy & discounts card and readiness strip',
+    (tester) async {
+      await _pump(tester, _CheckoutApi(rx: false), locator: locator);
+      expect(find.text('Pharmacy & discounts'), findsNothing);
+      expect(find.textContaining('step left:'), findsNothing);
+      expect(find.textContaining('steps left:'), findsNothing);
+    },
+  );
+
+  testWidgets('readiness strip opens Rx sheet and clears once attached', (
+    tester,
+  ) async {
+    final api = _CheckoutApi(rx: true);
+    await _pump(tester, api, locator: locator);
+    expect(
+      find.text('1 step left: Add prescription photo'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('1 step left: Add prescription photo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Take photos'), findsOneWidget);
+
+    await tester.tap(find.text('Take photos'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Take a photo'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 step left: Add prescription photo'), findsNothing);
+    expect(find.text('Ready'), findsOneWidget);
+  });
+
+  testWidgets('SC/PWD switch applies saved ID with photo in one tap', (
+    tester,
+  ) async {
+    final api = _CheckoutApi(
+      rx: false,
+      seniorPwd: '20.00',
+      cards: const [
+        {
+          'id': 'card-1',
+          'type': 'senior',
+          'name': 'Lola Cruz',
+          'id_number_masked': '••••4821',
+          'has_document': true,
+        },
+      ],
+    );
+    await _pump(tester, api, locator: locator);
+    expect(find.text('₱149.00'), findsWidgets);
+
+    await tester.ensureVisible(find.byType(Switch));
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Discount ID selected'), findsOneWidget);
+    expect(find.text('Saved ₱20.00'), findsOneWidget);
+    expect(find.text('₱129.00'), findsWidgets);
+  });
+
+  testWidgets('dark theme checkout renders without exceptions', (tester) async {
+    await _pump(
+      tester,
+      _CheckoutApi(rx: true, online: true, seniorPwd: '20.00'),
+      locator: locator,
+      brightness: Brightness.dark,
+    );
+    expect(find.text('Checkout'), findsOneWidget);
+    expect(find.text('Place order'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('checkout counts units and lets the buyer edit the cart', (
@@ -547,6 +646,7 @@ class _CheckoutApi extends ApiClient {
     this.hasSavedAddresses = true,
     this.preferredAddress,
     this.quantity = 1,
+    this.itemCount = 1,
   }) : super(baseUrl: 'http://localhost', tokenProvider: () async => null);
 
   final bool rx;
@@ -559,6 +659,7 @@ class _CheckoutApi extends ApiClient {
   final bool hasSavedAddresses;
   final Address? preferredAddress;
   final int quantity;
+  final int itemCount;
   Address? placedAddress;
   int orderAttempts = 0;
   Completer<PlacedOrder>? pendingOrder;
@@ -576,23 +677,26 @@ class _CheckoutApi extends ApiClient {
         )
       : CheckoutQuote.fromJson({
           'items': [
-            {
-              'id': 'line-1',
-              'product_id': 'amox',
-              'quantity': quantity,
-              'selected': true,
-              'available': true,
-              'unit_price': '100.00',
-              'line_total': '${quantity * 100}.00',
-              'product': {
-                'name': 'Amoxicillin 500mg',
-                'slug': 'amoxicillin',
-                'requires_prescription': rx,
-                'store': {'name': 'Makati branch', 'slug': 'makati'},
+            for (var index = 0; index < itemCount; index++)
+              {
+                'id': 'line-${index + 1}',
+                'product_id': index == 0 ? 'amox' : 'med-${index + 1}',
+                'quantity': quantity,
+                'selected': true,
+                'available': true,
+                'unit_price': '100.00',
+                'line_total': '${quantity * 100}.00',
+                'product': {
+                  'name': index == 0
+                      ? 'Amoxicillin 500mg'
+                      : 'Medicine ${index + 1}',
+                  'slug': index == 0 ? 'amoxicillin' : 'medicine-${index + 1}',
+                  'requires_prescription': rx && index == 0,
+                  'store': {'name': 'Makati branch', 'slug': 'makati'},
+                },
               },
-            },
           ],
-          'subtotal': '${quantity * 100}.00',
+          'subtotal': '${quantity * itemCount * 100}.00',
           'senior_pwd_discount': seniorPwd,
           'discount_cards': cards,
           'branch': {
