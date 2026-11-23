@@ -43,10 +43,7 @@ services:
       - key: APP_DEBUG
         value: "false"
       - key: APP_URL
-        fromService:
-          name: jmmart-marketplace
-          type: web
-          envVarKey: RENDER_EXTERNAL_URL
+        value: https://edp.jmsolutionitservices.com
       - key: APP_KEY
         sync: false
       - key: DB_CONNECTION
@@ -77,7 +74,7 @@ services:
       - key: REVERB_SCHEME
         value: https
       - key: REVERB_ALLOWED_ORIGINS
-        value: jmmart-marketplace.onrender.com
+        value: edp.jmsolutionitservices.com,jmmart-marketplace.onrender.com
       - key: FILESYSTEM_DISK
         value: public
       - key: NEON_PRODUCT_IMAGES_BUCKET
@@ -96,11 +93,9 @@ services:
         sync: false
       - key: CLERK_SECRET_KEY
         sync: false
+      # The onrender.com address keeps working for old links and bookmarks.
       - key: CLERK_AUTHORIZED_PARTIES
-        fromService:
-          name: jmmart-marketplace
-          type: web
-          envVarKey: RENDER_EXTERNAL_URL
+        value: https://edp.jmsolutionitservices.com,https://jmmart-marketplace.onrender.com
       - key: LOG_CHANNEL
         value: stderr
       - key: LOG_LEVEL
@@ -151,10 +146,7 @@ services:
           type: web
           envVarKey: APP_KEY
       - key: APP_URL
-        fromService:
-          name: jmmart-marketplace
-          type: web
-          envVarKey: RENDER_EXTERNAL_URL
+        value: https://edp.jmsolutionitservices.com
       - key: RUN_MIGRATIONS
         value: "false"
       - key: RUN_OPTIMIZATIONS
@@ -229,10 +221,7 @@ services:
           type: web
           envVarKey: APP_KEY
       - key: APP_URL
-        fromService:
-          name: jmmart-marketplace
-          type: web
-          envVarKey: RENDER_EXTERNAL_URL
+        value: https://edp.jmsolutionitservices.com
       - key: RUN_MIGRATIONS
         value: "false"
       - key: RUN_OPTIMIZATIONS
@@ -252,7 +241,7 @@ services:
       - key: REVERB_SERVER_PORT
         value: "10000"
       - key: REVERB_ALLOWED_ORIGINS
-        value: jmmart-marketplace.onrender.com
+        value: edp.jmsolutionitservices.com,jmmart-marketplace.onrender.com
       - fromGroup: jmmart-reverb-credentials
       - key: LOG_CHANNEL
         value: stderr
@@ -278,10 +267,7 @@ services:
       - key: APP_DEBUG
         value: "false"
       - key: APP_URL
-        fromService:
-          name: jmmart-marketplace
-          type: web
-          envVarKey: RENDER_EXTERNAL_URL
+        value: https://edp.jmsolutionitservices.com
       - key: APP_KEY
         fromService:
           name: jmmart-marketplace
