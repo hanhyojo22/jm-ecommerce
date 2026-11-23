@@ -240,27 +240,34 @@ void main() {
     );
     expect(
       PushNotifications.announcementDestination(
-        'https://jmmart-marketplace.onrender.com/products',
+        'https://edp.jmsolutionitservices.com/products',
       ),
-      'https://jmmart-marketplace.onrender.com/products',
+      'https://edp.jmsolutionitservices.com/products',
     );
     expect(
       PushNotifications.announcementDestination(
-        'https://jmmart-marketplace.onrender.com/stores/northwind',
+        'https://edp.jmsolutionitservices.com/stores/northwind',
       ),
       '/store/northwind',
     );
     expect(
       PushNotifications.announcementDestination(
-        'https://jmmart-marketplace.onrender.com/stores/northwind/products/tote',
+        'https://edp.jmsolutionitservices.com/stores/northwind/products/tote',
       ),
       '/product/northwind/tote',
     );
     expect(
       PushNotifications.announcementDestination(
-        'https://jmmart-marketplace.onrender.com/cart',
+        'https://edp.jmsolutionitservices.com/cart',
       ),
       '/cart',
+    );
+    // Links sent before the move still open their screen.
+    expect(
+      PushNotifications.announcementDestination(
+        'https://jmmart-marketplace.onrender.com/stores/northwind',
+      ),
+      '/store/northwind',
     );
     expect(
       PushNotifications.routeFor({'type': 'return_case', 'order_id': 'o1'}),

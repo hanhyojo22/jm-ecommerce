@@ -31,7 +31,7 @@ Put the login config in `mobile/.env` (gitignored):
 
 ```
 CLERK_PUBLISHABLE_KEY=pk_test_...
-API_BASE_URL=https://jmmart-marketplace.onrender.com/api/v1
+API_BASE_URL=https://edp.jmsolutionitservices.com/api/v1
 GOOGLE_WEB_CLIENT_ID=....apps.googleusercontent.com
 ```
 

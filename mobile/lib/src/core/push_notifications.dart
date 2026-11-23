@@ -203,7 +203,7 @@ class PushNotifications {
     final api = Uri.parse(AppConfig.apiBaseUrl);
     if (uri == null ||
         uri.scheme != 'https' ||
-        uri.host != api.host ||
+        (uri.host != api.host && uri.host != AppConfig.legacySiteHost) ||
         uri.userInfo.isNotEmpty) {
       return '/';
     }

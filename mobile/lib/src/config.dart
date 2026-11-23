@@ -1,12 +1,16 @@
 class AppConfig {
   const AppConfig._();
 
-  /// Use Render by default so the app does not depend on a running local PC.
+  /// Use production by default so the app does not depend on a running local PC.
   /// Local development can override these values with --dart-define.
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://jmmart-marketplace.onrender.com/api/v1',
+    defaultValue: 'https://edp.jmsolutionitservices.com/api/v1',
   );
+
+  /// Production's previous address. It still serves the same site, and links
+  /// sent before the move (or from apps not yet updated) use it.
+  static const String legacySiteHost = 'jmmart-marketplace.onrender.com';
 
   static const String clerkPublishableKey = String.fromEnvironment(
     'CLERK_PUBLISHABLE_KEY',
@@ -51,7 +55,7 @@ class AppConfig {
   /// server allows this value. Keep it in sync with REVERB_ALLOWED_ORIGINS.
   static const String reverbOrigin = String.fromEnvironment(
     'REVERB_ORIGIN',
-    defaultValue: 'https://jmmart-marketplace.onrender.com',
+    defaultValue: 'https://edp.jmsolutionitservices.com',
   );
 
   static bool get hasClerk => clerkPublishableKey.isNotEmpty;
