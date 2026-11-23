@@ -13,7 +13,7 @@
     },
     "devDependencies": {
         "@axe-core/playwright": "^4.13.0",
-        "@clerk/clerk-js": "^6.38.1",
+        "@clerk/clerk-js": "^6.46.3",
         "@playwright/test": "^1.64.0",
         "@tailwindcss/forms": "^0.5.2",
         "alpinejs": "^3.4.2",
