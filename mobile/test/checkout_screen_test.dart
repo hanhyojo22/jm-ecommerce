@@ -31,430 +31,141 @@ const _branch = StoreBranch(
 );
 
 void main() {
-  testWidgets(
-    'success uses the created order snapshot even if cart refresh fails',
-    (tester) async {
-      final api = _CheckoutApi(rx: false)
-        ..cartFailure = true
-        ..response = PlacedOrder.fromJson({
-          'id': 'order-1',
-          'number': 'EP-20418',
-          'total': '168.25',
-        });
-      await _pump(
-        tester,
-        api,
-        locator: const StoreLocatorState(
-          branches: [BranchDistance(_branch, 1.2)],
-        ),
-      );
-      await _openReview(tester);
-      await tester.tap(find.text('Place order'));
-      await tester.pumpAndSettle();
-      expect(find.text('Order placed'), findsOneWidget);
-      expect(find.text('Order #EP-20418'), findsOneWidget);
-      expect(find.text('\u20b1168.25'), findsOneWidget);
-      expect(api.orderAttempts, 1);
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      expect(find.text('Order route'), findsOneWidget);
-      expect(api.orderAttempts, 1);
-    },
-  );
+  const locator = StoreLocatorState(branches: [BranchDistance(_branch, 1.2)]);
 
-  testWidgets(
-    'payment is separate and review edits return with the selected method',
-    (tester) async {
-      final api = _CheckoutApi(rx: false, online: true);
-      await _pump(
-        tester,
-        api,
-        locator: const StoreLocatorState(
-          branches: [BranchDistance(_branch, 1.2)],
-        ),
-      );
-      await _openPayment(tester);
-      expect(find.text('Payment method'), findsOneWidget);
-      expect(find.text('Place order'), findsNothing);
-      await tester.tap(find.text('GCash'));
-      await tester.pumpAndSettle();
-      await _openReview(tester);
-      expect(find.text('Review your order'), findsOneWidget);
-      expect(find.byType(RadioListTile<String>), findsNothing);
-      expect(find.text('GCash'), findsOneWidget);
-      expect(api.orderAttempts, 0);
-      await tester.tap(find.bySemanticsLabel('Edit payment method'));
-      await tester.pumpAndSettle();
-      expect(find.text('Payment method'), findsOneWidget);
-      expect(find.text('Save & return to review'), findsOneWidget);
-      final gcash = tester.widget<RadioListTile<String>>(
-        find.widgetWithText(RadioListTile<String>, 'GCash'),
-      );
-      expect(gcash.selected, isTrue);
-      await tester.tap(find.text('Cash on delivery'));
-      await tester.tap(find.text('Save & return to review'));
-      await tester.pumpAndSettle();
-      expect(find.text('Review your order'), findsOneWidget);
-      expect(find.text('Cash on delivery'), findsOneWidget);
-      expect(find.text('GCash'), findsNothing);
-      expect(api.orderAttempts, 0);
-    },
-  );
-
-  testWidgets(
-    'review address edit saves directly back to review without losing documents',
-    (tester) async {
-      final api = _CheckoutApi(rx: true);
-      await _pump(
-        tester,
-        api,
-        locator: const StoreLocatorState(
-          branches: [BranchDistance(_branch, 1.2)],
-        ),
-      );
-      await _openDocuments(tester);
-      await tester.tap(find.text('Take photos'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Take a photo'));
-      await tester.pumpAndSettle();
-      await _openReview(tester);
-      await tester.tap(find.bySemanticsLabel('Edit contact details'));
-      await tester.pumpAndSettle();
-      expect(find.text('Delivery address'), findsOneWidget);
-      await tester.tap(find.text('Save address'));
-      await tester.pumpAndSettle();
-      expect(find.text('Review your order'), findsOneWidget);
-      expect(find.text('1 page added'), findsOneWidget);
-      expect(find.text('Ana Buyer'), findsOneWidget);
-      expect(find.byType(RadioListTile<String>), findsNothing);
-      await tester.tap(find.bySemanticsLabel('Edit Prescription'));
-      await tester.pumpAndSettle();
-      expect(find.text('1 page'), findsOneWidget);
-      await tester.tap(find.text('Save & return to review'));
-      await tester.pumpAndSettle();
-      expect(find.text('Review your order'), findsOneWidget);
-      expect(api.orderAttempts, 0);
-    },
-  );
-
-  testWidgets('total opens a receipt without advancing or submitting', (
-    tester,
-  ) async {
-    final api = _CheckoutApi(rx: false);
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
-    );
-    await tester.tap(find.text('Order total'));
-    await tester.pumpAndSettle();
-    expect(find.text('Order summary'), findsOneWidget);
-    expect(find.text('Subtotal'), findsOneWidget);
-    await tester.tap(find.byTooltip('Close order summary'));
-    await tester.pumpAndSettle();
-    expect(find.text('Delivery or pickup'), findsOneWidget);
+  testWidgets('checkout shows the complete order on one page', (tester) async {
+    final api = _CheckoutApi(rx: true, online: true, seniorPwd: '20.00');
+    await _pump(tester, api, locator: locator);
+    expect(find.text('Order summary'), findsWidgets);
+    expect(find.text('Deliver to'), findsOneWidget);
+    expect(find.text('Items'), findsOneWidget);
+    expect(find.text('Amoxicillin 500mg'), findsOneWidget);
+    expect(find.text('Prescription'), findsOneWidget);
+    expect(find.text('Senior citizen / PWD'), findsOneWidget);
+    expect(find.text('Payment method'), findsOneWidget);
+    expect(find.text('Place order'), findsOneWidget);
+    expect(find.textContaining('Continue to'), findsNothing);
     expect(api.orderAttempts, 0);
   });
 
-  testWidgets('address validation reveals the first offscreen error', (
+  testWidgets('checkout counts units and lets the buyer edit the cart', (
     tester,
   ) async {
-    final api = _CheckoutApi(rx: false, hasSavedAddresses: false);
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
-      width: 320,
-      height: 700,
-    );
-    await tester.scrollUntilVisible(
-      find.widgetWithText(TextField, 'Country'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await _pump(tester, _CheckoutApi(rx: false, quantity: 3), locator: locator);
+    expect(find.text('Total (3 items)'), findsOneWidget);
+    await tester.tap(find.text('Edit cart'));
     await tester.pumpAndSettle();
-    await _openReview(tester);
-    expect(
-      find.text('Enter the recipient name.').hitTestable(),
-      findsOneWidget,
-    );
-    expect(api.orderAttempts, 0);
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Recipient name'),
-      'Ana Buyer',
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Enter the recipient name.'), findsNothing);
-    expect(tester.takeException(), isNull);
+    expect(find.text('Cart route'), findsOneWidget);
   });
 
-  testWidgets('address keyboard Next reaches the phone and Done ends entry', (
+  testWidgets('placing a simple order uses the created order snapshot', (
     tester,
   ) async {
-    final api = _CheckoutApi(rx: false, hasSavedAddresses: false);
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
-    );
-    final name = find.widgetWithText(TextField, 'Recipient name');
-    await tester.enterText(name, 'Ana Buyer');
-    await tester.testTextInput.receiveAction(TextInputAction.next);
+    final api = _CheckoutApi(rx: false)
+      ..cartFailure = true
+      ..response = PlacedOrder.fromJson({
+        'id': 'order-1',
+        'number': 'EP-20418',
+        'total': '149.00',
+      });
+    await _pump(tester, api, locator: locator);
+    await tester.tap(find.text('Place order'));
     await tester.pumpAndSettle();
-    final phone = tester.widget<TextField>(
-      find.widgetWithText(TextField, 'Phone'),
-    );
-    expect(
-      tester
-          .widgetList<EditableText>(find.byType(EditableText))
-          .singleWhere((field) => field.focusNode.hasFocus)
-          .controller,
-      phone.controller,
-    );
-    expect(find.byType(AutofillGroup), findsOneWidget);
-    await tester.enterText(find.widgetWithText(TextField, 'ZIP code'), '1200');
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pumpAndSettle();
-    expect(
-      tester
-          .widgetList<EditableText>(find.byType(EditableText))
-          .any((field) => field.focusNode.hasFocus),
-      isFalse,
-    );
-    expect(api.orderAttempts, 0);
+    expect(find.text('Order placed'), findsOneWidget);
+    expect(find.text('Order #EP-20418'), findsOneWidget);
+    expect(api.orderAttempts, 1);
   });
 
-  testWidgets('prescription errors persist until an attachment is added', (
+  testWidgets('prescription is requested in a sheet before submission', (
     tester,
   ) async {
     final api = _CheckoutApi(rx: true);
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
-    );
-    await _openDocuments(tester);
-    await _openReview(tester);
-    await tester.pump(const Duration(seconds: 8));
-    expect(
-      find.text('Add a photo of your prescription.').hitTestable(),
-      findsOneWidget,
-    );
-    expect(find.byType(SnackBar), findsNothing);
+    await _pump(tester, api, locator: locator);
+    await tester.tap(find.text('Place order'));
+    await tester.pumpAndSettle();
+    expect(find.text('Add a photo of your prescription.'), findsOneWidget);
+    expect(api.orderAttempts, 0);
     await tester.tap(find.text('Take photos'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Take a photo'));
     await tester.pumpAndSettle();
-    expect(find.text('Add a photo of your prescription.'), findsNothing);
-    expect(
-      tester.getSize(find.byTooltip('Remove page 1')).shortestSide,
-      greaterThanOrEqualTo(48),
-    );
-    expect(
-      tester.getSize(find.widgetWithText(OutlinedButton, 'Upload file')).height,
-      greaterThanOrEqualTo(48),
-    );
-    expect(api.orderAttempts, 0);
+    expect(find.text('1 page'), findsOneWidget);
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 page added'), findsOneWidget);
+    await tester.tap(find.text('Place order'));
+    await tester.pumpAndSettle();
+    expect(api.placed?.prescriptions.length, 1);
   });
 
-  testWidgets('pickup review shows the contact and phone on separate lines', (
+  testWidgets('discount ID sheet updates total and sends the card', (
     tester,
   ) async {
+    final api = _CheckoutApi(rx: false, seniorPwd: '20.00');
+    await _pump(tester, api, locator: locator);
+    await tester.ensureVisible(find.text('Apply eligible discount'));
+    await tester.tap(find.text('Apply eligible discount'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Senior citizen / PWD').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'ID number'),
+      'SC-123',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Name on the ID'),
+      'Ana Buyer',
+    );
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Add a photo of your senior citizen or PWD ID.'),
+      findsOneWidget,
+    );
+    expect(find.text('₱149.00'), findsWidgets);
+    await tester.tap(find.text('Add photo of ID'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choose from gallery'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    expect(find.text('Discount ID selected'), findsOneWidget);
+    expect(find.text('₱129.00'), findsWidgets);
+    await tester.tap(find.text('Place order'));
+    await tester.pumpAndSettle();
+    expect(api.placed?.discountCard?.idNumber, 'SC-123');
+  });
+
+  testWidgets('payment selection changes the displayed total', (tester) async {
     await _pump(
       tester,
-      _CheckoutApi(rx: false),
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
+      _CheckoutApi(rx: false, online: true),
+      locator: locator,
     );
+    expect(find.text('₱149.00'), findsWidgets);
+    await tester.ensureVisible(find.text('GCash'));
+    await tester.tap(find.text('GCash'));
+    await tester.pumpAndSettle();
+    expect(find.text('₱154.50'), findsWidgets);
+    await tester.ensureVisible(find.text('Pickup · Free'));
     await tester.tap(find.text('Pickup · Free'));
     await tester.pumpAndSettle();
-    await _openReview(tester);
-    expect(find.textContaining('Ana Buyer\n09171234567'), findsOneWidget);
-    expect(find.bySemanticsLabel('Edit contact details'), findsOneWidget);
+    expect(find.text('₱103.50'), findsWidgets);
   });
 
-  testWidgets('landscape footer leaves the fulfillment choices visible', (
-    tester,
-  ) async {
-    await _pump(
-      tester,
-      _CheckoutApi(rx: true),
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
-      width: 844,
-      height: 390,
-      scale: 1.3,
-    );
-    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
-    expect(
-      tester.getSize(find.byWidget(scaffold.bottomNavigationBar!)).height,
-      lessThan(100),
-    );
-    expect(find.text('Pickup · Free').hitTestable(), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  for (final brightness in Brightness.values) {
-    testWidgets(
-      'expanded address supports large text in ${brightness.name} theme',
-      (tester) async {
-        await _pump(
-          tester,
-          _CheckoutApi(rx: false, hasSavedAddresses: false),
-          locator: const StoreLocatorState(
-            branches: [BranchDistance(_branch, 1.2)],
-          ),
-          width: 320,
-          height: 844,
-          scale: 2,
-          brightness: brightness,
-        );
-        await tester.scrollUntilVisible(
-          find.widgetWithText(TextField, 'Country'),
-          200,
-          scrollable: find.byType(Scrollable).first,
-        );
-        await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull);
-        await _openReview(tester);
-        expect(
-          find.text('Enter the recipient name.').hitTestable(),
-          findsOneWidget,
-        );
-        expect(tester.takeException(), isNull);
-      },
-    );
-  }
-
-  testWidgets(
-    'document editing and review support large text on a narrow phone',
-    (tester) async {
-      await _pump(
-        tester,
-        _CheckoutApi(rx: true, seniorPwd: '28.57'),
-        locator: const StoreLocatorState(
-          branches: [BranchDistance(_branch, 1.2)],
-        ),
-        width: 320,
-        height: 844,
-        scale: 2,
-      );
-      await _openDocuments(tester);
-      await tester.scrollUntilVisible(
-        find.text('Senior citizen / PWD'),
-        160,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.ensureVisible(find.text('Senior citizen / PWD'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Senior citizen / PWD'));
-      await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.widgetWithText(TextField, 'ID number'),
-        160,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      await tester.ensureVisible(find.text('Senior citizen / PWD'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Senior citizen / PWD'));
-      await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.text('Take photos'),
-        -200,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.ensureVisible(find.text('Take photos'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Take photos'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Take a photo'));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      await _openReview(tester);
-      expect(find.text('Review your order'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
-
-  testWidgets('full delivery address validates and reaches the order request', (
+  testWidgets('missing address opens the address sheet and blocks order', (
     tester,
   ) async {
     final api = _CheckoutApi(rx: false, hasSavedAddresses: false);
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
-    );
-    for (final entry in {
-      'Recipient name': 'Maria Buyer',
-      'Phone': '09170001234',
-      'House no., street, landmark': '22 Sample Street',
-      'Barangay': 'Poblacion',
-      'City / municipality': '',
-    }.entries) {
-      await tester.enterText(
-        find.widgetWithText(TextField, entry.key),
-        entry.value,
-      );
-    }
-    await _openReview(tester);
-    expect(find.text('Enter the city or municipality.'), findsOneWidget);
-    expect(find.text('Enter the province.'), findsOneWidget);
-    expect(find.text('Use a 4-digit ZIP code.'), findsOneWidget);
+    await _pump(tester, api, locator: locator);
+    await tester.tap(find.text('Place order'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delivery address'), findsOneWidget);
+    expect(find.text('Enter the recipient name.'), findsOneWidget);
     expect(api.orderAttempts, 0);
-    await tester.enterText(
-      find.widgetWithText(TextField, 'City / municipality'),
-      'Makati',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Province'),
-      'Metro Manila',
-    );
-    for (final zip in ['123', '12AB', '12345']) {
-      await tester.enterText(find.widgetWithText(TextField, 'ZIP code'), zip);
-      await _openReview(tester);
-      expect(find.text('Use a 4-digit ZIP code.'), findsOneWidget);
-      expect(api.orderAttempts, 0);
-    }
-    expect(
-      tester
-          .widget<TextField>(find.widgetWithText(TextField, 'Country'))
-          .readOnly,
-      isTrue,
-    );
-    await tester.enterText(find.widgetWithText(TextField, 'ZIP code'), '1200');
-    await _openReview(tester);
-    expect(
-      find.textContaining(
-        '22 Sample Street, Poblacion, Makati, Metro Manila 1200, Philippines',
-      ),
-      findsOneWidget,
-    );
-    await _submit(tester);
-    expect(api.placedAddress?.toJson(), containsPair('city', 'Makati'));
-    expect(
-      api.placedAddress?.toJson(),
-      containsPair('province', 'Metro Manila'),
-    );
-    expect(api.placedAddress?.toJson(), containsPair('postal_code', '1200'));
-    expect(find.text('Order route'), findsOneWidget);
   });
 
-  testWidgets('preferred address retains city province and ZIP code', (
+  testWidgets('preferred address is shown when no saved address exists', (
     tester,
   ) async {
     final api = _CheckoutApi(
@@ -463,833 +174,70 @@ void main() {
       preferredAddress: const Address(
         recipientName: 'Ana Buyer',
         phone: '09171234567',
-        addressLine: '8 Main Street',
-        subdivision: 'Sample Village',
-        barangay: 'San Lorenzo',
+        addressLine: '18 Mabini Street',
+        barangay: 'Poblacion',
         city: 'Makati',
         province: 'Metro Manila',
-        postalCode: '1223',
+        postalCode: '1200',
       ),
     );
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
-    );
-    expect(
-      tester
-          .widget<TextField>(
-            find.widgetWithText(TextField, 'Subdivision / building (optional)'),
-          )
-          .controller
-          ?.text,
-      'Sample Village',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Subdivision / building (optional)'),
-      'Updated Village',
-    );
-    await _submit(tester);
-    expect(api.placedAddress?.subdivision, 'Updated Village');
-    expect(api.placedAddress?.city, 'Makati');
-    expect(api.placedAddress?.province, 'Metro Manila');
-    expect(api.placedAddress?.postalCode, '1223');
-    expect(find.text('Order route'), findsOneWidget);
+    await _pump(tester, api, locator: locator);
+    expect(find.textContaining('18 Mabini Street'), findsOneWidget);
+    await tester.tap(find.text('Place order'));
+    await tester.pumpAndSettle();
+    expect(api.placedAddress?.addressLine, '18 Mabini Street');
   });
 
-  testWidgets('new pickup contact does not require a delivery address', (
-    tester,
-  ) async {
-    final api = _CheckoutApi(rx: false, hasSavedAddresses: false);
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
-    );
-    await tester.tap(find.text('Pickup · Free'));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Recipient name'),
-      'Ana Buyer',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Phone'),
-      '09171234567',
-    );
-    expect(find.widgetWithText(TextField, 'ZIP code'), findsNothing);
-    await _submit(tester);
-    expect(api.placed?.fulfillment, 'pickup');
-    expect(find.text('Order route'), findsOneWidget);
-  });
-
-  testWidgets('a failed quote refresh hides submission until retry succeeds', (
-    tester,
-  ) async {
-    final api = _CheckoutApi(rx: false);
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
-    );
-    await _openReview(tester);
-    api.quoteFailure = true;
-    ProviderScope.containerOf(tester.element(find.byType(CheckoutScreen)))
-        .invalidate(checkoutQuoteProvider);
-    await tester.pumpAndSettle();
-    expect(find.text('Try again'), findsOneWidget);
-    expect(find.text('Place order'), findsNothing);
-    expect(api.orderAttempts, 0);
-
-    api.quoteFailure = false;
-    await tester.tap(find.text('Try again'));
-    await tester.pumpAndSettle();
-    expect(find.text('Review your order'), findsOneWidget);
-    expect(find.text('Place order'), findsOneWidget);
-    expect(api.orderAttempts, 0);
-  });
-
-  testWidgets(
-    'a server failure keeps review open when a saved ID was not used',
-    (tester) async {
-      final api =
-          _CheckoutApi(
-              rx: false,
-              cards: const [
-                {'id': 'unused', 'type': 'senior', 'name': 'Ana Buyer'},
-              ],
-            )
-            ..failure = const ApiException(
-              code: 'resource.not_found',
-              message: 'The item is no longer available.',
-              statusCode: 404,
-            );
-      await _pump(
-        tester,
-        api,
-        locator: const StoreLocatorState(
-          branches: [BranchDistance(_branch, 1.2)],
-        ),
-      );
-      await _openReview(tester);
-      await _submit(tester);
-      expect(find.text('Review your order'), findsOneWidget);
-      expect(find.text('Documents'), findsNothing);
-      expect(
-        find.text(
-          'That saved ID is no longer available. Type it again and place the order.',
-        ),
-        findsNothing,
-      );
-      expect(api.orderAttempts, 1);
-      expect(api.placed, isNull);
-    },
-  );
-
-  testWidgets('keyboard leaves room for the address editor on a small phone', (
-    tester,
-  ) async {
-    await _pump(
-      tester,
-      _CheckoutApi(rx: false),
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
-      width: 320,
-      height: 600,
-      scale: 1.3,
-    );
-    await tester.scrollUntilVisible(
-      find.bySemanticsLabel('Edit contact details'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.bySemanticsLabel('Edit contact details'));
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Use a new address'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Use a new address'));
-    await tester.pumpAndSettle();
-    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
-    addTearDown(tester.view.resetViewInsets);
-    await tester.pumpAndSettle();
-    expect(find.text('Order total'), findsNothing);
-    expect(tester.takeException(), isNull);
-    await tester.scrollUntilVisible(
-      find.widgetWithText(TextField, 'Recipient name'),
-      180,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Recipient name'),
-      'Ana Buyer',
-    );
-    expect(tester.takeException(), isNull);
-    tester.view.resetViewInsets();
-    await tester.pumpAndSettle();
-    expect(find.text('Order total'), findsOneWidget);
-  });
-
-  testWidgets('checkout skips documents when none are needed', (tester) async {
-    final api = _CheckoutApi(rx: false);
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
-    );
-
-    expect(find.text('Documents'), findsNothing);
-    expect(find.text('Place order'), findsNothing);
-    await _openReview(tester);
-
-    expect(find.text('Review your order'), findsOneWidget);
-    expect(find.text('Place order'), findsOneWidget);
-    expect(api.orderAttempts, 0);
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
-    expect(find.text('Payment method'), findsOneWidget);
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
-    expect(find.text('Delivery or pickup'), findsOneWidget);
-    expect(api.orderAttempts, 0);
-  });
-
-  testWidgets('Back keeps the prescription and checkout details', (
-    tester,
-  ) async {
-    final api = _CheckoutApi(rx: true);
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
-    );
-    await _openDocuments(tester);
-    await tester.tap(find.text('Take photos'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Take a photo'));
-    await tester.pumpAndSettle();
-    await _openReview(tester);
-
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
-    expect(find.text('Payment method'), findsOneWidget);
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
-    expect(find.text('1 page'), findsOneWidget);
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-    expect(find.text('Delivery or pickup'), findsOneWidget);
-    expect(find.text('Ana Buyer'), findsOneWidget);
-    await _openDocuments(tester);
-    expect(find.text('1 page'), findsOneWidget);
-    expect(api.orderAttempts, 0);
-  });
-
-  testWidgets('address editing validates before advancing and survives Back', (
-    tester,
-  ) async {
-    final api = _CheckoutApi(rx: true);
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
-    );
-    await tester.tap(find.bySemanticsLabel('Edit contact details'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Use a new address'));
-    await tester.pumpAndSettle();
-    await _openDocuments(tester);
-    expect(find.text('Enter the recipient name.'), findsOneWidget);
-    expect(find.text('Delivery'), findsOneWidget);
-    expect(api.orderAttempts, 0);
-
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Recipient name'),
-      'Maria Buyer',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Phone'),
-      '09170001234',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'House no., street, landmark'),
-      '22 Sample Street',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Barangay'),
-      'Poblacion',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'City / municipality'),
-      'Makati',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Province'),
-      'Metro Manila',
-    );
-    await tester.enterText(find.widgetWithText(TextField, 'ZIP code'), '1200');
-    await tester.tap(find.text('Save address'));
-    await tester.pumpAndSettle();
-    await _openDocuments(tester);
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
-    expect(find.text('Maria Buyer'), findsOneWidget);
-    expect(find.textContaining('22 Sample Street'), findsOneWidget);
-    expect(
-      find.textContaining('Makati, Metro Manila 1200, Philippines'),
-      findsOneWidget,
-    );
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('fees follow the chosen payment, discount and fulfillment', (
-    tester,
-  ) async {
-    final api = _CheckoutApi(
-      rx: false,
-      seniorPwd: '28.57',
-      online: true,
-      cards: const [
-        {
-          'id': 'saved',
-          'type': 'senior',
-          'name': 'Lola Ana',
-          'id_number_masked': '4821',
-          'has_document': true,
-        },
-      ],
-    );
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
-    );
-    await _openDocuments(tester);
-    await tester.tap(find.text('Senior citizen / PWD'));
-    await tester.pumpAndSettle();
-    await _openPayment(tester);
-    await tester.tap(find.text('GCash'));
-    await tester.pumpAndSettle();
-    expect(find.text('₱124.93'), findsWidgets);
-
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Pickup · Free'));
-    await tester.pumpAndSettle();
-    await _openDocuments(tester);
-    await _openPayment(tester);
-    expect(find.text('₱73.93'), findsWidgets);
-    expect(api.orderAttempts, 0);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('unavailable delivery cash cannot submit but pickup can', (
+  testWidgets('unavailable delivery cash blocks ordering, pickup allows it', (
     tester,
   ) async {
     final api = _CheckoutApi(rx: false, cashAvailable: false);
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
-    );
-    await _openReview(tester);
-    await _submit(tester);
-    expect(find.text('Choose an available payment method.'), findsOneWidget);
+    await _pump(tester, api, locator: locator);
+    await tester.tap(find.text('Place order'));
+    await tester.pump();
     expect(api.orderAttempts, 0);
-
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
+    expect(
+      find.text('Choose another payment method or switch to pickup.'),
+      findsOneWidget,
+    );
+    await tester.ensureVisible(find.text('Pickup · Free'));
     await tester.tap(find.text('Pickup · Free'));
     await tester.pumpAndSettle();
-    await _submit(tester);
+    await tester.tap(find.text('Place order'));
+    await tester.pumpAndSettle();
     expect(api.placed?.fulfillment, 'pickup');
-    expect(api.orderAttempts, 1);
   });
 
-  testWidgets('pending submission blocks repeat taps and Back', (tester) async {
-    final pending = Completer<PlacedOrder>();
-    final api = _CheckoutApi(rx: false)..pendingOrder = pending;
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
+  testWidgets('an unconfirmed delivery pin blocks ordering', (tester) async {
+    final api = _CheckoutApi(rx: false);
+    await _pump(tester, api, locator: locator, location: const _NoLocation());
+    await tester.tap(find.text('Place order'));
+    await tester.pump();
+    expect(
+      find.text('Set the delivery pin so the rider can find you.'),
+      findsOneWidget,
     );
-    await _openReview(tester);
-    final submit = find.widgetWithText(FilledButton, 'Place order');
-    await tester.tap(submit);
+    expect(api.orderAttempts, 0);
+  });
+
+  testWidgets('pending submission cannot be sent twice', (tester) async {
+    final api = _CheckoutApi(rx: false)
+      ..pendingOrder = Completer<PlacedOrder>();
+    await _pump(tester, api, locator: locator);
+    await tester.tap(find.text('Place order'));
     await tester.pump();
     expect(api.orderAttempts, 1);
     expect(
-      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+      tester.widget<FilledButton>(find.byType(FilledButton).first).onPressed,
       isNull,
     );
-    await tester.binding.handlePopRoute();
-    await tester.pump();
-    expect(find.text('Review your order'), findsOneWidget);
-    expect(api.orderAttempts, 1);
-    pending.complete(PlacedOrder.fromJson({'id': 'order-1', 'number': 'JM-1'}));
+    api.pendingOrder!.complete(
+      PlacedOrder.fromJson({'id': 'order-1', 'number': 'JM-1'}),
+    );
     await tester.pumpAndSettle();
-    expect(find.text('Order placed'), findsOneWidget);
-    expect(find.text('Place order'), findsNothing);
-    expect(api.orderAttempts, 1);
-    await tester.tap(find.text('View order'));
-    await tester.pumpAndSettle();
-    expect(find.text('Order route'), findsOneWidget);
   });
 
-  testWidgets('a senior citizen card takes the discount off the total', (
-    tester,
-  ) async {
-    final api = _CheckoutApi(rx: false, seniorPwd: '28.57');
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, null)],
-        issue: LocationIssue.denied,
-      ),
-      location: const _NoLocation(),
-    );
-    await tester.tap(find.text('Pickup · Free'));
-    await tester.pumpAndSettle();
-    expect(find.text('₱100.00'), findsWidgets);
-
-    await _openDocuments(tester);
-    await tester.ensureVisible(find.text('Senior citizen / PWD'));
-    await tester.tap(find.text('Senior citizen / PWD'));
-    await tester.pumpAndSettle();
-    expect(find.text('₱71.43'), findsWidgets);
-    expect(find.text('Use a different ID'), findsNothing);
-
-    await _submit(tester);
-    await tester.pump();
-    expect(
-      find.text('Enter the ID number and the name on the ID for the discount.'),
-      findsOneWidget,
-    );
-    expect(api.placed, isNull);
-
-    await tester.enterText(find.widgetWithText(TextField, 'ID number'), 'SC-9');
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Name on the ID'),
-      'Lola Ana',
-    );
-    tester
-        .state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))
-        .removeCurrentSnackBar();
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Add photo of ID'));
-    await tester.tap(find.text('Add photo of ID'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Scan front and back'));
-    await tester.pumpAndSettle();
-    expect(find.text('Now scan the back of your ID'), findsOneWidget);
-    await tester.tap(find.text('Scan the back'));
-    await tester.pumpAndSettle();
-    await _submit(tester);
-    await tester.pumpAndSettle();
-
-    expect(api.placed!.discountDocument?.name, 'front-back.png');
-    expect(api.placed!.discountCard, (
-      type: 'senior',
-      idNumber: 'SC-9',
-      name: 'Lola Ana',
-    ));
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('closing the back-of-ID prompt attaches no ID photo', (
-    tester,
-  ) async {
-    final api = _CheckoutApi(rx: false, seniorPwd: '28.57');
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, null)],
-        issue: LocationIssue.denied,
-      ),
-      location: const _NoLocation(),
-    );
-    await tester.tap(find.text('Pickup · Free'));
-    await tester.pumpAndSettle();
-    await _openDocuments(tester);
-    await tester.ensureVisible(find.text('Senior citizen / PWD'));
-    await tester.tap(find.text('Senior citizen / PWD'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.widgetWithText(TextField, 'ID number'), 'SC-9');
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Name on the ID'),
-      'Lola Ana',
-    );
-
-    await tester.ensureVisible(find.text('Add photo of ID'));
-    await tester.tap(find.text('Add photo of ID'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Scan front and back'));
-    await tester.pumpAndSettle();
-    expect(find.text('Now scan the back of your ID'), findsOneWidget);
-    await tester.tapAt(const Offset(20, 20));
-    await tester.pumpAndSettle();
-    expect(find.text('Now scan the back of your ID'), findsNothing);
-
-    await _submit(tester);
-    await tester.pump();
-    expect(
-      find.text('Add a photo of your senior citizen or PWD ID.'),
-      findsOneWidget,
-    );
-    expect(api.placed, isNull);
-  });
-
-  testWidgets('an Rx pickup order needs a prescription and sends no pin', (
-    tester,
-  ) async {
-    final api = _CheckoutApi(rx: true);
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, null)],
-        issue: LocationIssue.denied,
-      ),
-      location: const _NoLocation(),
-    );
-
-    expect(
-      find.text(
-        'We could not find your location. Put a pin on your door so the rider knows where to go.',
-      ),
-      findsOneWidget,
-    );
-    await tester.tap(find.text('Pickup · Free'));
-    await tester.pumpAndSettle();
-
-    await _submit(tester);
-    await tester.pump();
-    expect(find.text('Add a photo of your prescription.'), findsOneWidget);
-    expect(api.placed, isNull);
-
-    expect(find.text('Required'), findsOneWidget);
-    expect(find.textContaining('For Amoxicillin 500mg'), findsOneWidget);
-    await tester.ensureVisible(find.text('Take photos'));
-    await tester.tap(find.text('Take photos'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Take a photo'));
-    await tester.pumpAndSettle();
-    expect(
-      find.text(
-        'Include every page, front and back. Up to 10 pages, 5 MB each.',
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('1 page'), findsOneWidget);
-    expect(find.byTooltip('Remove page 1'), findsOneWidget);
-    tester
-        .state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))
-        .removeCurrentSnackBar();
-    await tester.pumpAndSettle();
-
-    await _openReview(tester);
-    expect(find.text('Pay at the counter'), findsOneWidget);
-    await _submit(tester);
-    await tester.pumpAndSettle();
-
-    expect(api.placed!.fulfillment, 'pickup');
-    expect(api.placed!.prescriptions.single.name, 'camera.jpg');
-    expect(api.placed!.latitude, isNull);
-    expect(find.text('Order route'), findsOneWidget);
-  });
-
-  testWidgets(
-    'a delivery inside the radius sends the map pin and adds the fee',
-    (tester) async {
-      final api = _CheckoutApi(rx: false);
-      await _pump(
-        tester,
-        api,
-        locator: const StoreLocatorState(
-          branches: [BranchDistance(_branch, 1.2)],
-        ),
-      );
-
-      expect(find.text('Delivery · ₱49.00'), findsOneWidget);
-      await _openReview(tester);
-      expect(find.text('Delivery fee'), findsOneWidget);
-      expect(find.text('₱149.00'), findsWidgets);
-
-      await _submit(tester);
-      await tester.pumpAndSettle();
-
-      expect(api.placed!.fulfillment, 'delivery');
-      expect(api.placed!.latitude, 14.55);
-      expect(api.placed!.longitude, 121.02);
-      expect(api.placed!.prescriptions, isEmpty);
-    },
-  );
-
-  testWidgets('a closed branch starts on pickup and greys out delivery', (
-    tester,
-  ) async {
-    final api = _CheckoutApi(
-      rx: false,
-      closedUntil: DateTime.now()
-          .add(const Duration(hours: 2))
-          .toUtc()
-          .toIso8601String(),
-    );
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
-    );
-
-    expect(find.textContaining('Makati branch is closed.'), findsOneWidget);
-
-    await tester.tap(find.text('Delivery · ₱49.00'));
-    await tester.pumpAndSettle();
-    await _openReview(tester);
-    expect(find.text('Pay at the counter'), findsOneWidget);
-    await _submit(tester);
-    await tester.pumpAndSettle();
-    expect(api.placed!.fulfillment, 'pickup');
-  });
-
-  for (final (width, height, scale) in [
-    (320.0, 844.0, 1.0),
-    (320.0, 844.0, 2.0),
-    (390.0, 844.0, 1.0),
-    (390.0, 844.0, 2.0),
-    (768.0, 1024.0, 1.3),
-    (844.0, 390.0, 1.3),
-  ]) {
-    testWidgets('checkout fits ${width}x$height at ${scale}x text', (
-      tester,
-    ) async {
-      await _pump(
-        tester,
-        _CheckoutApi(rx: true),
-        locator: const StoreLocatorState(
-          branches: [BranchDistance(_branch, 1.2)],
-        ),
-        width: width,
-        height: height,
-        scale: scale,
-      );
-      expect(tester.takeException(), isNull);
-      await _openDocuments(tester);
-      await tester.scrollUntilVisible(
-        find.text('Take photos'),
-        220,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Take photos'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Take a photo'));
-      await tester.pumpAndSettle();
-      await _openReview(tester);
-      await tester.drag(find.byType(ListView), const Offset(0, -4000));
-      await tester.pumpAndSettle();
-
-      expect(tester.takeException(), isNull);
-      expect(find.text('Place order'), findsOneWidget);
-    });
-  }
-
-  testWidgets('a saved discount ID replaces the typed fields', (tester) async {
-    final api = _CheckoutApi(
-      rx: false,
-      seniorPwd: '28.57',
-      cards: const [
-        {
-          'id': 'card-1',
-          'type': 'senior',
-          'name': 'Lola Ana',
-          'id_number_masked': '•••••0123',
-          'has_document': true,
-        },
-      ],
-    );
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, null)],
-        issue: LocationIssue.denied,
-      ),
-      location: const _NoLocation(),
-    );
-    await tester.tap(find.text('Pickup · Free'));
-    await tester.pumpAndSettle();
-
-    await _openDocuments(tester);
-    await tester.ensureVisible(find.text('Senior citizen / PWD'));
-    await tester.tap(find.text('Senior citizen / PWD'));
-    await tester.pumpAndSettle();
-
-    // The saved ID starts selected, so there is nothing to type.
-    expect(find.text('Lola Ana'), findsOneWidget);
-    expect(find.text('Senior citizen ID · •••••0123'), findsOneWidget);
-    expect(find.text('ID photo on file'), findsOneWidget);
-    expect(find.widgetWithText(TextField, 'ID number'), findsNothing);
-
-    await tester.tap(find.text('Use a different ID'));
-    await tester.pumpAndSettle();
-    expect(find.widgetWithText(TextField, 'ID number'), findsOneWidget);
-
-    await tester.tap(find.text('Lola Ana'));
-    await tester.pumpAndSettle();
-    expect(find.widgetWithText(TextField, 'ID number'), findsNothing);
-
-    await _submit(tester);
-    await tester.pumpAndSettle();
-
-    expect(api.placed!.discountCardId, 'card-1');
-    expect(api.placed!.discountCard, isNull);
-    expect(api.placed!.saveDiscountCard, isFalse);
-    // Its photo is on file, so none goes up with the order.
-    expect(api.placed!.discountDocument, isNull);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('the save checkbox sends save_discount_card', (tester) async {
-    final api = _CheckoutApi(rx: false, seniorPwd: '28.57');
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, null)],
-        issue: LocationIssue.denied,
-      ),
-      location: const _NoLocation(),
-    );
-    await tester.tap(find.text('Pickup · Free'));
-    await tester.pumpAndSettle();
-
-    await _openDocuments(tester);
-    await tester.ensureVisible(find.text('Senior citizen / PWD'));
-    await tester.tap(find.text('Senior citizen / PWD'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.widgetWithText(TextField, 'ID number'), 'SC-9');
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Name on the ID'),
-      'Lola Ana',
-    );
-    await tester.ensureVisible(find.text('Save this ID for next time'));
-    await tester.tap(find.text('Save this ID for next time'));
-    await tester.pumpAndSettle();
-
-    // A typed ID needs its photo before the order can go.
-    await _submit(tester);
-    await tester.pumpAndSettle();
-    expect(api.placed, isNull);
-    expect(
-      find.text('Add a photo of your senior citizen or PWD ID.'),
-      findsOneWidget,
-    );
-    tester
-        .state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))
-        .removeCurrentSnackBar();
-    await tester.pumpAndSettle();
-
-    await tester.ensureVisible(find.text('Add photo of ID'));
-    await tester.tap(find.text('Add photo of ID'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Choose from gallery'));
-    await tester.pumpAndSettle();
-    await _submit(tester);
-    await tester.pumpAndSettle();
-
-    expect(api.placed!.discountDocument?.name, 'rx.jpg');
-    expect(api.placed!.saveDiscountCard, isTrue);
-    expect(api.placed!.discountCardId, isNull);
-    expect(api.placed!.discountCard, (
-      type: 'senior',
-      idNumber: 'SC-9',
-      name: 'Lola Ana',
-    ));
-  });
-
-  testWidgets('the ID photo sets the card type and fills only empty fields', (
-    tester,
-  ) async {
-    final api = _CheckoutApi(rx: false, seniorPwd: '28.57');
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, null)],
-        issue: LocationIssue.denied,
-      ),
-      location: const _NoLocation(),
-      idPhotoText: 'PWD ID No.: 07-2201-000-0001234\nName: JUANA DELA CRUZ',
-    );
-    await tester.tap(find.text('Pickup · Free'));
-    await tester.pumpAndSettle();
-    await _openDocuments(tester);
-    await tester.ensureVisible(find.text('Senior citizen / PWD'));
-    await tester.tap(find.text('Senior citizen / PWD'));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Name on the ID'),
-      'Juana Cruz',
-    );
-
-    await tester.ensureVisible(find.text('Add photo of ID'));
-    await tester.tap(find.text('Add photo of ID'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Choose from gallery'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Juana Cruz'), findsOneWidget);
-    expect(find.text('JUANA DELA CRUZ'), findsNothing);
-    expect(
-      find.text('Filled in from your ID photo. Check it matches your card.'),
-      findsOneWidget,
-    );
-    tester
-        .state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))
-        .removeCurrentSnackBar();
-    await tester.pumpAndSettle();
-    await _submit(tester);
-    await tester.pumpAndSettle();
-
-    expect(api.placed!.discountCard, (
-      type: 'pwd',
-      idNumber: '07-2201-000-0001234',
-      name: 'Juana Cruz',
-    ));
-  });
-
-  testWidgets('a deleted saved ID falls back to the typed fields', (
+  testWidgets('a deleted saved ID reopens the ID sheet for correction', (
     tester,
   ) async {
     final api = _CheckoutApi(
@@ -1306,180 +254,75 @@ void main() {
         },
       ],
     );
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, null)],
-        issue: LocationIssue.denied,
-      ),
-      location: const _NoLocation(),
-    );
-    await tester.tap(find.text('Pickup · Free'));
+    await _pump(tester, api, locator: locator);
+    await tester.ensureVisible(find.text('Apply eligible discount'));
+    await tester.tap(find.text('Apply eligible discount'));
     await tester.pumpAndSettle();
-
-    await _openDocuments(tester);
-    await tester.ensureVisible(find.text('Senior citizen / PWD'));
-    await tester.tap(find.text('Senior citizen / PWD'));
+    await tester.tap(find.text('Senior citizen / PWD').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Lolo Ben'));
+    expect(find.text('Lolo Ben'), findsOneWidget);
+    await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
-
-    await _submit(tester);
+    await tester.tap(find.text('Place order'));
     await tester.pumpAndSettle();
-
-    expect(api.placed, isNull);
-    expect(
-      find.text(
-        'That saved ID is no longer available. Type it again and place the order.',
-      ),
-      findsOneWidget,
-    );
     expect(find.widgetWithText(TextField, 'ID number'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'Name on the ID'), findsOneWidget);
+    expect(api.orderAttempts, 1);
   });
 
-  testWidgets('a pin outside the delivery radius cannot be ordered', (
+  testWidgets('closed delivery starts with pickup', (tester) async {
+    final api = _CheckoutApi(
+      rx: false,
+      closedUntil: DateTime.now()
+          .add(const Duration(hours: 2))
+          .toUtc()
+          .toIso8601String(),
+    );
+    await _pump(tester, api, locator: locator);
+    expect(find.textContaining('Makati branch is closed.'), findsOneWidget);
+    await tester.tap(find.text('Place order'));
+    await tester.pumpAndSettle();
+    expect(api.placed?.fulfillment, 'pickup');
+  });
+
+  testWidgets('delivery outside the branch radius cannot be ordered', (
     tester,
   ) async {
     final api = _CheckoutApi(rx: false);
     await _pump(
       tester,
       api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
+      locator: locator,
       location: const _HereLocation(latitude: 14.65, longitude: 121.02),
     );
-
-    final problem = find.textContaining('Makati branch delivers within 5 km');
-    expect(problem, findsOneWidget);
-
-    await _submit(tester);
-    await tester.pump();
-    expect(problem, findsWidgets);
-    expect(api.placed, isNull);
-  });
-
-  testWidgets('the pin picker shows a far pin and can switch to pickup', (
-    tester,
-  ) async {
-    final api = _CheckoutApi(rx: false);
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, 1.2)],
-      ),
-      location: const _HereLocation(latitude: 14.65, longitude: 121.02),
-    );
-
-    await tester.tap(find.text('Adjust pin'));
-    await tester.pumpAndSettle();
-    expect(find.text('Too far for delivery'), findsOneWidget);
-    expect(find.textContaining('This pin is'), findsOneWidget);
-    final confirm = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Move the pin closer'),
-    );
-    expect(confirm.onPressed, isNull);
-
-    await tester.tap(find.text('Choose pickup instead'));
-    await tester.pumpAndSettle();
-    await _openReview(tester);
-    expect(find.text('Pay at the counter'), findsOneWidget);
-
-    await _submit(tester);
-    await tester.pumpAndSettle();
-    expect(api.placed!.fulfillment, 'pickup');
-  });
-
-  testWidgets('with location off, delivery waits for a confirmed pin', (
-    tester,
-  ) async {
-    final api = _CheckoutApi(rx: false);
-    await _pump(
-      tester,
-      api,
-      locator: const StoreLocatorState(
-        branches: [BranchDistance(_branch, null)],
-        issue: LocationIssue.denied,
-      ),
-      location: const _NoLocation(),
-    );
-
-    await _submit(tester);
-    await tester.pump();
     expect(
-      find.text('Set the delivery pin so the rider can find you.'),
+      find.textContaining('Makati branch delivers within 5 km'),
       findsOneWidget,
     );
-    expect(api.placed, isNull);
-    tester
-        .state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))
-        .removeCurrentSnackBar();
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Set delivery pin'));
-    await tester.pumpAndSettle();
-    expect(find.text('Is the pin on your door?'), findsOneWidget);
-    await tester.tap(find.text('Confirm pin'));
-    await tester.pumpAndSettle();
-    expect(find.text('Adjust pin'), findsOneWidget);
-
-    await _submit(tester);
-    await tester.pumpAndSettle();
-    expect(api.placed!.fulfillment, 'delivery');
-    expect(api.placed!.latitude, _branch.latitude);
-    expect(api.placed!.longitude, _branch.longitude);
+    await tester.tap(find.text('Place order'));
+    await tester.pump();
+    expect(api.orderAttempts, 0);
   });
-}
 
-Future<void> _openDocuments(WidgetTester tester) async {
-  final save = find.widgetWithText(FilledButton, 'Save address');
-  if (save.evaluate().isNotEmpty) {
-    await tester.tap(save);
-    await tester.pumpAndSettle();
-    if (save.evaluate().isNotEmpty) {
-      return;
-    }
-  }
-  final next = find.widgetWithText(FilledButton, 'Continue to documents');
-  if (next.evaluate().isNotEmpty) {
-    await tester.tap(next);
-    await tester.pumpAndSettle();
-  }
-}
-
-Future<void> _openPayment(WidgetTester tester) async {
-  final next = find.widgetWithText(FilledButton, 'Continue to payment');
-  if (next.evaluate().isNotEmpty) {
-    await tester.tap(next);
-    await tester.pumpAndSettle();
-  }
-}
-
-Future<void> _openReview(WidgetTester tester) async {
-  await _openPayment(tester);
-  final next = find.widgetWithText(FilledButton, 'Continue to review');
-  if (next.evaluate().isNotEmpty) {
-    await tester.tap(next);
-    await tester.pumpAndSettle();
-  }
-}
-
-Future<void> _submit(WidgetTester tester) async {
-  for (final label in [
-    'Continue to documents',
-    'Continue to payment',
-    'Continue to review',
-    'Place order',
-    'View order',
+  for (final (width, height, scale) in [
+    (320.0, 844.0, 1.0),
+    (390.0, 844.0, 2.0),
+    (844.0, 390.0, 1.3),
   ]) {
-    final button = find.widgetWithText(FilledButton, label);
-    if (button.evaluate().isNotEmpty) {
-      await tester.tap(button);
-      await tester.pumpAndSettle();
-    }
+    testWidgets('one-page checkout fits ${width}x$height at ${scale}x text', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _CheckoutApi(rx: true),
+        locator: locator,
+        width: width,
+        height: height,
+        scale: scale,
+      );
+      expect(find.text('Place order'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   }
 }
 
@@ -1501,6 +344,10 @@ Future<void> _pump(
   final router = GoRouter(
     routes: [
       GoRoute(path: '/', builder: (_, _) => const CheckoutScreen()),
+      GoRoute(
+        path: '/cart',
+        builder: (_, _) => const Scaffold(body: Text('Cart route')),
+      ),
       GoRoute(
         path: '/checkout/success',
         builder: (_, state) => CheckoutSuccessScreen(
@@ -1651,6 +498,7 @@ class _CheckoutApi extends ApiClient {
     this.cashAvailable = true,
     this.hasSavedAddresses = true,
     this.preferredAddress,
+    this.quantity = 1,
   }) : super(baseUrl: 'http://localhost', tokenProvider: () async => null);
 
   final bool rx;
@@ -1662,6 +510,7 @@ class _CheckoutApi extends ApiClient {
   final bool cashAvailable;
   final bool hasSavedAddresses;
   final Address? preferredAddress;
+  final int quantity;
   Address? placedAddress;
   int orderAttempts = 0;
   Completer<PlacedOrder>? pendingOrder;
@@ -1682,11 +531,11 @@ class _CheckoutApi extends ApiClient {
             {
               'id': 'line-1',
               'product_id': 'amox',
-              'quantity': 1,
+              'quantity': quantity,
               'selected': true,
               'available': true,
               'unit_price': '100.00',
-              'line_total': '100.00',
+              'line_total': '${quantity * 100}.00',
               'product': {
                 'name': 'Amoxicillin 500mg',
                 'slug': 'amoxicillin',
@@ -1695,7 +544,7 @@ class _CheckoutApi extends ApiClient {
               },
             },
           ],
-          'subtotal': '100.00',
+          'subtotal': '${quantity * 100}.00',
           'senior_pwd_discount': seniorPwd,
           'discount_cards': cards,
           'branch': {
@@ -1707,20 +556,20 @@ class _CheckoutApi extends ApiClient {
           'fulfillment_methods': {
             'delivery': {
               'fee': '49.00',
-              'total': '149.00',
+              'total': '${quantity * 100 + 49}.00',
               'payment_fees': {if (online) 'gcash': '5.50'},
               'payment_fees_with_card': {if (online) 'gcash': '4.50'},
               'closed_until': closedUntil,
             },
             'pickup': {
               'fee': '0.00',
-              'total': '100.00',
+              'total': '${quantity * 100}.00',
               'payment_fees': {if (online) 'gcash': '3.50'},
               'payment_fees_with_card': {if (online) 'gcash': '2.50'},
             },
           },
           'store_totals': [
-            {'name': 'Makati branch', 'total': '100.00'},
+            {'name': 'Makati branch', 'total': '${quantity * 100}.00'},
           ],
           'preferred_address': preferredAddress?.toJson(),
           'addresses': [

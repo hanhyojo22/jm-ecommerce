@@ -64,13 +64,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   String _fulfillment = 'delivery';
   List<PickedAttachment> _prescriptions = const [];
   bool _placing = false;
-  int _step = 0;
-  bool _returnToReview = false;
-  bool _editingAddress = false;
-  bool _addressSheetOpen = false;
   bool _addressAttempted = false;
   bool _documentsAttempted = false;
-  final _stepScroll = List.generate(4, (_) => ScrollController());
+  bool _paymentAttempted = false;
+  final _paymentErrorKey = GlobalKey();
+  StateSetter? _documentsSheetRefresh;
 
   /// Where the rider goes. Starts at the phone's location, or at the branch
   /// when location is off, and follows the map as the customer moves it.
@@ -155,9 +153,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   @override
   void dispose() {
-    for (final controller in _stepScroll) {
-      controller.dispose();
-    }
     _recipient.dispose();
     _phone.dispose();
     _addressLine.dispose();
@@ -190,7 +185,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     } else {
       _useNewAddress = true;
     }
-    _editingAddress = _useNewAddress;
     if (_city.text.isEmpty) {
       _city.text = quote.branchCity ?? '';
     }
@@ -249,11 +243,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   bool _validateDelivery(CheckoutQuote quote) {
     if (_address(quote) == null) {
-      _snack('Choose a delivery address.');
+      _snack(
+        _method == 'pickup'
+            ? 'Add contact details for pickup.'
+            : 'Choose a delivery address.',
+      );
       return false;
     }
 
     if (_useNewAddress && !_validateAddressForm()) {
+      _openAddressEditor(quote);
       return false;
     }
 
@@ -296,10 +295,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       return false;
     }
     if (invalid.isNotEmpty) {
-      if (!inSheet) {
-        setState(() => _editingAddress = true);
+      if (inSheet) {
+        _reveal(invalid.first.context);
       }
-      _reveal(invalid.first.context);
       return false;
     }
     return true;
@@ -332,47 +330,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     return true;
   }
 
-  bool _needsDocuments(CheckoutQuote quote) =>
-      quote.needsPrescription || quote.offersSeniorPwdDiscount;
-
-  void _goToStep(int step) {
-    FocusManager.instance.primaryFocus?.unfocus();
-    setState(() => _step = step);
-    if (_stepScroll[step].hasClients) {
-      _stepScroll[step].jumpTo(0);
-    }
-  }
-
-  void _continue(CheckoutQuote quote) {
-    final valid = switch (_step) {
-      0 => _validateDelivery(quote),
-      1 => _validateDocuments(quote),
-      2 => _validatePayment(quote),
-      _ => false,
-    };
-    if (!valid) {
-      return;
-    }
-    final next = _returnToReview
-        ? 3
-        : _step == 0 && !_needsDocuments(quote)
-        ? 2
-        : _step + 1;
-    _returnToReview = false;
-    _goToStep(next);
-  }
-
-  void _editStep(int step) {
-    _returnToReview = true;
-    _goToStep(step);
-  }
-
   bool _validatePayment(CheckoutQuote quote) {
+    setState(() => _paymentAttempted = true);
     if ((_method == 'pickup' && _paymentMethod == 'cod') ||
         quote.paymentOptions[_paymentMethod]?.available == true) {
       return true;
     }
-    _snack('Choose an available payment method.');
+    _reveal(null, key: _paymentErrorKey);
     return false;
   }
 
@@ -380,18 +344,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     if (_placing) {
       return;
     }
-    if (_returnToReview) {
-      _returnToReview = false;
-      _goToStep(3);
-    } else if (_step == 0) {
-      Navigator.of(context).maybePop();
-    } else {
-      _goToStep(
-        _step == 2 && (quote == null || !_needsDocuments(quote))
-            ? 0
-            : _step - 1,
-      );
-    }
+    Navigator.of(context).maybePop();
   }
 
   Future<void> _placeOrder(CheckoutQuote quote) async {
@@ -399,15 +352,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       return;
     }
     if (!_validateDelivery(quote)) {
-      _editStep(0);
       return;
     }
     if (!_validateDocuments(quote)) {
-      _editStep(1);
+      if (quote.needsPrescription && _prescriptions.isEmpty) {
+        _openDocumentsSheet(quote, prescription: true);
+      } else {
+        _openDocumentsSheet(quote, prescription: false);
+      }
       return;
     }
     if (!_validatePayment(quote)) {
-      _editStep(2);
       return;
     }
     final address = _address(quote)!;
@@ -478,7 +433,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
         if (lostSavedCard) {
           setState(() => _savedCardId = null);
-          _editStep(1);
+          _openDocumentsSheet(quote, prescription: false);
         }
 
         _snack(
@@ -546,6 +501,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       setState(
         () => _prescriptions = [..._prescriptions, ...picked.take(room)],
       );
+      _refreshDocumentsSheet();
       if (picked.length > room) {
         _snack('Only the first $room pages were added.');
       }
@@ -596,6 +552,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         final photo = await picker.pickImage();
         if (photo != null && mounted) {
           setState(() => _cardPhoto = photo);
+          _refreshDocumentsSheet();
           await _fillFromCardPhoto(photo);
         }
         return;
@@ -622,6 +579,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         return;
       }
       setState(() => _cardPhoto = photo);
+      _refreshDocumentsSheet();
       // Only the front: the back can carry an emergency contact's name.
       await _fillFromCardPhoto(front);
     } on AttachmentTooLargeException {
@@ -680,6 +638,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     // The toggle starts on Senior citizen; a scanned PWD card must not stay recorded as one.
     if (fields.type != null && fields.type != _cardType) {
       setState(() => _cardType = fields.type!);
+      _refreshDocumentsSheet();
       filled = true;
     }
     if (fields.number != null && _cardNumber.text.trim().isEmpty) {
@@ -691,6 +650,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       filled = true;
     }
     if (filled) {
+      _refreshDocumentsSheet();
       _snack('Filled in from your ID photo. Check it matches your card.');
     }
   }
@@ -705,7 +665,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   /// The discount when the customer is using a card and something is a medicine.
   String? _cardDiscount(CheckoutQuote quote) =>
-      _useCard && quote.offersSeniorPwdDiscount
+      _useCard && quote.offersSeniorPwdDiscount && _discountError(quote) == null
       ? quote.seniorPwdDiscount
       : null;
 
@@ -726,14 +686,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
 
     return PopScope(
-      canPop: _step == 0 && !_placing && !_returnToReview,
+      canPop: !_placing,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
           _back(quote.value);
         }
       },
       child: Scaffold(
-        backgroundColor: scheme.surfaceContainerLowest,
+        backgroundColor: scheme.surfaceContainerLow,
         appBar: AppBar(
           backgroundColor: scheme.surfaceContainerLowest,
           surfaceTintColor: Colors.transparent,
@@ -742,7 +702,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             onPressed: _placing ? null : () => _back(quote.value),
           ),
           title: Text(
-            'Checkout',
+            'Order summary',
             style: theme.textTheme.titleMedium?.copyWith(
               fontSize: 18,
               fontWeight: FontWeight.w800,
@@ -767,84 +727,73 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           },
           builder: (value) {
             _initialise(value);
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                final compact = constraints.maxHeight < 420;
-                return Align(
-                  alignment: Alignment.topCenter,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 640),
-                    child: Column(
-                      children: [
-                        _progress(
-                          value,
-                          compact:
-                              compact ||
-                              (constraints.maxWidth < 480 &&
-                                  MediaQuery.textScalerOf(context).scale(14) >
-                                      16.8),
+            return Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: Form(
+                  key: _formKey,
+                  autovalidateMode: _addressAttempted
+                      ? AutovalidateMode.onUserInteraction
+                      : AutovalidateMode.disabled,
+                  child: ListView(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    children: [
+                      _checkoutSegment(
+                        title: 'How to get it',
+                        child: _fulfillmentCard(value),
+                      ),
+                      _checkoutSegment(title: '', child: _addressCard(value)),
+                      _checkoutSegment(
+                        title: 'Items',
+                        action: TextButton(
+                          onPressed: () => context.go('/cart'),
+                          child: const Text('Edit cart'),
                         ),
-                        Expanded(
-                          child: Form(
-                            key: _formKey,
-                            autovalidateMode: _addressAttempted
-                                ? AutovalidateMode.onUserInteraction
-                                : AutovalidateMode.disabled,
-                            child: IndexedStack(
-                              index: _step,
-                              children: [
-                                _stepPage(0, [
-                                  _pageHeading(
-                                    'Delivery or pickup',
-                                    'Your medicines, from ${value.branchName ?? 'your branch'}.',
-                                  ),
-                                  _fulfillmentCard(value),
-                                  const SizedBox(height: 24),
-                                  _addressCard(value),
-                                ]),
-                                _stepPage(1, [
-                                  _pageHeading(
-                                    value.needsPrescription
-                                        ? value.offersSeniorPwdDiscount
-                                              ? 'Prescription & ID'
-                                              : 'Prescription'
-                                        : 'Discount ID',
-                                    value.needsPrescription
-                                        ? 'For the medicines in your order.'
-                                        : 'Use your senior citizen or PWD ID, if eligible.',
-                                  ),
-                                  if (value.needsPrescription)
-                                    _prescriptionCard(value),
-                                  if (value.needsPrescription &&
-                                      value.offersSeniorPwdDiscount)
-                                    const Divider(height: 40),
-                                  if (value.offersSeniorPwdDiscount)
-                                    _discountCardSection(value),
-                                ]),
-                                _stepPage(2, [
-                                  _pageHeading(
-                                    'Payment method',
-                                    'Choose how you would like to pay.',
-                                  ),
-                                  _paymentCard(value),
-                                  const Divider(height: 40),
-                                  _paymentSummary(value),
-                                ]),
-                                _stepPage(3, [
-                                  _pageHeading('Review your order', null),
-                                  _summaryCard(value),
-                                  const SizedBox(height: 12),
-                                  _reviewDetails(value),
-                                ]),
-                              ],
-                            ),
+                        child: _checkoutItems(value),
+                      ),
+                      if (value.needsPrescription)
+                        _checkoutSegment(
+                          title: 'Prescription',
+                          child: _documentRow(
+                            icon: Icons.description_outlined,
+                            title: _prescriptions.isEmpty
+                                ? 'Add prescription'
+                                : '${_prescriptions.length} ${_prescriptions.length == 1 ? 'page' : 'pages'} added',
+                            subtitle: 'Required for prescription medicines',
+                            needsAction: _prescriptions.isEmpty,
+                            onTap: () =>
+                                _openDocumentsSheet(value, prescription: true),
                           ),
                         ),
-                      ],
-                    ),
+                      if (value.offersSeniorPwdDiscount)
+                        _checkoutSegment(
+                          title: 'Senior citizen / PWD',
+                          child: _documentRow(
+                            icon: Icons.badge_outlined,
+                            title: !_useCard
+                                ? 'Apply eligible discount'
+                                : _discountError(value) == null
+                                ? 'Discount ID selected'
+                                : 'Complete discount ID',
+                            subtitle:
+                                'Save ${money(value.seniorPwdDiscount)} on medicines',
+                            onTap: () =>
+                                _openDocumentsSheet(value, prescription: false),
+                          ),
+                        ),
+                      _checkoutSegment(
+                        title: 'Payment method',
+                        child: _paymentCard(value),
+                      ),
+                      _checkoutSegment(
+                        title: 'Order summary',
+                        child: _paymentSummary(value),
+                      ),
+                    ],
                   ),
-                );
-              },
+                ),
+              ),
             );
           },
         ),
@@ -852,185 +801,240 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Widget _stepPage(int step, List<Widget> children) => ListView(
-    key: PageStorageKey('checkout-step-$step'),
-    controller: _stepScroll[step],
-    padding: EdgeInsets.fromLTRB(20, _shortViewport ? 12 : 22, 20, 24),
-    children: children,
-  );
-
-  Widget _pageHeading(String title, String? description) {
+  Widget _checkoutSegment({
+    required String title,
+    required Widget child,
+    Widget? action,
+  }) {
     final theme = Theme.of(context);
     return Padding(
-      padding: EdgeInsets.only(bottom: _shortViewport ? 14 : 22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Semantics(
-            header: true,
-            child: Text(
-              title,
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
-                height: 1.2,
-              ),
-            ),
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: theme.colorScheme.surfaceContainerLowest,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (title.isNotEmpty) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: Semantics(
+                        header: true,
+                        child: Text(
+                          title,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                    ?action,
+                  ],
+                ),
+                const SizedBox(height: 14),
+              ],
+              child,
+            ],
           ),
-          if (description != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              description,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
 
-  Widget _progress(CheckoutQuote quote, {required bool compact}) {
+  Widget _checkoutItems(CheckoutQuote quote) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final steps = [
-      (index: 0, label: 'Delivery'),
-      if (_needsDocuments(quote)) (index: 1, label: 'Documents'),
-      (index: 2, label: 'Payment'),
-      (index: 3, label: 'Review'),
-    ];
-    final position = steps.indexWhere((step) => step.index == _step);
-    final current = steps[position < 0 ? 0 : position];
-    if (compact) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-        child: Semantics(
-          label: 'Step ${position + 1} of ${steps.length}, ${current.label}',
-          excludeSemantics: true,
-          child: Row(
+    return Column(
+      children: [
+        for (final line in quote.lines) ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  current.label,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: scheme.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+              NetworkThumb(
+                url: line.imageUrl,
+                width: 72,
+                height: 72,
+                radius: 8,
+                placeholderIcon: PhosphorIconsRegular.pill,
               ),
-              Text(
-                '${position + 1}/${steps.length}',
-                style: theme.textTheme.bodySmall,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      line.productName,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Qty ${line.quantity}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      money(line.lineTotal),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-        ),
-      );
-    }
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final (index, step) in steps.indexed)
+          if (line != quote.lines.last) const Divider(height: 28),
+        ],
+      ],
+    );
+  }
+
+  Widget _documentRow({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    bool needsAction = false,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: needsAction
+          ? scheme.primaryContainer.withValues(alpha: 0.25)
+          : scheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Icon(icon, color: scheme.primary),
+              const SizedBox(width: 12),
               Expanded(
-                child: Semantics(
-                  label:
-                      'Step ${index + 1} of ${steps.length}, ${step.label}${step.index == _step
-                          ? ', current'
-                          : step.index < _step
-                          ? ', completed'
-                          : ''}',
-                  selected: step.index == _step,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(appDetailRadius),
-                    onTap: step.index < _step && !_placing
-                        ? () => _step == 3
-                              ? _editStep(step.index)
-                              : _goToStep(step.index)
-                        : null,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: scheme.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openDocumentsSheet(
+    CheckoutQuote quote, {
+    required bool prescription,
+  }) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, refresh) {
+          _documentsSheetRefresh = refresh;
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.88,
+                maxWidth: 640,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 12, 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            prescription
+                                ? 'Prescription'
+                                : 'Senior citizen / PWD ID',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Close document sheet',
+                          onPressed: () => Navigator.pop(sheetContext),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                      child: prescription
+                          ? _prescriptionCard(quote)
+                          : _discountCardSection(quote),
+                    ),
+                  ),
+                  SafeArea(
+                    top: false,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 6,
-                      ),
-                      child: ExcludeSemantics(
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: step.index == _step
-                                    ? scheme.primary
-                                    : step.index < _step
-                                    ? scheme.primaryContainer
-                                    : scheme.surfaceContainerLowest,
-                                border: Border.all(
-                                  color: step.index <= _step
-                                      ? Colors.transparent
-                                      : scheme.outline,
-                                ),
-                              ),
-                              alignment: Alignment.center,
-                              child: step.index < _step
-                                  ? Icon(
-                                      Icons.check_rounded,
-                                      size: 16,
-                                      color: scheme.onPrimaryContainer,
-                                    )
-                                  : Text(
-                                      '${index + 1}',
-                                      textScaler: TextScaler.noScaling,
-                                      style: theme.textTheme.labelSmall
-                                          ?.copyWith(
-                                            color: step.index == _step
-                                                ? scheme.onPrimary
-                                                : scheme.onSurfaceVariant,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                    ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              step.label,
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: step.index <= _step
-                                    ? scheme.primary
-                                    : scheme.onSurfaceVariant,
-                                fontWeight: step.index == _step
-                                    ? FontWeight.w800
-                                    : FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Container(
-                              height: 3,
-                              decoration: BoxDecoration(
-                                color: step.index <= _step
-                                    ? scheme.primary
-                                    : scheme.outlineVariant,
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ],
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () {
+                            refresh(() => _documentsAttempted = true);
+                            if (prescription && _prescriptions.isEmpty) {
+                              return;
+                            }
+                            if (!prescription &&
+                                _discountError(quote) != null) {
+                              return;
+                            }
+                            Navigator.pop(sheetContext);
+                          },
+                          child: const Text('Done'),
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
-          ],
-        ),
+            ),
+          );
+        },
       ),
     );
+    _documentsSheetRefresh = null;
+  }
+
+  void _refreshDocumentsSheet() {
+    _documentsSheetRefresh?.call(() {});
+  }
+
+  void _updateDocument(VoidCallback change) {
+    setState(change);
+    _refreshDocumentsSheet();
   }
 
   bool get _shortViewport => MediaQuery.sizeOf(context).height < 500;
@@ -1038,23 +1042,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   Widget _checkoutFooter(CheckoutQuote quote) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final review = _step == 3;
     final compact = _shortViewport;
-    final label = review
-        ? 'Place order'
-        : _returnToReview
-        ? 'Save & return to review'
-        : _step == 0 && _needsDocuments(quote)
-        ? 'Continue to documents'
-        : _step < 2
-        ? 'Continue to payment'
-        : 'Continue to review';
+    final itemCount = quote.lines.fold<int>(
+      0,
+      (count, line) => count + line.quantity,
+    );
+    const label = 'Place order';
     final totalLabel = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Flexible(
           child: Text(
-            'Order total',
+            'Total ($itemCount ${itemCount == 1 ? 'item' : 'items'})',
             style: theme.textTheme.bodySmall?.copyWith(
               color: scheme.onSurfaceVariant,
             ),
@@ -1107,11 +1106,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
         shape: const StadiumBorder(),
       ),
-      onPressed: _placing
-          ? null
-          : review
-          ? () => _placeOrder(quote)
-          : () => _continue(quote),
+      onPressed: _placing ? null : () => _placeOrder(quote),
       child: _placing
           ? SizedBox.square(
               dimension: 22,
@@ -1228,106 +1223,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     ),
   );
 
-  Widget _reviewDetails(CheckoutQuote quote) {
-    final address = _address(quote);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Divider(),
-        _reviewDetail(
-          icon: _method == 'pickup'
-              ? Icons.storefront_outlined
-              : Icons.location_on_outlined,
-          title: _method == 'pickup'
-              ? 'Pickup at ${quote.branchName ?? 'your branch'}'
-              : address?.recipientName ?? 'Delivery details',
-          detail: [
-            if (_method == 'pickup') ...[
-              quote.branchAddress ?? '',
-              address?.recipientName ?? '',
-            ] else
-              address?.fullAddress ?? '',
-            address?.phone ?? '',
-          ].where((part) => part.isNotEmpty).join('\n'),
-          editLabel: 'Edit contact details',
-          onEdit: () {
-            _editStep(0);
-            _openAddressEditor(quote);
-          },
-        ),
-        if (quote.needsPrescription)
-          _reviewDetail(
-            icon: Icons.description_outlined,
-            title: 'Prescription',
-            detail:
-                '${_prescriptions.length} ${_prescriptions.length == 1 ? 'page' : 'pages'} added',
-            onEdit: () => _editStep(1),
-          ),
-        if (_useCard && quote.offersSeniorPwdDiscount)
-          _reviewDetail(
-            icon: Icons.badge_outlined,
-            title: 'Senior citizen / PWD',
-            detail: 'Discount ID added',
-            onEdit: () => _editStep(1),
-          ),
-        _reviewDetail(
-          icon: Icons.payments_outlined,
-          title: _paymentLabel,
-          detail: _paymentTiming,
-          editLabel: 'Edit payment method',
-          onEdit: () => _editStep(2),
-        ),
-      ],
-    );
-  }
-
-  Widget _reviewDetail({
-    required IconData icon,
-    required String title,
-    required String detail,
-    required VoidCallback onEdit,
-    String? editLabel,
-  }) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 3),
-            child: Icon(icon, size: 20, color: theme.colorScheme.primary),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  detail,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-            onPressed: _placing ? null : onEdit,
-            child: Text('Edit', semanticsLabel: editLabel ?? 'Edit $title'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// A flat checkout section, with optional status or edit controls.
   Widget _section({
     required IconData icon,
     required String title,
@@ -1393,7 +1288,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final largeText =
         MediaQuery.textScalerOf(context).scale(14) > 18 &&
         MediaQuery.sizeOf(context).width < 600;
-    final count = quote.lines.length;
+    final count = quote.lines.fold<int>(
+      0,
+      (total, line) => total + line.quantity,
+    );
 
     return _section(
       icon: Icons.receipt_long_outlined,
@@ -1492,14 +1390,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  String get _paymentLabel => switch (_paymentMethod) {
-    'cod' => _method == 'pickup' ? 'Pay at the counter' : 'Cash on delivery',
-    'gcash' => 'GCash',
-    'maya' => 'Maya',
-    'card' => 'Card',
-    _ => _paymentMethod,
-  };
-
   String get _paymentTiming => _paymentMethod == 'cod'
       ? _method == 'pickup'
             ? 'Pay at the counter when collecting.'
@@ -1579,7 +1469,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           MergeSemantics(
             child: InkWell(
               borderRadius: BorderRadius.circular(appSurfaceRadius),
-              onTap: () => setState(() => _useCard = !_useCard),
+              onTap: () => _updateDocument(() => _useCard = !_useCard),
               child: Row(
                 children: [
                   Icon(Icons.badge_outlined, size: 20, color: scheme.primary),
@@ -1606,7 +1496,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   ),
                   Switch(
                     value: _useCard,
-                    onChanged: (value) => setState(() => _useCard = value),
+                    onChanged: (value) =>
+                        _updateDocument(() => _useCard = value),
                   ),
                 ],
               ),
@@ -1619,7 +1510,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             if (quote.discountCards.isNotEmpty)
               RadioGroup<String>(
                 groupValue: _savedCardId ?? '__typed__',
-                onChanged: (value) => setState(
+                onChanged: (value) => _updateDocument(
                   () => _savedCardId = value == null || value == '__typed__'
                       ? null
                       : value,
@@ -1680,7 +1571,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ],
                 selected: {_cardType},
                 onSelectionChanged: (value) =>
-                    setState(() => _cardType = value.first),
+                    _updateDocument(() => _cardType = value.first),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -1688,7 +1579,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 textInputAction: TextInputAction.next,
                 onChanged: (_) {
                   if (_documentsAttempted) {
-                    setState(() {});
+                    _updateDocument(() {});
                   }
                 },
                 maxLength: 40,
@@ -1703,7 +1594,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 textInputAction: TextInputAction.done,
                 onChanged: (_) {
                   if (_documentsAttempted) {
-                    setState(() {});
+                    _updateDocument(() {});
                   }
                 },
                 maxLength: 120,
@@ -1724,7 +1615,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 contentPadding: EdgeInsets.zero,
                 value: _saveCard,
                 onChanged: (value) =>
-                    setState(() => _saveCard = value ?? false),
+                    _updateDocument(() => _saveCard = value ?? false),
                 controlAffinity: ListTileControlAffinity.leading,
                 title: const Text('Save this ID for next time'),
               ),
@@ -1793,7 +1684,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 8),
           ),
           onPressed: replaced
-              ? () => setState(() => _cardPhoto = null)
+              ? () => _updateDocument(() => _cardPhoto = null)
               : _pickCardPhoto,
           child: Text(replaced ? 'Undo' : 'Replace photo'),
         ),
@@ -1877,7 +1768,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               if (photo != null)
                 IconButton(
                   tooltip: 'Remove ID photo',
-                  onPressed: () => setState(() => _cardPhoto = null),
+                  onPressed: () => _updateDocument(() => _cardPhoto = null),
                   icon: const Icon(Icons.close_rounded),
                 ),
             ],
@@ -1894,7 +1785,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (!_editingAddress) ...[
+        ...[
           Row(
             children: [
               Expanded(
@@ -1908,9 +1799,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               TextButton(
                 style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
                 onPressed: () => _openAddressEditor(quote),
-                child: const Text(
+                child: Text(
                   'Edit',
-                  semanticsLabel: 'Edit contact details',
+                  semanticsLabel: _method == 'pickup'
+                      ? 'Edit contact details'
+                      : 'Edit delivery address',
                 ),
               ),
             ],
@@ -1919,7 +1812,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.home_outlined, color: scheme.primary, size: 22),
+              Icon(
+                _method == 'pickup'
+                    ? Icons.person_outline_rounded
+                    : Icons.home_outlined,
+                color: scheme.primary,
+                size: 22,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -1955,7 +1854,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         ],
         // Keep validators mounted when the summary replaces the address editor.
         Visibility(
-          visible: _editingAddress && !_addressSheetOpen,
+          visible: false,
           maintainState: true,
           child: _addressEditor(quote),
         ),
@@ -1968,8 +1867,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   Future<void> _openAddressEditor(CheckoutQuote quote) async {
-    setState(() => _addressSheetOpen = true);
-    final saved = await showModalBottomSheet<bool>(
+    await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -2014,7 +1912,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     child: Form(
                       key: _addressSheetFormKey,
                       autovalidateMode: _addressAttempted
-                          ? AutovalidateMode.onUserInteraction
+                          ? AutovalidateMode.always
                           : AutovalidateMode.disabled,
                       child: _addressEditor(
                         quote,
@@ -2035,7 +1933,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       onPressed: () {
                         if (!_useNewAddress ||
                             _validateAddressForm(inSheet: true)) {
-                          setState(() => _editingAddress = false);
                           Navigator.pop(sheetContext, true);
                         } else {
                           updateSheet(() {});
@@ -2051,13 +1948,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         ),
       ),
     );
-    if (!mounted) {
-      return;
-    }
-    setState(() => _addressSheetOpen = false);
-    if (saved == true && _returnToReview) {
-      _continue(quote);
-    }
   }
 
   Widget _addressEditor(
@@ -2077,16 +1967,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             : Icons.location_on_outlined,
         title: _method == 'pickup' ? 'Contact details' : 'Deliver to',
         showHeading: !inSheet,
-        trailing: TextButton(
-          style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-          onPressed: () {
-            if (!_useNewAddress || _validateAddressForm()) {
-              FocusManager.instance.primaryFocus?.unfocus();
-              updateState(() => _editingAddress = false);
-            }
-          },
-          child: const Text('Done'),
-        ),
         children: [
           RadioGroup<String>(
             groupValue: _useNewAddress ? '__new__' : _selectedAddressId,
@@ -2334,66 +2214,49 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
 
     final km = branch == null ? null : pinDistanceKm(branch, pin);
-    final ok = statusColour(context, 'completed');
-    final text = Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          problem == null ? Icons.location_on_outlined : Icons.error_outline,
-          color: problem == null ? scheme.primary : scheme.error,
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                problem == null
-                    ? 'Delivery pin confirmed'
-                    : 'Outside the delivery area',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: problem == null ? scheme.onSurface : scheme.error,
-                ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                problem ??
-                    (km == null
-                        ? 'Your rider will use this location.'
-                        : '${km.toStringAsFixed(1)} km from ${branch!.name}${branch.maxDeliveryRadiusKm == null ? '' : ' · inside the delivery area'}'),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: problem == null
-                      ? scheme.onSurfaceVariant
-                      : scheme.error,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (problem == null) ...[
-          const SizedBox(width: 6),
-          Icon(Icons.check_rounded, size: 18, color: ok),
-        ],
-      ],
-    );
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 14, 8, 6),
+      padding: const EdgeInsets.only(top: 8),
       decoration: BoxDecoration(
-        color: scheme.primaryContainer.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(appSurfaceRadius),
+        border: Border(top: BorderSide(color: scheme.outlineVariant)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
         children: [
-          text,
-          Align(
-            alignment: AlignmentDirectional.centerEnd,
-            child: TextButton(
-              style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-              onPressed: _openPinPicker,
-              child: const Text('Adjust pin'),
+          Icon(
+            problem == null ? Icons.location_on_outlined : Icons.error_outline,
+            color: problem == null ? scheme.primary : scheme.error,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  problem == null
+                      ? 'Delivery pin confirmed'
+                      : 'Outside delivery area',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: problem == null ? scheme.onSurface : scheme.error,
+                  ),
+                ),
+                Text(
+                  problem ??
+                      (km == null
+                          ? 'Rider will use this pin'
+                          : '${km.toStringAsFixed(1)} km from ${branch!.name}'),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: problem == null
+                        ? scheme.onSurfaceVariant
+                        : scheme.error,
+                  ),
+                ),
+              ],
             ),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: _openPinPicker,
+            child: const Text('Adjust pin'),
           ),
         ],
       ),
@@ -2446,6 +2309,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       title: 'Payment',
       showHeading: false,
       children: [
+        if (_paymentAttempted &&
+            !((_method == 'pickup' && _paymentMethod == 'cod') ||
+                quote.paymentOptions[_paymentMethod]?.available == true))
+          _inlineError(
+            'Choose another payment method or switch to pickup.',
+            key: _paymentErrorKey,
+          ),
         RadioGroup<String>(
           groupValue: _paymentMethod,
           onChanged: (value) {
@@ -2824,7 +2694,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         IconButton(
           tooltip: 'Remove page ${index + 1}',
           constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-          onPressed: () => setState(
+          onPressed: () => _updateDocument(
             () => _prescriptions = [..._prescriptions]..removeAt(index),
           ),
           icon: const Icon(Icons.close_rounded),
