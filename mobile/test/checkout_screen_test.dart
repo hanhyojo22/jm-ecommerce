@@ -136,6 +136,35 @@ void main() {
     expect(api.placed?.discountCard?.idNumber, 'SC-123');
   });
 
+  testWidgets('the save checkbox sends save_discount_card', (tester) async {
+    final api = _CheckoutApi(rx: false, seniorPwd: '20.00');
+    await _pump(tester, api, locator: locator);
+    await tester.ensureVisible(find.text('Apply eligible discount'));
+    await tester.tap(find.text('Apply eligible discount'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Senior citizen / PWD').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'ID number'), 'SC-9');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Name on the ID'),
+      'Lola Ana',
+    );
+    await tester.ensureVisible(find.text('Save this ID for next time'));
+    await tester.tap(find.text('Save this ID for next time'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Add photo of ID'));
+    await tester.tap(find.text('Add photo of ID'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choose from gallery'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Place order'));
+    await tester.pumpAndSettle();
+    expect(api.placed?.discountCard?.idNumber, 'SC-9');
+    expect(api.placed?.saveDiscountCard, isTrue);
+  });
+
   testWidgets('payment selection changes the displayed total', (tester) async {
     await _pump(
       tester,
@@ -235,6 +264,25 @@ void main() {
       PlacedOrder.fromJson({'id': 'order-1', 'number': 'JM-1'}),
     );
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('a failed quote refresh hides Place order until retry succeeds', (
+    tester,
+  ) async {
+    final api = _CheckoutApi(rx: false);
+    await _pump(tester, api, locator: locator);
+    api.quoteFailure = true;
+    ProviderScope.containerOf(tester.element(find.byType(CheckoutScreen)))
+        .invalidate(checkoutQuoteProvider);
+    await tester.pumpAndSettle();
+    expect(find.text('Try again'), findsOneWidget);
+    expect(find.text('Place order'), findsNothing);
+
+    api.quoteFailure = false;
+    await tester.tap(find.text('Try again'));
+    await tester.pumpAndSettle();
+    expect(find.text('Place order'), findsOneWidget);
+    expect(api.orderAttempts, 0);
   });
 
   testWidgets('a deleted saved ID reopens the ID sheet for correction', (
