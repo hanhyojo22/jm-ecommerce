@@ -7,6 +7,7 @@ use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -15,8 +16,8 @@ use Illuminate\Validation\ValidationException;
 class AddStaffMember
 {
     /**
-     * Adds an employee to the pharmacy. The email must be new: it gets an account they claim by signing
-     * in through Clerk with it.
+     * Adds an employee to the pharmacy. The email must be new, so it gets an account they claim by signing
+     * in through Clerk with it, or belong to someone this company removed earlier, who comes back.
      *
      * @param  array{email: string, role: string, store_id: ?string, is_pharmacist: bool, license_number: ?string, license_expires_on: ?string}  $details
      */
@@ -25,14 +26,21 @@ class AddStaffMember
         return DB::transaction(function () use ($actor, $tenant, $details, $ipAddress): TenantMember {
             $email = Str::lower(trim($details['email']));
             $user = User::query()->whereRaw('LOWER(email) = ?', [$email])->lockForUpdate()->first();
+            $returning = $user !== null;
 
-            // Existing accounts are never taken over: becoming staff changes what that person can do
+            // Other accounts are never taken over: becoming staff changes what that person can do
             // (staff cannot buy from their own company), so it needs an email nobody uses yet.
-            if ($user !== null) {
+            if ($returning && ! $this->isFormerEmployee($user, $tenant)) {
                 throw ValidationException::withMessages(['email' => 'That email already has a Everyday Pharmacy account. Use a work email that has not signed up yet.']);
             }
 
-            $user = User::query()->create(['name' => Str::before($email, '@'), 'email' => $email, 'password' => Hash::make(Str::random(64)), 'is_active' => true]);
+            try {
+                $user ??= User::query()->create(['name' => Str::before($email, '@'), 'email' => $email, 'password' => Hash::make(Str::random(64)), 'is_active' => true]);
+            } catch (UniqueConstraintViolationException) {
+                // A second submit of the same new email lost the race to the first.
+                throw ValidationException::withMessages(['email' => 'That email was just added. Refresh the page to see it.']);
+            }
+
             $user->forceFill(['account_type' => 'seller', 'preferred_workspace' => 'seller'])->save();
 
             $member = TenantMember::query()->create([
@@ -50,12 +58,27 @@ class AddStaffMember
                 'action' => 'tenant_member.added',
                 'entity_type' => TenantMember::class,
                 'entity_id' => $member->id,
-                'new_values' => ['email' => $email, 'role' => $details['role'], 'store_id' => $details['store_id'], 'is_pharmacist' => $details['is_pharmacist'], 'license_number' => $details['license_number'], 'license_expires_on' => $details['license_expires_on']],
+                'new_values' => ['email' => $email, 'returning' => $returning, 'role' => $details['role'], 'store_id' => $details['store_id'], 'is_pharmacist' => $details['is_pharmacist'], 'license_number' => $details['license_number'], 'license_expires_on' => $details['license_expires_on']],
                 'ip_address' => $ipAddress,
             ]);
 
             return $member;
         });
+    }
+
+    /**
+     * Someone this company removed, or whose invitation lapsed, and who has not joined anyone since.
+     */
+    private function isFormerEmployee(User $user, Tenant $tenant): bool
+    {
+        return $user->is_active
+            && $user->account_type === 'buyer'
+            && ! $user->tenantMemberships()->exists()
+            && AuditLog::query()
+                ->whereIn('action', ['tenant_member.removed', 'tenant_member.invitation_expired'])
+                ->where('old_values->user_id', $user->id)
+                ->where('old_values->tenant_id', $tenant->id)
+                ->exists();
     }
 
     /**

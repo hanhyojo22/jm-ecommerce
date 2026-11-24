@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Auth\ClerkIdentity;
 use App\Auth\ClerkSessionVerifier;
 use App\Auth\ClerkUserResolver;
+use App\Models\Tenant;
+use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -111,6 +113,36 @@ class ClerkUserResolverTest extends TestCase
             'entity_type' => User::class,
             'entity_id' => $administrator->id,
         ]);
+    }
+
+    public function test_a_staff_invitation_unclaimed_past_its_window_becomes_a_customer_account(): void
+    {
+        $tenant = Tenant::create(['name' => 'Botika', 'slug' => 'botika', 'status' => 'active']);
+        $invite = fn (string $email, int $daysAgo, string $role = 'manager'): TenantMember => $this->travelTo(now()->subDays($daysAgo), fn () => TenantMember::create([
+            'tenant_id' => $tenant->id,
+            'user_id' => User::factory()->seller()->create(['email' => $email, 'clerk_user_id' => null])->id,
+            'role' => $role,
+        ]));
+        $stale = $invite('typo@example.com', TenantMember::INVITATION_DAYS + 1);
+        $fresh = $invite('fresh@example.com', TenantMember::INVITATION_DAYS - 1);
+        $lateOwner = $invite('owner@example.com', TenantMember::INVITATION_DAYS + 30, 'owner');
+        $signIn = fn (string $id, string $email): ?User => (new ClerkUserResolver(new FakeClerkSessionVerifier(
+            new ClerkIdentity($id),
+            new ClerkIdentity($id, $email, true, 'Someone'),
+        )))->resolve(Request::create('/'));
+
+        $stranger = $signIn('user_stranger', 'typo@example.com');
+        $this->assertSame(['user_stranger', 'buyer'], [$stranger?->clerk_user_id, $stranger?->account_type]);
+        $this->assertDatabaseMissing('tenant_members', ['id' => $stale->id]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'tenant_member.invitation_expired', 'entity_id' => $stale->id]);
+
+        $employee = $signIn('user_fresh', 'fresh@example.com');
+        $this->assertSame('seller', $employee?->account_type);
+        $this->assertDatabaseHas('tenant_members', ['id' => $fresh->id]);
+
+        // The company's owner is set up by the platform and never lapses.
+        $this->assertSame('seller', $signIn('user_owner', 'owner@example.com')?->account_type);
+        $this->assertDatabaseHas('tenant_members', ['id' => $lateOwner->id, 'role' => 'owner']);
     }
 
     public function test_an_inactive_linked_user_is_not_resolved(): void

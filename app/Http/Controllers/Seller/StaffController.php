@@ -8,10 +8,14 @@ use App\Actions\RemoveStaffMember;
 use App\Actions\TransferOwnership;
 use App\Http\Controllers\Controller;
 use App\Models\TenantMember;
+use App\Services\ClerkInvitationService;
+use App\Support\SafeExceptionReporter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Throwable;
 
 class StaffController extends Controller
 {
@@ -29,7 +33,7 @@ class StaffController extends Controller
         ]);
     }
 
-    public function store(Request $request, AddStaffMember $addStaffMember): RedirectResponse
+    public function store(Request $request, AddStaffMember $addStaffMember, ClerkInvitationService $invitations, SafeExceptionReporter $reporter): RedirectResponse
     {
         $actor = $this->actor($request);
         $tenant = $actor->tenant;
@@ -38,45 +42,61 @@ class StaffController extends Controller
         AddStaffMember::assertOwnBranch($tenant, $details['store_id']);
         $this->assertMayAssign($actor, $details['role'], $details['store_id']);
 
-        $addStaffMember->handle($request->user(), $tenant, $details, $request->ip());
+        $member = $addStaffMember->handle($request->user(), $tenant, $details, $request->ip());
+        $email = $member->user->email;
 
-        return to_route('seller.staff.index')->with('status', "Added {$details['email']}. They sign in with that email to start.");
+        // A returning employee already has a sign-in; everyone else gets Clerk's email, sent once the add is saved.
+        if ($member->user->clerk_user_id !== null) {
+            return to_route('seller.staff.index')->with('status', "Added {$email} back to the team. They can sign in now.");
+        }
+
+        try {
+            $invitations->inviteEmployee($email);
+        } catch (Throwable $exception) {
+            $reporter->report($exception, $request);
+
+            return to_route('seller.staff.index')->with('status', "Added {$email}, but the invitation email could not be sent. Ask them to sign in with that email within ".TenantMember::INVITATION_DAYS.' days.');
+        }
+
+        return to_route('seller.staff.index')->with('status', "Invitation sent to {$email}. They have ".TenantMember::INVITATION_DAYS.' days to sign in with that email.');
     }
 
     public function update(Request $request, TenantMember $member, ChangeStaffMember $changeStaffMember): RedirectResponse
     {
-        $actor = $this->actor($request);
-        $tenant = $actor->tenant;
-        $member = $tenant->members()->whereKey($member)->firstOrFail();
+        return DB::transaction(function () use ($request, $member, $changeStaffMember): RedirectResponse {
+            [$actor, $member] = $this->lockedActorAndMember($request, $member->getKey());
+            $tenant = $actor->tenant;
 
-        // The owner keeps their role and branch; this only updates their own pharmacist license.
-        if ($actor->isOwner() && $member->is($actor)) {
-            $request->validate($this->pharmacistRules());
-            $changeStaffMember->handle($request->user(), $member, ['role' => 'owner', 'store_id' => null, ...$this->pharmacistDetails($request, $actor)], $request->ip());
+            // The owner keeps their role and branch; this only updates their own pharmacist license.
+            if ($actor->isOwner() && $member->is($actor)) {
+                $request->validate($this->pharmacistRules());
+                $changeStaffMember->handle($request->user(), $member, ['role' => 'owner', 'store_id' => null, ...$this->pharmacistDetails($request, $actor)], $request->ip());
 
-            return to_route('seller.staff.index')->with('status', 'Your pharmacist license was updated.');
-        }
+                return to_route('seller.staff.index')->with('status', 'Your pharmacist license was updated.');
+            }
 
-        $this->assertMayManage($actor, $member);
-        $details = [...$request->validate($this->assignmentRules($actor)), ...$this->pharmacistDetails($request, $actor, $member)];
-        $details['store_id'] ??= null;
-        AddStaffMember::assertOwnBranch($tenant, $details['store_id']);
-        $this->assertMayAssign($actor, $details['role'], $details['store_id']);
+            $this->assertMayManage($actor, $member);
+            $details = [...$request->validate($this->assignmentRules($actor)), ...$this->pharmacistDetails($request, $actor, $member)];
+            $details['store_id'] ??= null;
+            AddStaffMember::assertOwnBranch($tenant, $details['store_id']);
+            $this->assertMayAssign($actor, $details['role'], $details['store_id']);
 
-        $changeStaffMember->handle($request->user(), $member, $details, $request->ip());
+            $changeStaffMember->handle($request->user(), $member, $details, $request->ip());
 
-        return to_route('seller.staff.index')->with('status', 'Employee updated.');
+            return to_route('seller.staff.index')->with('status', 'Employee updated.');
+        });
     }
 
     public function destroy(Request $request, TenantMember $member, RemoveStaffMember $removeStaffMember): RedirectResponse
     {
-        $actor = $this->actor($request);
-        $member = $actor->tenant->members()->whereKey($member)->firstOrFail();
-        $this->assertMayManage($actor, $member);
+        return DB::transaction(function () use ($request, $member, $removeStaffMember): RedirectResponse {
+            [$actor, $member] = $this->lockedActorAndMember($request, $member->getKey());
+            $this->assertMayManage($actor, $member);
 
-        $removeStaffMember->handle($request->user(), $member, $request->ip());
+            $removeStaffMember->handle($request->user(), $member, $request->ip());
 
-        return to_route('seller.staff.index')->with('status', 'Employee removed.');
+            return to_route('seller.staff.index')->with('status', 'Employee removed.');
+        });
     }
 
     public function transferOwnership(Request $request, TenantMember $member, TransferOwnership $transferOwnership): RedirectResponse
@@ -175,5 +195,29 @@ class StaffController extends Controller
     private function actor(Request $request): TenantMember
     {
         return $request->user()->sellerMembership(['owner', 'manager']) ?? abort(403);
+    }
+
+    /**
+     * Locks the signed-in member and the employee (in id order) and re-reads both, so the permission
+     * checks and the change see the same roles and branches even when someone edits them meanwhile.
+     * Call inside a transaction. Another company's employee is a 404.
+     *
+     * @return array{0: TenantMember, 1: TenantMember}
+     */
+    private function lockedActorAndMember(Request $request, string $memberId): array
+    {
+        $actor = $this->actor($request);
+        $rows = TenantMember::query()
+            ->where('tenant_id', $actor->tenant_id)
+            ->whereIn('id', [$actor->id, $memberId])
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get();
+        $lockedActor = $rows->firstWhere('id', $actor->id);
+
+        abort_unless(in_array($lockedActor?->role, ['owner', 'manager'], true), 403);
+        $lockedActor->setRelation('tenant', $actor->tenant);
+
+        return [$lockedActor, $rows->firstWhere('id', $memberId) ?? abort(404)];
     }
 }

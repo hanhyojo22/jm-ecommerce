@@ -3,6 +3,7 @@
 namespace App\Auth;
 
 use App\Models\AuditLog;
+use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
@@ -82,6 +83,7 @@ class ClerkUserResolver
                     $attributes['admin_invited_at'] = null;
                 }
 
+                $this->dropExpiredStaffInvitations($user, $request);
                 $user->forceFill($attributes)->save();
 
                 AuditLog::query()->create([
@@ -129,5 +131,36 @@ class ClerkUserResolver
         $user->forceFill(['email_verified_at' => now()])->save();
 
         return $user;
+    }
+
+    /**
+     * A team place nobody claimed in time may have gone to a mistyped email, so whoever signs in with it
+     * now gets a customer account instead. The company can add the person again.
+     */
+    private function dropExpiredStaffInvitations(User $user, Request $request): void
+    {
+        // Owners are set up by the platform, not invited by a colleague, and a company must keep its owner.
+        $expired = $user->tenantMemberships()
+            ->where('role', '!=', 'owner')
+            ->where('created_at', '<', now()->subDays(TenantMember::INVITATION_DAYS))
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($expired as $member) {
+            $member->delete();
+
+            AuditLog::query()->create([
+                'actor_user_id' => null,
+                'action' => 'tenant_member.invitation_expired',
+                'entity_type' => TenantMember::class,
+                'entity_id' => $member->id,
+                'old_values' => $member->only(['tenant_id', 'user_id', 'role', 'store_id', 'is_pharmacist']),
+                'ip_address' => $request->ip(),
+            ]);
+        }
+
+        if ($expired->isNotEmpty() && ! $user->tenantMemberships()->exists()) {
+            $user->forceFill(['account_type' => 'buyer', 'preferred_workspace' => 'customer']);
+        }
     }
 }

@@ -249,9 +249,9 @@ class User extends Authenticatable
             ->whereIn('role', $roles)
             ->with(['tenant.store', 'store'])
             ->whereHas('tenant', fn ($query) => $query->where('status', 'active'))
-            // Head office keeps the workspace while branches open and close; a branch member whose
-            // branch is switched off has none.
-            ->where(fn ($query) => $query->whereNull('store_id')->orWhereHas('store', fn ($store) => $store->where('status', 'active')))
+            // A closed branch is only hidden from customers, so its people can still set it up before it
+            // opens; a branch the platform suspended takes their workspace away.
+            ->where(fn ($query) => $query->whereNull('store_id')->orWhereHas('store', fn ($store) => $store->whereIn('status', ['active', 'inactive'])))
             ->oldest('created_at')
             ->first();
     }

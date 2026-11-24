@@ -69,7 +69,16 @@
                                             <span class="text-muted">&mdash;</span>
                                         @endif
                                     </td>
-                                    <td data-label="Status"><span class="sc-badge" data-tone="{{ $member->user?->clerk_user_id ? 'success' : 'neutral' }}">{{ $member->user?->clerk_user_id ? 'Active' : 'Awaiting sign-in' }}</span></td>
+                                    <td data-label="Status">
+                                        @if ($member->user?->clerk_user_id)
+                                            <span class="sc-badge" data-tone="success">Active</span>
+                                        @elseif ($member->invitationExpired())
+                                            <span class="sc-badge" data-tone="danger">Invitation expired</span>
+                                            <small class="sc-cell-note">Remove and add them again to resend.</small>
+                                        @else
+                                            <span class="sc-badge" data-tone="neutral">Awaiting sign-in</span>
+                                        @endif
+                                    </td>
                                     <td class="text-right">
                                         @if ($canEdit)
                                             <button type="button" class="seller-outline-button" aria-label="Edit {{ $member->user?->name }}" aria-haspopup="dialog" aria-controls="member-{{ $member->id }}" x-data @click="document.getElementById(@js('member-'.$member->id)).showModal()">Edit</button>

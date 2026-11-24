@@ -31,7 +31,8 @@ class RemoveStaffMember
                 'action' => 'tenant_member.removed',
                 'entity_type' => TenantMember::class,
                 'entity_id' => $member->id,
-                'old_values' => $member->only(['user_id', 'role', 'store_id', 'is_pharmacist']),
+                // tenant_id lets this company add the person back later (AddStaffMember::isFormerEmployee).
+                'old_values' => $member->only(['tenant_id', 'user_id', 'role', 'store_id', 'is_pharmacist']),
                 'ip_address' => $ipAddress,
             ]);
         });

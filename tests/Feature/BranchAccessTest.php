@@ -125,12 +125,17 @@ class BranchAccessTest extends TestCase
         $this->actingAs($headOffice)->get(route('seller.store-settings.edit'))->assertOk();
     }
 
-    public function test_staff_of_a_switched_off_branch_lose_the_workspace(): void
+    public function test_staff_keep_a_closed_branch_but_lose_a_suspended_one(): void
     {
         [$tenant, $makati] = $this->pharmacy();
         $staff = $this->member($tenant, 'staff', $makati);
-        $makati->update(['status' => 'suspended']);
 
+        // A new branch starts closed; its people set it up before it opens.
+        $makati->update(['status' => 'inactive']);
+        $this->actingAs($staff)->get(route('seller.dashboard'))->assertOk();
+        $this->actingAs($staff)->get(route('seller.branch-stock.index'))->assertOk();
+
+        $makati->update(['status' => 'suspended']);
         $this->actingAs($staff)->get(route('seller.dashboard'))->assertRedirect(route('home'));
     }
 

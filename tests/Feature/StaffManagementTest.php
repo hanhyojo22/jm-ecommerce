@@ -7,11 +7,65 @@ use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class StaffManagementTest extends TestCase
 {
     use RefreshDatabase;
+
+    private int $clerkInvitationStatus = 200;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // The local .env may hold a live Clerk key; no test may reach Clerk.
+        config(['services.clerk.secret_key' => 'sk_test_fake']);
+        Http::preventStrayRequests();
+        Http::fake(['api.clerk.com/v1/invitations' => fn () => Http::response([], $this->clerkInvitationStatus)]);
+    }
+
+    public function test_a_new_employee_is_emailed_an_invitation_that_lapses(): void
+    {
+        [$tenant, $branch] = $this->pharmacy('botika');
+        $owner = $this->member($tenant, 'owner');
+
+        $this->actingAs($owner)->post(route('seller.staff.store'), ['email' => 'New.Clerk@Example.com', 'role' => 'staff', 'store_id' => $branch->id])
+            ->assertSessionHas('status', 'Invitation sent to new.clerk@example.com. They have 14 days to sign in with that email.');
+
+        Http::assertSent(fn ($request): bool => $request['email_address'] === 'new.clerk@example.com'
+            && $request['expires_in_days'] === TenantMember::INVITATION_DAYS
+            && $request['ignore_existing'] === true);
+
+        // Clerk being down never loses the employee; the owner is told to pass the word on.
+        $this->clerkInvitationStatus = 500;
+        $this->actingAs($owner)->post(route('seller.staff.store'), ['email' => 'second@example.com', 'role' => 'staff', 'store_id' => $branch->id])
+            ->assertSessionHas('status', fn (string $status): bool => str_contains($status, 'could not be sent'));
+        $this->assertDatabaseHas('tenant_members', ['user_id' => User::query()->where('email', 'second@example.com')->value('id')]);
+    }
+
+    public function test_a_removed_employee_can_be_added_back_but_only_by_their_company(): void
+    {
+        [$tenant, $branch] = $this->pharmacy('botika');
+        [$rivalTenant, $rivalBranch] = $this->pharmacy('rival');
+        $owner = $this->member($tenant, 'owner');
+        $employee = $this->member($tenant, 'staff', $branch);
+        $employee->forceFill(['clerk_user_id' => 'user_employee'])->save();
+
+        $this->actingAs($owner)->delete(route('seller.staff.destroy', $employee->tenantMemberships()->sole()))->assertRedirect();
+
+        $this->actingAs($this->member($rivalTenant, 'owner'))->post(route('seller.staff.store'), ['email' => $employee->email, 'role' => 'staff', 'store_id' => $rivalBranch->id])
+            ->assertSessionHasErrors('email');
+        $this->assertDatabaseMissing('tenant_members', ['user_id' => $employee->id]);
+
+        $this->actingAs($owner)->post(route('seller.staff.store'), ['email' => strtoupper($employee->email), 'role' => 'manager', 'store_id' => $branch->id])
+            ->assertSessionHas('status', "Added {$employee->email} back to the team. They can sign in now.");
+
+        $this->assertDatabaseHas('tenant_members', ['tenant_id' => $tenant->id, 'user_id' => $employee->id, 'role' => 'manager', 'store_id' => $branch->id]);
+        $this->assertSame('seller', $employee->fresh()->account_type);
+        Http::assertNothingSent();
+    }
 
     public function test_head_office_adds_a_branch_pharmacist_by_email(): void
     {

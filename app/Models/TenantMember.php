@@ -13,6 +13,12 @@ class TenantMember extends Model
 {
     use HasUlids;
 
+    /**
+     * Days a new employee has to sign in before their place on the team lapses, so a mistyped
+     * email cannot hand the pharmacy to a stranger later.
+     */
+    public const INVITATION_DAYS = 14;
+
     protected $fillable = ['tenant_id', 'store_id', 'user_id', 'role', 'is_pharmacist', 'license_number', 'license_expires_on'];
 
     protected function casts(): array
@@ -23,6 +29,14 @@ class TenantMember extends Model
     public function isOwner(): bool
     {
         return $this->role === 'owner';
+    }
+
+    /**
+     * An employee who never signed in within the invitation window; their next sign-in drops the place.
+     */
+    public function invitationExpired(): bool
+    {
+        return ! $this->isOwner() && $this->user?->clerk_user_id === null && $this->created_at->lt(now()->subDays(self::INVITATION_DAYS));
     }
 
     /**
