@@ -3,111 +3,134 @@
         <div class="sc-page-head">
             <div>
                 <h1 class="sc-title">Stock at {{ $branch->name }}</h1>
-                <p class="sc-subtitle">Units on hand at this branch. Customers near it see only what is in stock here.</p>
+                <p class="sc-subtitle">Review batches, receive deliveries, and keep branch stock up to date.</p>
             </div>
+            <a href="#receive-stock" class="seller-primary-button">
+                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                Receive stock
+            </a>
         </div>
     </x-slot>
 
     <div class="page-shell">
-        <div class="page-container seller-workspace-page sc-stack">
+        <div class="page-container seller-workspace-page sc-stock-page">
             @if (session('status'))<p class="sc-notice" data-tone="success" role="status">{{ session('status') }}</p>@endif
-            @if ($errors->any())<p class="sc-notice" data-tone="danger" role="alert">{{ $errors->first() }}</p>@endif
+            @if ($errors->any())
+                <div class="sc-notice" data-tone="danger" role="alert">
+                    <p class="font-semibold">Stock could not be saved</p>
+                    <ul class="mt-1 list-inside list-disc">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+                </div>
+            @endif
 
-            <form method="GET" action="{{ route('seller.branch-stock.index') }}" class="flex flex-wrap items-end gap-3">
+            <form method="GET" action="{{ route('seller.branch-stock.index') }}" class="sc-stock-toolbar">
                 @if ($branches)
-                    <div>
-                        <label for="branch" class="block text-sm font-semibold text-ink">Branch</label>
-                        <select id="branch" name="branch" class="field-control mt-2 text-base lg:text-sm" data-submit-on-change>
-                            @foreach ($branches as $option)
-                                <option value="{{ $option->id }}" @selected($option->id === $branch->id)>{{ $option->name }}</option>
-                            @endforeach
+                    <div class="sc-field sc-stock-branch">
+                        <label for="branch">Working branch</label>
+                        <select id="branch" name="branch" class="field-control sc-input" data-submit-on-change>
+                            @foreach ($branches as $option)<option value="{{ $option->id }}" @selected($option->id === $branch->id)>{{ $option->name }}</option>@endforeach
                         </select>
                     </div>
                 @endif
-                <div>
-                    <label for="search" class="block text-sm font-semibold text-ink">Find a medicine</label>
-                    <input id="search" name="search" type="search" value="{{ $search }}" maxlength="100" class="field-control mt-2 text-base lg:text-sm">
+                <div class="sc-field sc-stock-search">
+                    <label for="search">Find medicine to receive or count</label>
+                    <input id="search" name="search" type="search" value="{{ $search }}" maxlength="100" placeholder="Name or generic name" class="field-control sc-input">
                 </div>
-                <button type="submit" class="seller-outline-button min-h-11">Search</button>
+                <button type="submit" class="seller-outline-button">Search</button>
+                @if ($search)<a href="{{ route('seller.branch-stock.index', ['branch' => $branch->id]) }}" class="sc-link">Clear search</a>@endif
             </form>
 
-            <section class="grid gap-4 lg:grid-cols-2">
-                <form method="POST" action="{{ route('seller.branch-stock.receive', ['branch' => $branch->id]) }}" class="sc-card grid gap-3 p-4">
-                    @csrf
-                    <h2 class="text-lg font-semibold text-ink">Receive a batch</h2>
-                    <label class="text-sm font-semibold text-ink">Medicine
-                        <select name="product_id" required class="field-control mt-1 w-full">
-                            @foreach ($products as $product)<option value="{{ $product->id }}">{{ $product->name }}</option>@endforeach
-                        </select>
-                    </label>
-                    <label class="text-sm font-semibold text-ink">Product option <span class="font-normal text-muted">(leave blank for products without options)</span>
-                        <select name="variant_id" class="field-control mt-1 w-full">
-                            <option value="">No option</option>
-                            @foreach ($products as $product)
-                                @foreach ($product->variants as $variant)
-                                    <option value="{{ $variant->id }}">{{ $product->name }} — {{ $variant->label() }}</option>
-                                @endforeach
-                            @endforeach
-                        </select>
-                    </label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <label class="text-sm font-semibold text-ink">Lot number<input name="lot_number" maxlength="100" required class="field-control mt-1 w-full"></label>
-                        <label class="text-sm font-semibold text-ink">Quantity<input name="quantity" type="number" min="1" max="1000000" required class="field-control mt-1 w-full"></label>
-                        <label class="text-sm font-semibold text-ink">Expiry date<input name="expires_at" type="date" min="{{ today()->addDay()->toDateString() }}" required class="field-control mt-1 w-full"></label>
-                        <label class="text-sm font-semibold text-ink">Supplier<input name="supplier" maxlength="255" class="field-control mt-1 w-full"></label>
-                    </div>
-                    <label class="text-sm font-semibold text-ink">Supplier reference<input name="reference" maxlength="255" class="field-control mt-1 w-full"></label>
-                    <button class="seller-primary-button min-h-11 justify-self-start">Receive stock</button>
-                </form>
-                <div class="sc-card p-4">
-                    <h2 class="text-lg font-semibold text-ink">Batch watch</h2>
-                    <dl class="mt-3 grid grid-cols-2 gap-3 text-sm">
-                        <div><dt class="text-muted">Expires within 90 days</dt><dd class="font-semibold text-ink">{{ $watch['expiring'] }} units</dd></div>
-                        <div><dt class="text-muted">Expired</dt><dd class="font-semibold text-ink">{{ $watch['expired'] }} units</dd></div>
-                        <div><dt class="text-muted">Quarantined</dt><dd class="font-semibold text-ink">{{ $watch['quarantined'] }} units</dd></div>
-                        <div><dt class="text-muted">Low stock (5 or fewer)</dt><dd class="font-semibold text-ink">{{ $watch['low_stock'] }} product options</dd></div>
-                        <div><dt class="text-muted">Stock discrepancies</dt><dd class="font-semibold text-ink">{{ $watch['discrepancies'] }} counts</dd></div>
-                    </dl>
-                    <p class="mt-2 text-sm text-muted">Use the stock count table below to reconcile physical quantities.</p>
+            <section class="sc-stock-watch" aria-labelledby="stock-watch-title">
+                <div class="sc-stock-section-heading">
+                    <h2 id="stock-watch-title" class="sc-card-title">Batch watch</h2>
+                    <p class="sc-card-note">Across {{ $branch->name }}</p>
                 </div>
+                <dl class="sc-stock-signals">
+                    @foreach ([['expiring', 'Expires within 90 days', 'units', 'warning'], ['expired', 'Expired', 'units', 'danger'], ['quarantined', 'Quarantined', 'units', 'warning'], ['low_stock', 'Low stock', 'product options', 'warning'], ['discrepancies', 'Stock discrepancies', 'counts', 'danger']] as [$key, $label, $unit, $tone])
+                        <div class="sc-stock-signal" @if ($watch[$key] > 0) data-tone="{{ $tone }}" @endif>
+                            <dt>{{ $label }}</dt>
+                            <dd><strong>{{ number_format($watch[$key]) }}</strong> <span>{{ $watch[$key] === 1 ? Str::singular($unit) : $unit }}</span></dd>
+                        </div>
+                    @endforeach
+                </dl>
             </section>
 
-            <section class="sc-card overflow-x-auto">
-                <h2 class="p-4 text-lg font-semibold text-ink">Batches at {{ $branch->name }}</h2>
-                <table class="w-full text-sm">
-                    <thead><tr class="border-y border-line text-left text-muted"><th class="p-3">Medicine / lot</th><th class="p-3">Expiry</th><th class="p-3">On hand</th><th class="p-3">Status / adjustment</th></tr></thead>
-                    <tbody>
-                        @forelse ($batches as $batch)
-                            <tr class="border-b border-line-soft">
-                                <td class="p-3"><span class="font-semibold text-ink">{{ $batch->product->name }}</span><span class="block text-muted">{{ $batch->lot_number }}</span></td>
-                                <td class="p-3">{{ $batch->expires_at?->format('M j, Y') ?? 'No expiry recorded' }}</td>
-                                <td class="p-3">{{ $batch->remaining_quantity }}</td>
-                                <td class="p-3">
-                                    <form method="POST" action="{{ route('seller.branch-stock.adjust', ['branch' => $branch->id]) }}" class="flex flex-wrap items-center gap-2">
-                                        @csrf @method('PATCH')
-                                        <input type="hidden" name="batch_id" value="{{ $batch->id }}">
-                                        <span class="text-muted">{{ ucfirst($batch->status) }}</span>
-                                        <input aria-label="New batch quantity" name="quantity" type="number" min="0" max="1000000" value="{{ $batch->remaining_quantity }}" required class="field-control w-24">
-                                        <select aria-label="Adjustment reason" name="reason" required class="field-control"><option value="count">Count</option><option value="damage">Damage</option><option value="expiry">Expiry</option><option value="correction">Correction</option><option value="quarantine">Quarantine</option></select>
-                                        <button class="seller-outline-button min-h-10">Adjust</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="4" class="p-4 text-muted">No batches recorded for this branch yet.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-                <div class="p-3">{{ $batches->links() }}</div>
-            </section>
+            <div class="sc-stock-workspace">
+                <section class="sc-card sc-stock-batches" aria-labelledby="batches-title">
+                    <div class="sc-card-head">
+                        <div><h2 id="batches-title" class="sc-card-title">Stock batches</h2><p class="sc-card-note">Review expiry dates and record changes to each lot.</p></div>
+                        <span class="sc-stock-total">{{ number_format($batches->total()) }} {{ Str::plural('batch', $batches->total()) }}</span>
+                    </div>
+                    <table class="sc-table sc-stock-table">
+                        <thead><tr><th scope="col">Medicine / lot</th><th scope="col">Expiry</th><th scope="col" class="is-num">On hand</th><th scope="col">Status</th></tr></thead>
+                        <tbody>
+                            @forelse ($batches as $batch)
+                                @php
+                                    $expired = $batch->expires_at && $batch->expires_at->lt(today());
+                                    $nearExpiry = !$expired && $batch->expires_at && $batch->expires_at->lte(today()->addDays(90));
+                                    $tone = $batch->status === 'quarantined' ? 'warning' : ($expired ? 'danger' : 'neutral');
+                                    $statusLabel = $batch->status === 'quarantined' ? 'Quarantined' : ($expired ? 'Expired' : ucfirst($batch->status));
+                                @endphp
+                                <tr>
+                                    <th scope="row" class="sc-stock-medicine"><span class="sc-strong">{{ $batch->product->name }}</span><span class="sc-stock-lot">Lot {{ $batch->lot_number }}</span></th>
+                                    <td class="sc-stock-expiry"><span>{{ $batch->expires_at?->format('M j, Y') ?? 'Not recorded' }}</span>@if ($nearExpiry)<span class="sc-stock-expiry-note">Expires soon</span>@endif</td>
+                                    <td class="is-num sc-stock-quantity"><strong>{{ number_format($batch->remaining_quantity) }}</strong><span class="sc-stock-mobile-unit"> units on hand</span></td>
+                                    <td class="sc-stock-status">
+                                        <span class="sc-badge" data-tone="{{ $tone }}">{{ $statusLabel }}</span>
+                                        <details class="sc-stock-adjust" @if (old('batch_id') === $batch->id) open @endif>
+                                            <summary>Adjust batch <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></summary>
+                                            <form method="POST" action="{{ route('seller.branch-stock.adjust', ['branch' => $branch->id]) }}" class="sc-stock-adjust-form">
+                                                @csrf @method('PATCH')
+                                                <input type="hidden" name="batch_id" value="{{ $batch->id }}">
+                                                <div class="sc-field"><label for="batch-quantity-{{ $batch->id }}">New quantity</label><input id="batch-quantity-{{ $batch->id }}" name="quantity" type="number" inputmode="numeric" min="0" max="1000000" value="{{ old('batch_id') === $batch->id ? old('quantity', $batch->remaining_quantity) : $batch->remaining_quantity }}" required class="field-control sc-input"></div>
+                                                <div class="sc-field"><label for="batch-reason-{{ $batch->id }}">Reason</label><select id="batch-reason-{{ $batch->id }}" name="reason" required class="field-control sc-input">@foreach (['count' => 'Count', 'damage' => 'Damage', 'expiry' => 'Expiry', 'correction' => 'Correction', 'quarantine' => 'Quarantine'] as $value => $label)<option value="{{ $value }}" @selected(old('batch_id') === $batch->id && old('reason') === $value)>{{ $label }}</option>@endforeach</select></div>
+                                                <button class="seller-outline-button">Save adjustment</button>
+                                            </form>
+                                        </details>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="4"><div class="sc-empty"><h3>No batches recorded yet</h3><p>Receive your first delivery to start tracking lots and expiry dates at this branch.</p><a href="#receive-stock" class="sc-link">Receive stock</a></div></td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                    @if ($batches->hasPages())<div class="sc-card-foot">{{ $batches->links() }}</div>@endif
+                </section>
 
+                <aside id="receive-stock" class="sc-card sc-stock-receive" aria-labelledby="receive-stock-title" tabindex="-1">
+                    <div class="sc-card-head"><div><h2 id="receive-stock-title" class="sc-card-title">Receive a batch</h2><p class="sc-card-note">Add a delivery to {{ $branch->name }}.</p></div></div>
+                    @if ($products->isNotEmpty())
+                        <form method="POST" action="{{ route('seller.branch-stock.receive', ['branch' => $branch->id]) }}" class="sc-stock-receive-form">
+                            @csrf
+                            <fieldset class="sc-stock-fields"><legend>Medicine &amp; batch</legend>
+                                <div class="sc-field"><label for="receive-product">Medicine</label><select id="receive-product" name="product_id" required class="field-control sc-input"><option value="" disabled @selected(!old('product_id'))>Select a medicine</option>@foreach ($products as $product)<option value="{{ $product->id }}" @selected(old('product_id') === $product->id)>{{ $product->name }}</option>@endforeach</select></div>
+                                <div class="sc-field"><label for="receive-variant">Product option <span class="sc-stock-optional">if applicable</span></label><select id="receive-variant" name="variant_id" class="field-control sc-input"><option value="">No option</option>@foreach ($products as $product)@foreach ($product->variants as $variant)<option value="{{ $variant->id }}" @selected(old('variant_id') === $variant->id)>{{ $product->name }} ? {{ $variant->label() }}</option>@endforeach @endforeach</select></div>
+                                <div class="sc-field"><label for="receive-lot">Lot number</label><input id="receive-lot" name="lot_number" maxlength="100" value="{{ old('lot_number') }}" required class="field-control sc-input"></div>
+                                <div class="sc-stock-field-pair">
+                                    <div class="sc-field"><label for="receive-quantity">Quantity</label><input id="receive-quantity" name="quantity" type="number" inputmode="numeric" min="1" max="1000000" value="{{ old('batch_id') ? '' : old('quantity') }}" required class="field-control sc-input"></div>
+                                    <div class="sc-field"><label for="receive-expiry">Expiry date</label><input id="receive-expiry" name="expires_at" type="date" min="{{ today()->addDay()->toDateString() }}" value="{{ old('expires_at') }}" required class="field-control sc-input"></div>
+                                </div>
+                            </fieldset>
+                            <fieldset class="sc-stock-fields"><legend>Supplier details <span class="sc-stock-optional">optional</span></legend>
+                                <div class="sc-field"><label for="receive-supplier">Supplier</label><input id="receive-supplier" name="supplier" maxlength="255" value="{{ old('supplier') }}" class="field-control sc-input"></div>
+                                <div class="sc-field"><label for="receive-reference">Supplier reference</label><input id="receive-reference" name="reference" maxlength="255" value="{{ old('reference') }}" class="field-control sc-input"></div>
+                            </fieldset>
+                            <button class="seller-primary-button w-full">Receive stock</button>
+                        </form>
+                    @else
+                        <div class="sc-empty"><h3>No medicines to receive</h3><p>{{ $search ? 'Clear your search to choose a medicine from your catalog.' : 'Head office adds medicines under Products before stock can be received.' }}</p></div>
+                    @endif
+                </aside>
+            </div>
+
+            <section class="sc-card sc-stock-reconcile" aria-labelledby="counts-title">
+                <div class="sc-card-head"><div><h2 id="counts-title" class="sc-card-title">Physical stock counts</h2><p class="sc-card-note">Compare shelf quantities with recorded stock and save a count for this branch.</p></div><span class="sc-stock-total">Low stock: 5 or fewer units</span></div>
             @if ($products->isEmpty())
-                <div class="sc-empty"><h3>No medicines found</h3><p>Head office adds medicines under Products; they appear here to stock.</p></div>
+                <div class="sc-empty"><h3>No medicines found</h3><p>{{ $search ? 'Try another name or clear your search to see your catalog.' : 'Head office adds medicines under Products; they appear here to stock.' }}</p>@if ($search)<a href="{{ route('seller.branch-stock.index', ['branch' => $branch->id]) }}" class="sc-link">Clear search</a>@endif</div>
             @else
-                <form method="POST" action="{{ route('seller.branch-stock.update', ['branch' => $branch->id]) }}" class="sc-card">
+                <form method="POST" action="{{ route('seller.branch-stock.update', ['branch' => $branch->id]) }}" class="sc-stock-count-form">
                     @csrf
                     @method('PATCH')
-                    <table class="w-full text-sm">
+                    <div class="sc-table-wrap"><table class="sc-table">
                         <thead><tr class="border-b border-line text-left text-muted"><th class="p-3 font-semibold">Medicine</th><th class="p-3 font-semibold">Option</th><th class="w-36 p-3 font-semibold">On hand</th></tr></thead>
                         <tbody>
                             @foreach ($products as $product)
@@ -131,13 +154,14 @@
                                 @endforeach
                             @endforeach
                         </tbody>
-                    </table>
-                    <div class="flex items-center justify-between gap-3 p-3">
+                    </table></div>
+                    <div class="sc-card-foot">
                         <button type="submit" class="seller-primary-button min-h-11">Save stock</button>
                         {{ $products->links() }}
                     </div>
                 </form>
             @endif
+            </section>
         </div>
     </div>
 </x-app-layout>
