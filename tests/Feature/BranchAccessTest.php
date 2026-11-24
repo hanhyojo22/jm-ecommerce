@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\BranchStock;
 use App\Models\Order;
 use App\Models\Prescription;
 use App\Models\Product;
@@ -224,6 +225,31 @@ class BranchAccessTest extends TestCase
             $makati->fresh()->latitude,
             $makati->fresh()->longitude,
         ]);
+    }
+
+    public function test_renaming_and_relocating_a_branch_keeps_its_url_and_stock_links(): void
+    {
+        [$tenant, $branch] = $this->pharmacy();
+        $product = $this->product($tenant, $branch, 'Paracetamol 500 mg Tablet');
+        BranchStock::create(['store_id' => $branch->id, 'product_id' => $product->id, 'variant_key' => 'default', 'quantity' => 25]);
+        $slug = $branch->slug;
+
+        $this->actingAs($this->member($tenant, 'owner'))
+            ->patch(route('seller.store-settings.update', ['branch' => $branch->id]), [
+                'name' => 'Everyday Pharmacy Cebu Capitol',
+                'phone' => $branch->phone,
+                'address_line' => 'Osmena Boulevard',
+                'city' => 'Cebu City',
+                'latitude' => 10.3149298,
+                'longitude' => 123.8915335,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $branch->refresh();
+        $this->assertSame('Everyday Pharmacy Cebu Capitol', $branch->name);
+        $this->assertSame($slug, $branch->slug);
+        $this->assertSame(['Cebu City', 10.3149298, 123.8915335], [$branch->city, $branch->latitude, $branch->longitude]);
+        $this->assertDatabaseHas('branch_stocks', ['store_id' => $branch->id, 'product_id' => $product->id, 'quantity' => 25]);
     }
 
     public function test_head_office_opens_one_branch_but_cannot_touch_another_companys(): void
