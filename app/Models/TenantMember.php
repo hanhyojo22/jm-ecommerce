@@ -65,7 +65,7 @@ class TenantMember extends Model
     public function roleLabel(): string
     {
         return match ($this->role) {
-            'owner' => 'Owner',
+            'owner' => $this->isHeadOffice() ? 'Admin' : 'Owner',
             'manager' => $this->isHeadOffice() ? 'Manager' : 'Branch manager',
             default => 'Staff',
         };

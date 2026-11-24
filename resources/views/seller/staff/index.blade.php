@@ -10,7 +10,7 @@
     </x-slot>
 
     @php
-        $roleLabels = ['owner' => 'Owner', 'manager' => 'Manager', 'staff' => 'Staff'];
+        $roleLabels = ['manager' => 'Manager', 'staff' => 'Staff'];
     @endphp
 
     <div class="page-shell">
@@ -58,7 +58,7 @@
                                             <span><strong>{{ $member->user?->name }}</strong><small>{{ $member->user?->email }}</small></span>
                                         </span>
                                     </th>
-                                    <td data-label="Role">{{ $roleLabels[$member->role] ?? $member->role }}@if ($member->is_pharmacist)<small class="sc-cell-note">Pharmacist</small>@endif</td>
+                                    <td data-label="Role">{{ $roleLabels[$member->role] ?? $member->roleLabel() }}@if ($member->is_pharmacist)<small class="sc-cell-note">Pharmacist</small>@endif</td>
                                     <td data-label="Branch">{{ $member->store?->name ?? 'Head office' }}</td>
                                     <td data-label="PRC license">
                                         @if ($member->is_pharmacist)

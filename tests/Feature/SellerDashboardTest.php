@@ -152,7 +152,7 @@ class SellerDashboardTest extends TestCase
 
         $this->actingAs($seller)->get(route('seller.dashboard'))
             ->assertOk()
-            ->assertSee('Owner')
+            ->assertSee('Admin')
             ->assertSee('Head office · all branches')
             ->assertSee('no PRC license on file')
             ->assertSee('Add your PRC license number and expiry date to review prescriptions.')
@@ -206,7 +206,7 @@ class SellerDashboardTest extends TestCase
         $this->actingAs($owner)->get(route('profile.edit'))
             ->assertOk()
             ->assertSee('Marco Santos')
-            ->assertSee('data-role-tone="owner">Owner</span>', false)
+            ->assertSee('data-role-tone="owner">Admin</span>', false)
             ->assertSee('data-role-tone="pharmacist">Pharmacist</span>', false)
             ->assertSee('aria-current=page', false);
     }
