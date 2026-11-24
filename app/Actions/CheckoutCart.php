@@ -159,7 +159,7 @@ class CheckoutCart
                         throw ValidationException::withMessages(['payment_method' => 'Online payments are not available yet. Choose cash on delivery.']);
                     }
 
-                    $this->inventory->take($branch->id, $product, $variant, $item->quantity);
+                    $allocations = $this->inventory->take($branch->id, $product, $variant, $item->quantity);
 
                     $unitPrice = (string) ($variant?->price ?? $product->price);
                     $lineTotal = bcmul($unitPrice, (string) $item->quantity, 2);
@@ -172,6 +172,7 @@ class CheckoutCart
                         'image_path' => (filled($variant?->color) ? $product->images()->where('color', $variant->color)->value('path') : null) ?? $product->images()->value('path'),
                         'total' => $lineTotal,
                         'discount' => $discountCard !== null && SeniorPwdDiscount::appliesTo($product) ? SeniorPwdDiscount::on($lineTotal) : '0.00',
+                        'allocations' => $allocations,
                     ];
                 });
 
@@ -231,7 +232,7 @@ class CheckoutCart
                         ]);
 
                         foreach ($storeLines as $line) {
-                            $sellerOrder->items()->create([
+                            $orderItem = $sellerOrder->items()->create([
                                 'product_id' => $line['product']->id,
                                 'product_variant_id' => $line['variant']?->id,
                                 'product_name' => $line['product']->name,
@@ -243,6 +244,12 @@ class CheckoutCart
                                 'line_total' => $line['total'],
                                 'discount_amount' => $line['discount'],
                             ]);
+                            foreach ($line['allocations'] as $allocation) {
+                                $orderItem->inventoryAllocations()->create([
+                                    'inventory_batch_id' => $allocation['batch_id'],
+                                    'quantity' => $allocation['quantity'],
+                                ]);
+                            }
                         }
                     });
 

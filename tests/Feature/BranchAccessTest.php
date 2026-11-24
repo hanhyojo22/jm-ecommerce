@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\BranchStock;
+use App\Models\InventoryBatch;
 use App\Models\Order;
 use App\Models\Prescription;
 use App\Models\Product;
@@ -349,6 +350,38 @@ class BranchAccessTest extends TestCase
             ->assertOk()
             ->assertSee('Stock at Botika Plus Makati')
             ->assertSee('value="40"', false);
+    }
+
+    public function test_branch_stock_receiving_and_adjustments_are_scoped_and_audited(): void
+    {
+        [$tenant, $makati, $cebu] = $this->pharmacy();
+        $product = $this->product($tenant, $makati, 'Paracetamol batch test');
+        $staff = $this->member($tenant, 'staff', $makati);
+        $this->actingAs($staff)->post(route('seller.branch-stock.receive'), [
+            'product_id' => $product->id,
+            'lot_number' => 'LOT-TEST-1',
+            'expires_at' => today()->addMonths(8)->toDateString(),
+            'quantity' => 12,
+            'supplier' => 'Local Supplier',
+            'reference' => 'INV-1001',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('inventory_batches', ['store_id' => $makati->id, 'lot_number' => 'LOT-TEST-1', 'remaining_quantity' => 12]);
+        $this->assertDatabaseHas('branch_stocks', ['store_id' => $makati->id, 'product_id' => $product->id, 'quantity' => 12]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'branch_stock.received', 'actor_user_id' => $staff->id]);
+
+        $batchId = InventoryBatch::query()->where('lot_number', 'LOT-TEST-1')->value('id');
+        $this->actingAs($staff)->patch(route('seller.branch-stock.adjust'), [
+            'batch_id' => $batchId, 'quantity' => 10, 'reason' => 'damage',
+        ])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('inventory_movements', ['inventory_batch_id' => $batchId, 'quantity_change' => -2, 'reason' => 'damage']);
+        $this->assertDatabaseHas('branch_stocks', ['store_id' => $makati->id, 'product_id' => $product->id, 'quantity' => 10]);
+
+        $this->actingAs($staff)->post(route('seller.branch-stock.receive', ['branch' => $cebu->id]), [
+            'product_id' => $product->id, 'lot_number' => 'FOREIGN-BRANCH', 'expires_at' => today()->addMonths(8)->toDateString(), 'quantity' => 2,
+        ])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('inventory_batches', ['store_id' => $makati->id, 'lot_number' => 'FOREIGN-BRANCH']);
+        $this->assertDatabaseMissing('inventory_batches', ['store_id' => $cebu->id, 'lot_number' => 'FOREIGN-BRANCH']);
     }
 
     public function test_head_office_counts_stock_for_any_branch_but_only_its_own_products(): void

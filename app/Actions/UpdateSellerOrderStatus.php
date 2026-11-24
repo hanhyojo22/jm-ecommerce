@@ -311,6 +311,7 @@ class UpdateSellerOrderStatus
     private function restoreStock(SellerOrder $sellerOrder): void
     {
         $items = $sellerOrder->items()
+            ->with('inventoryAllocations')
             ->orderBy('product_id')
             ->lockForUpdate()
             ->get();
@@ -329,7 +330,16 @@ class UpdateSellerOrderStatus
             if ($product !== null) {
                 $variant = $item->product_variant_id === null ? null : $product->variants()->whereKey($item->product_variant_id)->first();
                 if ($item->product_variant_id === null || $variant !== null) {
-                    app(BranchInventory::class)->put($sellerOrder->store_id, $product, $variant, $item->quantity);
+                    app(BranchInventory::class)->restoreAllocations(
+                        $sellerOrder->store_id,
+                        $product,
+                        $variant,
+                        $item->inventoryAllocations->map(fn ($allocation): array => [
+                            'batch_id' => $allocation->inventory_batch_id,
+                            'quantity' => $allocation->quantity,
+                        ])->all(),
+                        $item->quantity,
+                    );
                 }
             }
         }

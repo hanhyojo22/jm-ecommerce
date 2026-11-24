@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Models\AuditLog;
 use App\Models\BranchStock;
+use App\Models\InventoryBatch;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\User;
@@ -54,15 +55,15 @@ class SetBranchStock
                     }
 
                     $stock = $existing[$productId.'|'.$variantKey] ?? null;
-                    if ($stock?->quantity === $quantity || ($stock === null && $quantity === 0)) {
+                    $current = (int) InventoryBatch::query()->where('store_id', $branch->id)->where('product_id', $productId)
+                        ->where('variant_key', $variantKey)->where('status', 'active')->sum('remaining_quantity');
+                    if ($current === $quantity && ($stock?->quantity ?? 0) === $quantity) {
                         continue;
                     }
 
-                    BranchStock::query()->updateOrCreate(
-                        ['store_id' => $branch->id, 'product_id' => $productId, 'variant_key' => $variantKey],
-                        ['product_variant_id' => $variantKey === 'default' ? null : $variantKey, 'quantity' => $quantity],
-                    );
-                    $changes[] = ['product_id' => $productId, 'variant_key' => $variantKey, 'from' => $stock?->quantity ?? 0, 'to' => $quantity];
+                    $variant = $variantKey === 'default' ? null : $product->variants->firstWhere('id', $variantKey);
+                    $this->inventory->setCount($actor, $branch->id, $product, $variant, $quantity, $ipAddress);
+                    $changes[] = ['product_id' => $productId, 'variant_key' => $variantKey, 'from' => $current, 'to' => $quantity];
                 }
             }
 

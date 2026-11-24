@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Actions\UpdateSellerOrderStatus;
 use App\Models\BranchStock;
+use App\Models\InventoryBatch;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\SellerOrder;
@@ -59,6 +61,48 @@ class BranchCheckoutTest extends TestCase
 
         $this->actingAs($this->buyer())->postJson('/api/v1/cart/items', ['branch' => $cebu->id, 'product_id' => $product->id, 'quantity' => 2])
             ->assertUnprocessable();
+    }
+
+    public function test_checkout_uses_expiring_batches_first_and_cancellation_restores_the_same_batches(): void
+    {
+        [, $branch, $product] = $this->pharmacyWithStock(makati: 0, cebu: 5);
+        $earlier = InventoryBatch::query()->create([
+            'store_id' => $branch->id, 'product_id' => $product->id, 'variant_key' => 'default',
+            'lot_number' => 'LOT-EARLY', 'expires_at' => today()->addDays(10), 'received_quantity' => 2,
+            'remaining_quantity' => 2, 'status' => 'active',
+        ]);
+        $later = InventoryBatch::query()->create([
+            'store_id' => $branch->id, 'product_id' => $product->id, 'variant_key' => 'default',
+            'lot_number' => 'LOT-LATE', 'expires_at' => today()->addDays(40), 'received_quantity' => 3,
+            'remaining_quantity' => 3, 'status' => 'active',
+        ]);
+        BranchStock::query()->where('store_id', $branch->id)->where('product_id', $product->id)->update(['quantity' => 5]);
+        $buyer = $this->buyer();
+
+        $this->actingAs($buyer)->postJson('/api/v1/cart/items', ['branch' => $branch->id, 'product_id' => $product->id, 'quantity' => 4])->assertCreated();
+        $this->postJson('/api/v1/checkout', [...$this->delivery(), 'payment_method' => 'cod'])->assertCreated();
+
+        $this->assertSame([0, 1], [$earlier->fresh()->remaining_quantity, $later->fresh()->remaining_quantity]);
+        $orderItem = OrderItem::query()->sole();
+        $this->assertDatabaseHas('inventory_allocations', ['order_item_id' => $orderItem->id, 'inventory_batch_id' => $earlier->id, 'quantity' => 2]);
+        $this->assertDatabaseHas('inventory_allocations', ['order_item_id' => $orderItem->id, 'inventory_batch_id' => $later->id, 'quantity' => 2]);
+
+        app(UpdateSellerOrderStatus::class)->handle(SellerOrder::query()->sole(), 'cancelled', null);
+        $this->assertSame([2, 3], [$earlier->fresh()->remaining_quantity, $later->fresh()->remaining_quantity]);
+    }
+
+    public function test_expired_batches_are_not_sellable(): void
+    {
+        [, $branch, $product] = $this->pharmacyWithStock(makati: 0, cebu: 2);
+        InventoryBatch::query()->create([
+            'store_id' => $branch->id, 'product_id' => $product->id, 'variant_key' => 'default',
+            'lot_number' => 'LOT-EXPIRED', 'expires_at' => today()->subDay(), 'received_quantity' => 2,
+            'remaining_quantity' => 2, 'status' => 'active',
+        ]);
+        $buyer = $this->buyer();
+
+        $this->actingAs($buyer)->postJson('/api/v1/cart/items', ['branch' => $branch->id, 'product_id' => $product->id, 'quantity' => 1])->assertUnprocessable();
+        $this->assertDatabaseCount('orders', 0);
     }
 
     public function test_closing_the_first_branch_does_not_stop_buying_at_another(): void
@@ -337,6 +381,7 @@ class BranchCheckoutTest extends TestCase
         $this->postJson('/api/v1/cart/items', ['product_id' => $cetirizine->id, 'quantity' => 1])->assertCreated();
         $order = $this->postJson('/api/v1/checkout', [...$this->delivery(), 'payment_method' => 'cod'])->assertCreated()->json('data.id');
         BranchStock::query()->where('product_id', $cetirizine->id)->update(['quantity' => 0]);
+        InventoryBatch::query()->where('product_id', $cetirizine->id)->update(['remaining_quantity' => 0]);
 
         $this->postJson(route('api.v1.cart.reorder', $order))
             ->assertOk()
@@ -362,6 +407,7 @@ class BranchCheckoutTest extends TestCase
         $this->assertSame(2, $buyer->cart()->sole()->items()->sole()->quantity);
 
         BranchStock::query()->where('product_id', $paracetamol->id)->update(['quantity' => 0]);
+        InventoryBatch::query()->where('product_id', $paracetamol->id)->update(['remaining_quantity' => 0]);
         $this->post(route('orders.reorder', $order))->assertSessionHas('status', 'Added what is in stock. Not available now: Paracetamol 500mg.');
 
         $this->actingAs($this->buyer())->post(route('orders.reorder', $order))->assertNotFound();
