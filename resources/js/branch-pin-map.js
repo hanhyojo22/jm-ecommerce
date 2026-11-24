@@ -82,6 +82,10 @@ export function mountBranchPinMap(element) {
         // Bubbling input marks the form as changed and keeps Alpine x-model in sync.
         latitude.dispatchEvent(new Event('input', { bubbles: true }));
         longitude.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new CustomEvent('branch-pin-changed', {
+            bubbles: true,
+            detail: { lat, lng },
+        }));
     };
     const clearPin = () => {
         if (marker !== null) {
@@ -109,6 +113,10 @@ export function mountBranchPinMap(element) {
         if (pin) {
             placeMarker(pin);
             map.setView(pin, Math.max(map.getZoom(), 17));
+            element.dispatchEvent(new CustomEvent('branch-pin-changed', {
+                bubbles: true,
+                detail: { lat: pin[0], lng: pin[1] },
+            }));
         } else if (latitude.value.trim() === '' && longitude.value.trim() === '') {
             clearPin();
         }

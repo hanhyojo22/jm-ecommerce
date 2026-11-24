@@ -761,6 +761,12 @@ test('branch details map fills the coordinates when tapped and follows typed one
         await expect(longitude).toHaveValue('123.8900103');
         await expect(map.locator('.leaflet-marker-icon')).toBeVisible();
 
+        await page.route('https://photon.komoot.io/reverse**', (route) => route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ features: [{ properties: { city: 'Mandaue' } }] }),
+        }));
+
         await latitude.fill('10.3157');
         await longitude.fill('123.8854');
         await longitude.blur();
@@ -771,6 +777,7 @@ test('branch details map fills the coordinates when tapped and follows typed one
         await expect(latitude).toHaveValue(/^\d+\.\d{7}$/);
         await expect(latitude).not.toHaveValue('10.3157');
         await expect(longitude).toHaveValue(/^\d+\.\d{7}$/);
+        await expect(city).toHaveValue('Mandaue');
         await expect(page.getByText('Unsaved changes', { exact: true })).toBeVisible();
     } finally {
         await seller.context.close();

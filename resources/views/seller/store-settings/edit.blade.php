@@ -225,6 +225,7 @@
                 </details>
 
                 <details class="seller-form-card sc-settings-disclosure" @if ($errors->hasAny(['latitude', 'longitude', 'delivery_radius_km'])) open @endif
+                    @branch-pin-changed="updateCityFromPin($event.detail)"
                     @toggle="if (!$el.open && mapFullscreen) toggleFullscreen(false)"
                     x-data="{
                         locating: false,
@@ -235,6 +236,8 @@
                         searched: false,
                         searchResults: [],
                         searchAbort: null,
+                        cityLookupAbort: null,
+                        cityLookupRequest: 0,
                         activeIndex: -1,
                         pinLat: @js((string) old('latitude', $store->latitude ?? '')),
                         pinLng: @js((string) old('longitude', $store->longitude ?? '')),
@@ -270,6 +273,33 @@
                         },
                         get googleMapsUrl() {
                             return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(this.pinLat + ',' + this.pinLng);
+                        },
+                        async updateCityFromPin({ lat, lng }) {
+                            this.cityLookupAbort?.abort();
+                            const controller = new AbortController();
+                            const request = ++this.cityLookupRequest;
+                            this.cityLookupAbort = controller;
+                            try {
+                                const url = 'https://photon.komoot.io/reverse?' + new URLSearchParams({ lat: String(lat), lon: String(lng), lang: 'en' });
+                                const response = await fetch(url, { signal: controller.signal });
+                                if (! response.ok) return;
+                                const data = await response.json();
+                                if (request !== this.cityLookupRequest) return;
+                                const properties = data.features?.[0]?.properties;
+                                const city = properties?.city ?? properties?.county ?? properties?.locality;
+                                if (typeof city !== 'string' || city.trim() === '') return;
+                                const cityInput = document.getElementById('city');
+                                if (cityInput !== null) {
+                                    cityInput.value = city.trim();
+                                    cityInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                }
+                            } catch (error) {
+                                if (error?.name !== 'AbortError') return;
+                            } finally {
+                                if (this.cityLookupAbort === controller) {
+                                    this.cityLookupAbort = null;
+                                }
+                            }
                         },
                         async searchPlaces(pickFirst = false) {
                             const q = this.searchQuery.trim();
@@ -345,6 +375,9 @@
                                 }
                             }
                             this.$refs.pinMap.dispatchEvent(new Event('branch-pin:moved'));
+                            if (typeof place.city !== 'string' || place.city.trim() === '') {
+                                this.$refs.pinMap.dispatchEvent(new CustomEvent('branch-pin-changed', { bubbles: true, detail: { lat: Number(lat), lng: Number(lng) } }));
+                            }
                             this.searchQuery = place.label;
                             this.searchResults = [];
                             this.searched = false;
