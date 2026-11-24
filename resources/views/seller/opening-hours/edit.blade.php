@@ -13,9 +13,9 @@
             @if (session('status'))<p class="sc-notice" data-tone="success" role="status">{{ session('status') }}</p>@endif
             @if ($errors->any())<p class="sc-notice" data-tone="danger" role="alert">{{ $errors->first() }}</p>@endif
 
-            <div class="sc-settings-layout">
+            <div class="sc-settings-stack">
             <x-marketplace.seller-settings-nav active="hours" :branch="$branch->id" />
-            <div class="min-w-0 space-y-6">
+            <div class="min-w-0 max-w-3xl space-y-6">
             @if ($branches)
                 <form method="GET" action="{{ route('seller.opening-hours.edit') }}">
                     <label for="branch" class="block text-sm font-semibold text-ink">Branch</label>

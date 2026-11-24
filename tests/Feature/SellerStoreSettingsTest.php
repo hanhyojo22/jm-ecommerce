@@ -343,6 +343,52 @@ class SellerStoreSettingsTest extends TestCase
         $this->assertDatabaseHas('stores', ['id' => $store->id, 'latitude' => null]);
     }
 
+    public function test_redesigned_store_settings_adapts_controls_by_role_and_status(): void
+    {
+        [$owner, $tenant, $store] = $this->seller();
+        $branchManager = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create([
+            'tenant_id' => $tenant->id,
+            'store_id' => $store->id,
+            'user_id' => $branchManager->id,
+            'role' => 'manager',
+        ]);
+
+        $this->actingAs($owner)->get(route('seller.store-settings.edit'))
+            ->assertOk()
+            ->assertSee('Store identity')
+            ->assertSee('Customer app preview')
+            ->assertSee('Branch setup readiness')
+            ->assertSee('Open to customers')
+            ->assertSee('Temporarily closed')
+            ->assertSee('name="name"', false)
+            ->assertSee('name="status"', false);
+
+        $this->actingAs($branchManager)->get(route('seller.store-settings.edit'))
+            ->assertOk()
+            ->assertSee('Managed by head office')
+            ->assertSee('Contact head office to close or reopen')
+            ->assertDontSee('name="name"', false)
+            ->assertDontSee('name="status"', false);
+
+        $store->update(['status' => 'suspended']);
+
+        $this->actingAs($owner)->get(route('seller.store-settings.edit'))
+            ->assertOk()
+            ->assertSee('This branch is suspended by Everyday Pharmacy.')
+            ->assertDontSee('name="status"', false);
+
+        $this->actingAs($owner)->from(route('seller.store-settings.edit'))->followingRedirects()
+            ->patch(route('seller.store-settings.update'), [
+                'phone' => '',
+                'address_line' => '',
+                'city' => 'Manila',
+            ])
+            ->assertSee('We could not save your changes')
+            ->assertSee('href="#phone"', false)
+            ->assertSee('href="#address_line"', false);
+    }
+
     private function seller(): array
     {
         $owner = User::factory()->seller()->create(['email_verified_at' => now()]);
