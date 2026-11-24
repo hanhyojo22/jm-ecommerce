@@ -198,6 +198,32 @@ class BranchAccessTest extends TestCase
 
         $this->assertSame(['Everyday Makati Ayala', $slug], [$makati->fresh()->name, $makati->fresh()->slug]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'store.updated', 'entity_id' => $makati->id]);
+
+        $this->actingAs($headOffice)
+            ->patch(route('seller.store-settings.update', ['branch' => $makati->id]), [...$details, 'name' => 'BOTIKA PLUS CEBU'])
+            ->assertSessionHasErrors(['name' => 'Another branch already uses this name.']);
+        $this->assertSame('Everyday Makati Ayala', $makati->fresh()->name);
+    }
+
+    public function test_saving_branch_details_without_location_fields_keeps_the_saved_location(): void
+    {
+        [$tenant, $makati] = $this->pharmacy();
+        $makati->update(['region' => 'Metro Manila', 'latitude' => 14.5547, 'longitude' => 121.0244]);
+
+        $this->actingAs($this->member($tenant, 'owner'))
+            ->patch(route('seller.store-settings.update', ['branch' => $makati->id]), [
+                'name' => 'Everyday Pharmacy Makati Ayala',
+                'phone' => '+639171234567',
+                'address_line' => '6750 Ayala Avenue',
+                'city' => 'Makati',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(['Metro Manila', 14.5547, 121.0244], [
+            $makati->fresh()->region,
+            $makati->fresh()->latitude,
+            $makati->fresh()->longitude,
+        ]);
     }
 
     public function test_head_office_opens_one_branch_but_cannot_touch_another_companys(): void

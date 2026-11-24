@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class StoreSettingsController extends Controller
@@ -77,8 +78,13 @@ class StoreSettingsController extends Controller
                 $status = $lockedStore->status === 'suspended' || ! $this->member($request)->isHeadOffice() ? $lockedStore->status : ($request->validated('status') ?? $lockedStore->status);
                 // Only head office renames a branch; the slug (store URL) keeps the original name.
                 $name = $this->member($request)->isHeadOffice() && $request->filled('name') ? trim($request->validated('name')) : $lockedStore->name;
+                if (mb_strtolower($name) !== mb_strtolower($lockedStore->name)
+                    && Store::query()->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])->where('id', '!=', $lockedStore->id)->exists()) {
+                    throw ValidationException::withMessages(['name' => 'Another branch already uses this name.']);
+                }
+
                 // Same key order as UNDO_FIELDS, which undo checks.
-                $newValues = array_replace(array_fill_keys(self::UNDO_FIELDS, null), $data, ['name' => $name, 'status' => $status, 'logo_path' => $logoPath]);
+                $newValues = array_replace($oldValues, $data, ['name' => $name, 'status' => $status, 'logo_path' => $logoPath]);
 
                 $lockedStore->update($newValues);
 
@@ -94,6 +100,10 @@ class StoreSettingsController extends Controller
 
                 return ['store_id' => $lockedStore->id, 'old_values' => $oldValues, 'new_values' => $newValues];
             });
+        } catch (ValidationException $exception) {
+            $this->deleteUploadedLogo(is_string($newLogoPath) ? $newLogoPath : null);
+
+            throw $exception;
         } catch (Throwable $exception) {
             $this->deleteUploadedLogo(is_string($newLogoPath) ? $newLogoPath : null);
             report($exception);
@@ -196,16 +206,20 @@ class StoreSettingsController extends Controller
      */
     private function locationDetails(UpdateStoreSettingsRequest $request): array
     {
-        return collect(Store::LOCATION_DETAILS)->mapWithKeys(function (string $field) use ($request): array {
-            $value = $request->validated($field);
+        $validated = $request->validated();
 
-            return [$field => match (true) {
-                $value === null => null,
-                in_array($field, ['latitude', 'longitude'], true) => round((float) $value, 7),
-                in_array($field, ['processing_days', 'delivery_radius_km'], true) => (int) $value,
-                default => $value,
-            }];
-        })->all();
+        return collect(Store::LOCATION_DETAILS)
+            ->filter(fn (string $field): bool => array_key_exists($field, $validated))
+            ->mapWithKeys(function (string $field) use ($validated): array {
+                $value = $validated[$field];
+
+                return [$field => match (true) {
+                    $value === null => null,
+                    in_array($field, ['latitude', 'longitude'], true) => round((float) $value, 7),
+                    in_array($field, ['processing_days', 'delivery_radius_km'], true) => (int) $value,
+                    default => $value,
+                }];
+            })->all();
     }
 
     /**

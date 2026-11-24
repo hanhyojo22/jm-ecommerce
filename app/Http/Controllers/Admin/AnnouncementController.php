@@ -53,6 +53,9 @@ class AnnouncementController extends Controller
         ]);
         $search = trim((string) ($validated['q'] ?? ''));
         $matching = fn (Builder $query): Builder => $query->when($search !== '', fn (Builder $query) => $query->whereLike('name', "%{$search}%"));
+        $branch = filled($validated['store'] ?? null)
+            ? CatalogQuery::publicStores()->where('slug', $validated['store'])->first()
+            : null;
 
         $results = $validated['type'] === 'stores'
             ? $matching(CatalogQuery::publicStores())
@@ -61,7 +64,14 @@ class AnnouncementController extends Controller
                 ->get(['id', 'name', 'slug', 'city', 'logo_path'])
                 ->map(fn (Store $store): array => self::storeTarget($store))
             : $matching(CatalogQuery::publishedProducts())
-                ->when(filled($validated['store'] ?? null), fn (Builder $query) => $query->whereHas('store', fn (Builder $store) => $store->where('slug', $validated['store'])))
+                // Pharmacy products belong to the company; branch availability is stored separately.
+                // Keep a branch filter tied to its stock records, even when a name change leaves its URL slug alone.
+                ->when(filled($validated['store'] ?? null), function (Builder $query) use ($branch): void {
+                    $query->where('tenant_id', $branch?->tenant_id)
+                        ->whereHas('branchStocks', fn (Builder $stock) => $stock
+                            ->where('store_id', $branch?->id)
+                            ->where('quantity', '>', 0));
+                })
                 ->with('thumbnail', 'store:id,name,slug')
                 ->orderBy('name')
                 ->limit(8)

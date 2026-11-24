@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Jobs\SendAdminAnnouncement;
 use App\Livewire\NotificationBell;
 use App\Models\Announcement;
+use App\Models\BranchStock;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -239,7 +240,9 @@ class AdminAnnouncementTest extends TestCase
         $otherStore = Store::create(['tenant_id' => $otherTenant->id, 'name' => 'Southwind Store', 'slug' => 'southwind-store', 'phone' => '+639171234567', 'address_line' => '11 Market Street', 'city' => 'Cebu', 'status' => 'active']);
         $product = fn (Store $owner, string $name, string $slug, string $status): Product => Product::create(['tenant_id' => $owner->tenant_id, 'store_id' => $owner->id, 'name' => $name, 'slug' => $slug, 'sku' => strtoupper($slug), 'price' => 199, 'stock_quantity' => 3, 'status' => $status]);
         Storage::fake('product_images');
-        $product($store, 'Canvas Tote', 'canvas-tote', 'active')->images()->create(['path' => 'products/canvas-tote.jpg', 'position' => 0]);
+        $canvasTote = $product($store, 'Canvas Tote', 'canvas-tote', 'active');
+        $canvasTote->images()->create(['path' => 'products/canvas-tote.jpg', 'position' => 0]);
+        BranchStock::create(['store_id' => $store->id, 'product_id' => $canvasTote->id, 'variant_key' => 'default', 'quantity' => 3]);
         $product($store, 'Canvas Draft', 'canvas-draft', 'draft');
         $product($otherStore, 'Canvas Pouch', 'canvas-pouch', 'active');
 
@@ -269,6 +272,25 @@ class AdminAnnouncementTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->getJson(route('admin.announcements.link-targets', ['type' => 'products']))
             ->assertForbidden();
+    }
+
+    public function test_product_link_targets_for_a_branch_use_branch_stock_instead_of_the_products_primary_store(): void
+    {
+        $tenant = Tenant::create(['name' => 'Everyday Pharmacy', 'slug' => 'everyday-pharmacy', 'status' => 'active']);
+        $ermita = Store::create(['tenant_id' => $tenant->id, 'name' => 'Everyday Pharmacy Ermita', 'slug' => 'everyday-pharmacy-ermita', 'phone' => '+639171234567', 'address_line' => 'Taft Avenue', 'city' => 'Manila', 'status' => 'active']);
+        $cebu = Store::create(['tenant_id' => $tenant->id, 'name' => 'Everyday Pharmacy Cebu Capitol', 'slug' => 'everyday-pharmacy-cebu-capitol', 'phone' => '+639171234567', 'address_line' => 'Osmena Boulevard', 'city' => 'Cebu City', 'status' => 'active']);
+        $product = Product::create(['tenant_id' => $tenant->id, 'store_id' => $ermita->id, 'name' => 'Paracetamol 500 mg Tablet', 'slug' => 'paracetamol-500-mg-tablet', 'sku' => 'PARA-500', 'price' => 4.50, 'stock_quantity' => 10, 'status' => 'active']);
+        Product::create(['tenant_id' => $tenant->id, 'store_id' => $ermita->id, 'name' => 'Paracetamol Syrup', 'slug' => 'paracetamol-syrup', 'sku' => 'PARA-SYRUP', 'price' => 80, 'stock_quantity' => 10, 'status' => 'active']);
+        $outOfStockInCebu = Product::create(['tenant_id' => $tenant->id, 'store_id' => $ermita->id, 'name' => 'Paracetamol Drops', 'slug' => 'paracetamol-drops', 'sku' => 'PARA-DROPS', 'price' => 50, 'stock_quantity' => 10, 'status' => 'active']);
+        BranchStock::create(['store_id' => $cebu->id, 'product_id' => $product->id, 'variant_key' => 'default', 'quantity' => 12]);
+        BranchStock::create(['store_id' => $cebu->id, 'product_id' => $outOfStockInCebu->id, 'variant_key' => 'default', 'quantity' => 0]);
+
+        $this->actingAs(User::factory()->administrator()->create())
+            ->getJson(route('admin.announcements.link-targets', ['type' => 'products', 'q' => 'Paracetamol', 'store' => $cebu->slug]))
+            ->assertOk()
+            ->assertJsonCount(1, 'results')
+            ->assertJsonPath('results.0.name', 'Paracetamol 500 mg Tablet')
+            ->assertJsonPath('results.0.url', route('catalog.show', ['store' => $ermita->slug, 'product' => $product->slug]));
     }
 
     public function test_a_failed_submit_keeps_the_picked_product(): void
