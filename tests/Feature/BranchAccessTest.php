@@ -474,6 +474,44 @@ class BranchAccessTest extends TestCase
         ]);
     }
 
+    public function test_redesigned_branch_stock_displays_watch_signals_batch_adjustments_and_stock_levels(): void
+    {
+        [$tenant, $makati] = $this->pharmacy();
+        $lowMed = $this->product($tenant, $makati, 'Biogesic 500mg');
+        $inStockMed = $this->product($tenant, $makati, 'Cetirizine 10mg');
+        $emptyMed = $this->product($tenant, $makati, 'Amoxicillin 500mg');
+        $staff = $this->member($tenant, 'staff', $makati);
+
+        $this->actingAs($staff)->post(route('seller.branch-stock.receive'), [
+            'product_id' => $lowMed->id,
+            'lot_number' => 'LOT-SOON-01',
+            'expires_at' => today()->addDays(20)->toDateString(),
+            'quantity' => 3,
+            'supplier' => 'Unilab',
+        ])->assertSessionHasNoErrors();
+
+        $this->actingAs($staff)->post(route('seller.branch-stock.receive'), [
+            'product_id' => $inStockMed->id,
+            'lot_number' => 'LOT-OK-02',
+            'expires_at' => today()->addMonths(10)->toDateString(),
+            'quantity' => 24,
+            'supplier' => 'Zuellig Pharma',
+        ])->assertSessionHasNoErrors();
+
+        $this->actingAs($staff)->get(route('seller.branch-stock.index'))
+            ->assertOk()
+            ->assertSee('Batch watch')
+            ->assertSee('LOT-SOON-01')
+            ->assertSee('Unilab')
+            ->assertSee('In 20 days')
+            ->assertSee('LOT-OK-02')
+            ->assertSee('Adjust Lot LOT-SOON-01')
+            ->assertSee('Low stock')
+            ->assertSee('In stock')
+            ->assertSee('Out of stock')
+            ->assertSee('Save stock');
+    }
+
     /** @return array{0: Tenant, 1: Store, 2: Store} a pharmacy with two active branches */
     private function pharmacy(): array
     {
