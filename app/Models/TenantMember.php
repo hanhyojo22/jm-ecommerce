@@ -68,6 +68,10 @@ class TenantMember extends Model
 
         $place = trim(Str::after($this->store->name, $this->tenant->name)) ?: $this->store->name;
 
+        if (in_array(Str::lower($place), ['store', 'main store', 'branch', 'main branch'], true)) {
+            $place = filled($this->store->city) ? $this->store->city : $this->store->name;
+        }
+
         return Str::endsWith(Str::lower($place), 'branch') ? $place : "{$place} branch";
     }
 

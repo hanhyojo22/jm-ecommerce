@@ -296,7 +296,7 @@
                 @endif
 
                 <details class="sc-card sc-dashboard-support" aria-labelledby="quick-actions-heading">
-                    <summary id="quick-actions-heading"><span>Quick actions</span><svg class="size-4 shrink-0 text-muted" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></summary>
+                    <summary id="quick-actions-heading"><span class="sc-card-title" role="heading" aria-level="2">Quick actions</span><svg class="size-4 shrink-0 text-muted" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></summary>
                     <div class="sc-actions-list">
                         @if ($canManageProducts)<a href="{{ route('seller.products.create') }}" data-seller-shortcut="new-product" aria-keyshortcuts="N" class="sc-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add product<small>N</small></a>@endif
                         <a href="{{ route('seller.orders.index', ['status' => 'pending']) }}" class="sc-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.5 12h10L21 8H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>Review new orders</a>
@@ -308,7 +308,7 @@
                 </details>
 
                 <details class="sc-card sc-dashboard-support" data-dashboard-section="products" aria-labelledby="products-heading">
-                    <summary id="products-heading"><span>Recent products</span><svg class="size-4 shrink-0 text-muted" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></summary>
+                    <summary id="products-heading"><span class="sc-card-title" role="heading" aria-level="2">Recent products</span><svg class="size-4 shrink-0 text-muted" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></summary>
                     @if ($recentProducts->isNotEmpty())
                         <div class="sc-list">
                             @foreach ($recentProducts as $product)
@@ -328,7 +328,7 @@
         </div>
 
         <details class="sc-card group" data-dashboard-section="help" data-seller-guide>
-            <summary class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 [&::-webkit-details-marker]:hidden"><span><span class="sc-card-title">Seller guide</span> <span class="sc-meta">· Search seller help and shortcuts</span></span><svg class="size-4 shrink-0 text-muted transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></summary>
+            <summary class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 [&::-webkit-details-marker]:hidden"><span><span class="sc-card-title" role="heading" aria-level="2">Seller guide</span> <span class="sc-meta">· Search seller help and shortcuts</span></span><svg class="size-4 shrink-0 text-muted transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></summary>
             <div class="grid gap-6 border-t border-line px-5 py-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                 <div>
                     <label for="seller-guide-search" class="text-sm font-semibold text-ink">Search seller help</label>
@@ -355,7 +355,7 @@
         </details>
 
         <details class="text-sm">
-            <summary class="inline-flex min-h-11 cursor-pointer items-center font-semibold text-muted hover:text-ink">Customize overview</summary>
+            <summary class="inline-flex min-h-11 cursor-pointer items-center font-semibold text-muted hover:text-ink"><span role="heading" aria-level="2">Customize overview</span></summary>
             <fieldset class="sc-card sc-card-pad mt-2 grid gap-2 sm:grid-cols-2"><legend class="sr-only">Overview sections to show</legend>@foreach (['setup' => 'Store setup', 'help' => 'Seller guide', 'orders' => 'Recent orders', 'products' => 'Recent products'] as $section => $label)<label class="inline-flex min-h-10 items-center gap-2"><input type="checkbox" data-dashboard-toggle="{{ $section }}" checked class="rounded-md border-line text-brand focus:ring-brand">{{ $label }}</label>@endforeach<button type="button" data-dashboard-reset class="min-h-10 justify-self-start font-semibold text-brand underline underline-offset-4">Restore defaults</button></fieldset>
         </details>
     </div></div>

@@ -176,6 +176,19 @@ class SellerDashboardTest extends TestCase
             ->assertDontSee(route('seller.branches.index'), false);
     }
 
+    public function test_branch_manager_sees_city_when_the_branch_name_is_generic(): void
+    {
+        [, $tenant] = $this->seller();
+        $branch = Store::create(['tenant_id' => $tenant->id, 'name' => 'Northwind Store', 'slug' => 'northwind-store-'.str()->lower(str()->random(6)), 'phone' => '+639171234567', 'address_line' => '2 Gorordo Avenue', 'city' => 'Cebu City', 'status' => 'active']);
+        $manager = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $tenant->id, 'store_id' => $branch->id, 'user_id' => $manager->id, 'role' => 'manager']);
+
+        $this->actingAs($manager)->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('<h1 class="sc-title">Cebu City branch</h1>', false)
+            ->assertSee('Cebu City branch');
+    }
+
     public function test_head_office_compares_branches_and_head_office_staff_get_no_stock_link(): void
     {
         [$owner, $tenant, $headStore] = $this->seller();

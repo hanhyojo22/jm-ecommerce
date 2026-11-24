@@ -11,7 +11,7 @@ for (const role of ['seller', 'manager', 'pharmacist', 'staff']) {
             await rejectOptionalCookies(page);
             await expect(page.locator('[data-seller-identity]').first()).toContainText('QA Northwind');
             const heading = page.getByRole('heading', { level: 1 });
-            await expect(heading).toContainText(role === 'pharmacist' ? 'Prescription desk' : role === 'staff' ? 'Today' : role === 'seller' ? 'Overview' : 'Store');
+            await expect(heading).toContainText(role === 'pharmacist' ? 'Prescription desk' : role === 'staff' ? 'Today' : role === 'seller' ? 'Overview' : 'Manila');
             const nav = page.locator('[data-workspace-header="seller"] nav');
             await expect(nav.getByRole('link', { name: 'Prescriptions', exact: false })).toHaveCount(['seller', 'pharmacist'].includes(role) ? 1 : 0);
             await expect(nav.getByRole('link', { name: 'Branches', exact: true })).toHaveCount(role === 'seller' ? 1 : 0);
