@@ -157,6 +157,7 @@
                         <div class="min-w-0">
                             <label for="city" class="block text-sm font-semibold text-ink">City <span class="font-normal text-muted">(required)</span></label>
                             <input id="city" name="city" x-model="city" autocomplete="address-level2" maxlength="100" required @error('city') aria-describedby="city-error" aria-invalid="true" @enderror value="{{ old('city', $store->city) }}" class="field-control mt-2 text-base lg:text-sm @error('city') border-rose-500 @enderror">
+                            <p class="mt-1 text-xs text-muted">Choosing a map search result fills the city when available. If you move the pin by hand, check that the city still matches.</p>
                             <x-input-error id="city-error" :messages="$errors->get('city')" class="mt-2" />
                         </div>
                         @if ($store->status !== 'suspended' && $canManageBranches)
@@ -307,7 +308,7 @@
                                     const label = parts.join(', ');
                                     if (! label || seen.has(label)) return [];
                                     seen.add(label);
-                                    return [{ title: parts[0], subtitle: parts.slice(1).join(', '), label, lat: Number(coords[1]), lng: Number(coords[0]) }];
+                                    return [{ title: parts[0], subtitle: parts.slice(1).join(', '), label, city: p.city ?? p.county ?? null, lat: Number(coords[1]), lng: Number(coords[0]) }];
                                 });
                                 this.searched = true;
                                 this.activeIndex = -1;
@@ -336,6 +337,13 @@
                             this.pinLng = lng;
                             this.$refs.latitude.value = lat;
                             this.$refs.longitude.value = lng;
+                            if (typeof place.city === 'string' && place.city.trim() !== '') {
+                                const cityInput = document.getElementById('city');
+                                if (cityInput !== null) {
+                                    cityInput.value = place.city.trim();
+                                    cityInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                }
+                            }
                             this.$refs.pinMap.dispatchEvent(new Event('branch-pin:moved'));
                             this.searchQuery = place.label;
                             this.searchResults = [];

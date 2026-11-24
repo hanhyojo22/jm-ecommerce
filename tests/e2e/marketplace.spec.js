@@ -734,6 +734,7 @@ test('branch details map fills the coordinates when tapped and follows typed one
         const { page } = seller;
         await page.goto('/seller/store-settings');
         await rejectOptionalCookies(page);
+        const city = page.locator('#city');
         const latitude = page.getByLabel('Latitude', { exact: true });
         const longitude = page.getByLabel('Longitude', { exact: true });
         const map = page.getByRole('region', { name: 'Branch location map' });
@@ -755,6 +756,7 @@ test('branch details map fills the coordinates when tapped and follows typed one
         }));
         await page.getByLabel('Search location').fill('Cebu Capitol');
         await page.getByRole('option', { name: 'Cebu Provincial Capitol, Cebu City' }).click();
+        await expect(city).toHaveValue('Cebu City');
         await expect(latitude).toHaveValue('10.3162943');
         await expect(longitude).toHaveValue('123.8900103');
         await expect(map.locator('.leaflet-marker-icon')).toBeVisible();
