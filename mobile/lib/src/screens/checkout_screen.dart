@@ -820,35 +820,46 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               Padding(
                 padding: const EdgeInsetsDirectional.only(end: 16),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 175),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: deliveryClosed
-                              ? scheme.error
-                              : statusColour(context, 'completed'),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          branchBadgeLabel,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelMedium?.copyWith(
+                  constraints: const BoxConstraints(maxWidth: 185),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: _hairline(scheme)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
                             color: deliveryClosed
                                 ? scheme.error
-                                : scheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
+                                : statusColour(context, 'completed'),
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            branchBadgeLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: deliveryClosed
+                                  ? scheme.error
+                                  : scheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -856,13 +867,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         ),
         bottomNavigationBar:
             currentQuote != null && MediaQuery.viewInsetsOf(context).bottom == 0
-            ? Align(
-                heightFactor: 1,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 640),
-                  child: _checkoutFooter(currentQuote),
-                ),
-              )
+            ? _checkoutFooter(currentQuote)
             : null,
         body: AsyncView(
           value: quote,
@@ -882,7 +887,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ? AutovalidateMode.onUserInteraction
                       : AutovalidateMode.disabled,
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -912,12 +917,32 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     alpha: scheme.brightness == Brightness.dark ? 0.55 : 0.65,
   );
 
-  ButtonStyle _compactTextLinkStyle({Size minimumSize = const Size(44, 34)}) =>
+  Widget _iconTile(
+    IconData icon, {
+    required Color background,
+    required Color foreground,
+    double size = 18,
+  }) => Container(
+    width: 36,
+    height: 36,
+    decoration: BoxDecoration(
+      color: background,
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: Icon(icon, size: size, color: foreground),
+  );
+
+  ButtonStyle _compactTextLinkStyle({Size minimumSize = const Size(44, 40)}) =>
       TextButton.styleFrom(
         visualDensity: VisualDensity.compact,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         minimumSize: minimumSize,
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 2, 8),
+        alignment: AlignmentDirectional.centerEnd,
+        textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+          fontSize: 13.5,
+          fontWeight: FontWeight.w700,
+        ),
       );
 
   Widget _checkoutCard({Key? key, required Widget child}) {
@@ -926,14 +951,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     return Padding(
       key: key,
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 14),
       child: Material(
         color: scheme.surfaceContainerLowest,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: dark
-              ? BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.45))
-              : BorderSide.none,
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: dark ? 0.5 : 0.65),
+          ),
         ),
         clipBehavior: Clip.antiAlias,
         child: Padding(padding: const EdgeInsets.all(16), child: child),
@@ -947,6 +972,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     Widget? action,
   }) {
     final theme = Theme.of(context);
+    final wrapHeader =
+        MediaQuery.textScalerOf(context).scale(14) > 20 &&
+        MediaQuery.sizeOf(context).width < 400;
     final leading = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -956,9 +984,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             child: Text(
               title,
               style: theme.textTheme.titleMedium?.copyWith(
-                fontSize: 15.5,
+                fontSize: 16,
                 fontWeight: FontWeight.w800,
-                letterSpacing: -0.2,
+                letterSpacing: -0.25,
+                height: 1.25,
               ),
             ),
           ),
@@ -969,12 +998,22 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     if (action == null) {
       return leading;
     }
-    return Wrap(
-      spacing: 8,
-      runSpacing: 4,
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [leading, action],
+    if (wrapHeader) {
+      return Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [leading, action],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(child: leading),
+        const SizedBox(width: 8),
+        action,
+      ],
     );
   }
 
@@ -1012,16 +1051,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             child: const Text('Edit cart'),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         for (var i = 0; i < visibleLines.length; i++) ...[
-          if (i > 0) Divider(height: 20, indent: 58, color: hairline),
+          if (i > 0) Divider(height: 24, indent: 64, color: hairline),
           _compactItemRow(visibleLines[i], largeText: largeText),
         ],
         if (quote.lines.length > 3) ...[
-          Divider(height: 16, color: hairline),
+          Divider(height: 20, color: hairline),
           TextButton.icon(
             style: TextButton.styleFrom(
-              minimumSize: const Size.fromHeight(38),
+              minimumSize: const Size.fromHeight(44),
               foregroundColor: scheme.primary,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               textStyle: theme.textTheme.labelLarge?.copyWith(
@@ -1092,12 +1131,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        NetworkThumb(
-          url: line.imageUrl,
-          width: 46,
-          height: 46,
-          radius: 10,
-          placeholderIcon: PhosphorIconsRegular.pill,
+        Container(
+          foregroundDecoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: _hairline(scheme)),
+          ),
+          child: NetworkThumb(
+            url: line.imageUrl,
+            width: 52,
+            height: 52,
+            radius: 10,
+            placeholderIcon: PhosphorIconsRegular.pill,
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -1105,7 +1150,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               titleSpan,
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
               Text(
                 '${line.quantity} × ${money(line.unitPrice)}',
                 style: theme.textTheme.bodySmall?.copyWith(
@@ -1117,6 +1162,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 Text(
                   money(line.lineTotal),
                   style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 14.5,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1129,6 +1175,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           Text(
             money(line.lineTotal),
             style: theme.textTheme.bodyMedium?.copyWith(
+              fontSize: 14.5,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -1155,6 +1202,63 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         .firstOrNull;
     final appliedDiscount = _cardDiscount(quote);
     final hairline = _hairline(scheme);
+    final stackRxCta =
+        MediaQuery.sizeOf(context).width < 350 ||
+        MediaQuery.textScalerOf(context).scale(14) > 19;
+    final addRxPill = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: dark ? scheme.primaryContainer : scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: dark ? scheme.primaryContainer : const Color(0xFFE5C878),
+        ),
+      ),
+      child: Text(
+        'Add Rx',
+        style: theme.textTheme.labelMedium?.copyWith(
+          color: dark ? scheme.onPrimaryContainer : scheme.primary,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+    final rxMissingLeading = Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _iconTile(
+          Icons.upload_file_rounded,
+          background: warn.withValues(alpha: dark ? 0.22 : 0.14),
+          foreground: warn,
+          size: 20,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Prescription',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                rxNames.isEmpty
+                    ? 'Required for prescription medicines'
+                    : 'Required for ${_joinNames(rxNames)}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: dark
+                      ? const Color(0xFFFFE3A3)
+                      : const Color(0xFF7A4F01),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1163,22 +1267,32 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           title: 'Pharmacy & discounts',
           action: actionNeeded
               ? null
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.check_circle_rounded, size: 15, color: ok),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Ready',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: ok,
-                        fontWeight: FontWeight.w700,
+              : Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: ok.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_rounded, size: 15, color: ok),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Ready',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: ok,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 14),
         if (quote.needsPrescription)
           rxMissing
               ? Material(
@@ -1187,76 +1301,39 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       : const Color(0xFFFFF8E1),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: dark
-                        ? const BorderSide(color: Color(0xFF5A4109))
-                        : BorderSide.none,
+                    side: BorderSide(
+                      color: dark
+                          ? const Color(0xFF5A4109)
+                          : const Color(0xFFF0D58C),
+                    ),
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
                     onTap: () => _openDocumentsSheet(quote, prescription: true),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 11,
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.upload_file_rounded,
-                            size: 20,
-                            color: warn,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
+                      padding: const EdgeInsets.all(14),
+                      child: stackRxCta
+                          ? Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Prescription',
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
+                                rxMissingLeading,
+                                const SizedBox(height: 10),
+                                Padding(
+                                  padding: const EdgeInsetsDirectional.only(
+                                    start: 48,
                                   ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  rxNames.isEmpty
-                                      ? 'Required for prescription medicines'
-                                      : 'Required for ${_joinNames(rxNames)}',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: dark
-                                        ? const Color(0xFFFFE3A3)
-                                        : const Color(0xFF7A4F01),
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                  child: addRxPill,
                                 ),
                               ],
+                            )
+                          : Row(
+                              children: [
+                                Expanded(child: rxMissingLeading),
+                                const SizedBox(width: 10),
+                                addRxPill,
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 11,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: dark
-                                  ? scheme.primaryContainer
-                                  : scheme.surfaceContainerLowest,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              'Add Rx',
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: dark
-                                    ? scheme.onPrimaryContainer
-                                    : scheme.primary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
                 )
@@ -1267,8 +1344,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Row(
                       children: [
-                        Icon(Icons.check_circle_rounded, size: 20, color: ok),
-                        const SizedBox(width: 10),
+                        _iconTile(
+                          Icons.check_circle_rounded,
+                          background: ok.withValues(alpha: 0.12),
+                          foreground: ok,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1314,9 +1396,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ),
         if (quote.needsPrescription && quote.offersSeniorPwdDiscount)
           if (rxMissing)
-            const SizedBox(height: 10)
+            const SizedBox(height: 12)
           else
-            Divider(height: 16, indent: 30, color: hairline),
+            Divider(height: 22, color: hairline),
         if (quote.offersSeniorPwdDiscount)
           InkWell(
             borderRadius: BorderRadius.circular(10),
@@ -1325,14 +1407,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 children: [
-                  Icon(
+                  _iconTile(
                     Icons.badge_outlined,
-                    size: 20,
-                    color: _useCard && discountErr == null
+                    background: _useCard && discountErr == null
+                        ? ok.withValues(alpha: 0.12)
+                        : scheme.primary.withValues(alpha: 0.10),
+                    foreground: _useCard && discountErr == null
                         ? ok
                         : scheme.primary,
+                    size: 20,
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1412,7 +1497,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _cardHeader(title: 'Price breakdown'),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         if (quote.storeTotals.length > 1) ...[
           for (final store in quote.storeTotals)
             Padding(
@@ -1426,6 +1511,38 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         ],
         _paymentSummary(quote),
       ],
+    );
+  }
+
+  Widget _sheetFooterButton({
+    required VoidCallback onPressed,
+    required String label,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        border: Border(top: BorderSide(color: _hairline(scheme))),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              onPressed: onPressed,
+              child: Text(label),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1481,28 +1598,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           : _discountCardSection(quote),
                     ),
                   ),
-                  SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: () {
-                            refresh(() => _documentsAttempted = true);
-                            if (prescription && _prescriptions.isEmpty) {
-                              return;
-                            }
-                            if (!prescription &&
-                                _discountError(quote) != null) {
-                              return;
-                            }
-                            Navigator.pop(sheetContext);
-                          },
-                          child: const Text('Done'),
-                        ),
-                      ),
-                    ),
+                  _sheetFooterButton(
+                    label: 'Done',
+                    onPressed: () {
+                      refresh(() => _documentsAttempted = true);
+                      if (prescription && _prescriptions.isEmpty) {
+                        return;
+                      }
+                      if (!prescription && _discountError(quote) != null) {
+                        return;
+                      }
+                      Navigator.pop(sheetContext);
+                    },
                   ),
                 ],
               ),
@@ -1530,9 +1637,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final scheme = theme.colorScheme;
     final dark = scheme.brightness == Brightness.dark;
     final compact = _shortViewport;
-    final stackFooter =
+    final stackSummary =
         MediaQuery.sizeOf(context).width < 430 &&
-        MediaQuery.textScalerOf(context).scale(14) > 22;
+        MediaQuery.textScalerOf(context).scale(14) > 20;
     final itemCount = quote.lines.fold<int>(
       0,
       (count, line) => count + line.quantity,
@@ -1549,36 +1656,37 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             'Total ($itemCount ${itemCount == 1 ? 'item' : 'items'})',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall?.copyWith(
+            style: theme.textTheme.bodyMedium?.copyWith(
               color: scheme.onSurfaceVariant,
               fontWeight: FontWeight.w600,
             ),
           ),
         ),
-        const SizedBox(width: 2),
+        const SizedBox(width: 4),
         Icon(
-          Icons.expand_more_rounded,
-          size: 16,
+          Icons.keyboard_arrow_up_rounded,
+          size: 18,
           color: scheme.onSurfaceVariant,
         ),
       ],
     );
     final amount = FittedBox(
       fit: BoxFit.scaleDown,
-      alignment: Alignment.centerLeft,
+      alignment: stackSummary ? Alignment.centerLeft : Alignment.centerRight,
       child: Text(
         money(_total(quote)),
         style: theme.textTheme.titleLarge?.copyWith(
-          fontSize: compact ? 20 : 22,
+          fontSize: compact ? 20 : 23,
           fontWeight: FontWeight.w800,
           letterSpacing: -0.5,
+          height: 1.15,
         ),
       ),
     );
     final savedText = discount == null || compact
         ? null
         : Padding(
-            padding: const EdgeInsets.only(top: 1),
+            padding: const EdgeInsets.only(top: 2),
             child: Text(
               'Saved ${money(discount)}',
               style: theme.textTheme.labelSmall?.copyWith(
@@ -1595,36 +1703,71 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       onTap: _placing ? null : () => _showOrderSummary(quote),
       excludeSemantics: true,
       child: InkWell(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
         onTap: _placing ? null : () => _showOrderSummary(quote),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [totalLabel, amount, ?savedText],
+          constraints: BoxConstraints(minHeight: compact ? 36 : 44),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: stackSummary
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      totalLabel,
+                      const SizedBox(height: 2),
+                      amount,
+                      ?savedText,
+                    ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [totalLabel, ?savedText],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      amount,
+                    ],
+                  ),
           ),
         ),
       ),
     );
-    final action = FilledButton(
-      style: FilledButton.styleFrom(
-        minimumSize: Size(stackFooter ? double.infinity : 144, compact ? 46 : 48),
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-        shape: const StadiumBorder(),
+    final action = SizedBox(
+      width: double.infinity,
+      child: FilledButton(
+        style: FilledButton.styleFrom(
+          minimumSize: Size.fromHeight(compact ? 46 : 52),
+          padding: EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: compact ? 10 : 14,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          textStyle: theme.textTheme.titleMedium?.copyWith(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.15,
+          ),
+        ),
+        onPressed: _placing ? null : () => _placeOrder(quote),
+        child: _placing
+            ? SizedBox.square(
+                dimension: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: scheme.primary,
+                  semanticsLabel: 'Placing your order',
+                ),
+              )
+            : Text(label, textAlign: TextAlign.center),
       ),
-      onPressed: _placing ? null : () => _placeOrder(quote),
-      child: _placing
-          ? SizedBox.square(
-              dimension: 22,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: scheme.primary,
-                semanticsLabel: 'Placing your order',
-              ),
-            )
-          : Text(label, textAlign: TextAlign.center),
     );
 
     final stripBg = blocker == null
@@ -1638,24 +1781,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         ? scheme.error
         : (dark ? const Color(0xFFFFE3A3) : const Color(0xFF6B4400));
 
-    return SafeArea(
-      top: false,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerLowest,
-          border: Border(
-            top: BorderSide(
-              color: scheme.outlineVariant.withValues(alpha: dark ? 0.5 : 0.45),
-            ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        border: Border(
+          top: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: dark ? 0.55 : 0.65),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: dark ? 0.28 : 0.05),
-              blurRadius: 14,
-              offset: const Offset(0, -4),
-            ),
-          ],
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: dark ? 0.28 : 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1673,65 +1816,78 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         ),
                       ),
                     ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 7,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          blocker.isError
-                              ? Icons.error_outline_rounded
-                              : Icons.info_outline_rounded,
-                          size: 16,
-                          color: stripFg,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${blocker.count == 1 ? '1 step left' : '${blocker.count} steps left'}: ${blocker.message}',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: stripFg,
-                              fontWeight: FontWeight.w700,
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      heightFactor: 1,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 640),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: compact ? 36 : 42,
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: compact ? 7 : 10,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  blocker.isError
+                                      ? Icons.error_outline_rounded
+                                      : Icons.info_outline_rounded,
+                                  size: 18,
+                                  color: stripFg,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    '${blocker.count == 1 ? '1 step left' : '${blocker.count} steps left'}: ${blocker.message}',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.labelMedium?.copyWith(
+                                      color: stripFg,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.chevron_right_rounded,
+                                  size: 18,
+                                  color: stripFg,
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          size: 18,
-                          color: stripFg,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                16,
-                compact ? 8 : 12,
-                16,
-                compact ? 8 : 14,
+            Align(
+              alignment: Alignment.topCenter,
+              heightFactor: 1,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    compact ? 8 : 12,
+                    16,
+                    compact ? 10 : 16,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      total,
+                      SizedBox(height: compact ? 8 : 12),
+                      action,
+                    ],
+                  ),
+                ),
               ),
-              child: stackFooter
-                  ? Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        total,
-                        const SizedBox(height: 10),
-                        action,
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        Expanded(child: total),
-                        const SizedBox(width: 12),
-                        Flexible(child: action),
-                      ],
-                    ),
             ),
           ],
         ),
@@ -2006,7 +2162,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.only(top: 10),
           child: _amountRow(
             label: Text(
               _method == 'pickup' ? 'Pickup at branch' : 'Delivery fee',
@@ -2027,7 +2183,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         ),
         if (_cardDiscount(quote) case final discount?)
           Padding(
-            padding: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.only(top: 10),
             child: _amountRow(
               label: Text(
                 'SC/PWD discount',
@@ -2047,7 +2203,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           ),
         if ((double.tryParse(fee) ?? 0) > 0)
           Padding(
-            padding: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.only(top: 10),
             child: _amountRow(
               label: Text(
                 'Online payment fee (${_paymentMethod.toUpperCase()})',
@@ -2063,7 +2219,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               ),
             ),
           ),
-        Divider(height: 20, color: hairline),
+        Divider(height: 24, color: hairline),
         _amountRow(
           label: Text(
             'Total',
@@ -2074,7 +2230,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           amount: Text(
             money(_total(quote)),
             style: theme.textTheme.titleMedium?.copyWith(
+              fontSize: 18,
               fontWeight: FontWeight.w800,
+              letterSpacing: -0.3,
             ),
           ),
         ),
@@ -2408,6 +2566,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   Widget _locationDetailsSection(CheckoutQuote quote) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final dark = scheme.brightness == Brightness.dark;
     final address = _address(quote);
     final hasRecipient =
         address != null && address.recipientName.trim().isNotEmpty;
@@ -2429,21 +2588,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Icon(
-                isPickup
-                    ? Icons.person_outline_rounded
-                    : Icons.location_on_outlined,
-                color: scheme.primary,
-                size: 18,
+            _iconTile(
+              isPickup
+                  ? Icons.person_outline_rounded
+                  : Icons.location_on_outlined,
+              background: scheme.primaryContainer.withValues(
+                alpha: dark ? 0.55 : 0.7,
               ),
+              foreground: scheme.primary,
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2455,27 +2613,31 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         ? 'Add contact details'
                         : 'Choose an address',
                     style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: 14.5,
                       fontWeight: FontWeight.w700,
+                      height: 1.25,
                     ),
                   ),
                   if (hasRecipient) ...[
                     if (address.phone.isNotEmpty) ...[
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 4),
                       Text(
                         address.phone,
                         style: theme.textTheme.bodySmall?.copyWith(
+                          fontSize: 13,
                           color: scheme.onSurfaceVariant,
-                          height: 1.35,
+                          height: 1.4,
                         ),
                       ),
                     ],
                     if (!isPickup && address.fullAddress.isNotEmpty) ...[
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 4),
                       Text(
                         address.fullAddress,
                         style: theme.textTheme.bodySmall?.copyWith(
+                          fontSize: 13,
                           color: scheme.onSurfaceVariant,
-                          height: 1.35,
+                          height: 1.4,
                         ),
                       ),
                     ],
@@ -2548,22 +2710,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     ),
                   ),
                 ),
-                SafeArea(
-                  top: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-                    child: FilledButton(
-                      onPressed: () {
-                        if (!_useNewAddress ||
-                            _validateAddressForm(inSheet: true)) {
-                          Navigator.pop(sheetContext, true);
-                        } else {
-                          updateSheet(() {});
-                        }
-                      },
-                      child: const Text('Save address'),
-                    ),
-                  ),
+                _sheetFooterButton(
+                  label: 'Save address',
+                  onPressed: () {
+                    if (!_useNewAddress ||
+                        _validateAddressForm(inSheet: true)) {
+                      Navigator.pop(sheetContext, true);
+                    } else {
+                      updateSheet(() {});
+                    }
+                  },
                 ),
               ],
             ),
@@ -2790,10 +2946,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final branch = _deliveryBranch;
     final ok = statusColour(context, 'completed');
     final warn = statusColour(context, 'pending');
+    final stackPinRow =
+        MediaQuery.textScalerOf(context).scale(14) > 20 &&
+        MediaQuery.sizeOf(context).width < 400;
+    final stackRangeActions =
+        MediaQuery.sizeOf(context).width < 340 ||
+        MediaQuery.textScalerOf(context).scale(14) > 20;
 
     if (pin == null && _located) {
       return Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: scheme.error.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
@@ -2808,16 +2970,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(0, 36),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(44),
                   backgroundColor: scheme.surfaceContainerLowest,
                   foregroundColor: scheme.error,
-                  shape: const StadiumBorder(),
+                  side: BorderSide(color: scheme.error.withValues(alpha: 0.35)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 onPressed: () => setState(() => _fulfillment = 'pickup'),
                 child: const Text('Switch to pickup'),
@@ -2830,7 +2994,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     if (pin == null) {
       return Container(
-        height: 76,
+        height: 92,
         decoration: BoxDecoration(
           color: dark ? scheme.surfaceContainerLow : scheme.surfaceContainer,
           borderRadius: BorderRadius.circular(12),
@@ -2844,11 +3008,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     // Location was off: the pin only sits on the branch, so ask for a real one.
     if (!_pinConfirmed) {
       return Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: dark ? const Color(0xFF251B06) : const Color(0xFFFFF8E1),
           borderRadius: BorderRadius.circular(12),
-          border: dark ? Border.all(color: const Color(0xFF5A4109)) : null,
+          border: Border.all(
+            color: dark ? const Color(0xFF5A4109) : const Color(0xFFF0D58C),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2880,22 +3046,31 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     : const Color(0xFF6B4400),
               ),
             ),
-            const SizedBox(height: 10),
-            TextButton.icon(
-              style: TextButton.styleFrom(
-                minimumSize: const Size(0, 38),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                backgroundColor: dark
-                    ? scheme.primaryContainer
-                    : scheme.surfaceContainerLowest,
-                foregroundColor: dark
-                    ? scheme.onPrimaryContainer
-                    : scheme.primary,
-                shape: const StadiumBorder(),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(44),
+                  backgroundColor: dark
+                      ? scheme.primaryContainer
+                      : scheme.surfaceContainerLowest,
+                  foregroundColor: dark
+                      ? scheme.onPrimaryContainer
+                      : scheme.primary,
+                  side: BorderSide(
+                    color: dark
+                        ? const Color(0xFF5A4109)
+                        : const Color(0xFFE5C878),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: _openPinPicker,
+                icon: const Icon(Icons.add_location_alt_outlined, size: 18),
+                label: const Text('Set delivery pin'),
               ),
-              onPressed: _openPinPicker,
-              icon: const Icon(Icons.add_location_alt_outlined, size: 18),
-              label: const Text('Set delivery pin'),
             ),
           ],
         ),
@@ -2906,62 +3081,101 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final branchLatLng = branch == null
         ? null
         : LatLng(branch.latitude, branch.longitude);
+    final pinStatus = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.check_circle_rounded, size: 16, color: ok),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            km == null
+                ? 'Pin confirmed'
+                : 'Pin confirmed · ${km.toStringAsFixed(1)} km',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: ok,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+    final adjustPinButton = TextButton(
+      style: _compactTextLinkStyle(),
+      onPressed: _openPinPicker,
+      child: Text(
+        'Adjust pin',
+        style: theme.textTheme.labelMedium?.copyWith(
+          color: scheme.primary,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+    ButtonStyle rangeActionStyle({required bool isError}) =>
+        OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(44),
+          backgroundColor: scheme.surfaceContainerLowest,
+          foregroundColor: isError ? scheme.error : scheme.primary,
+          side: BorderSide(
+            color: isError
+                ? scheme.error.withValues(alpha: 0.35)
+                : scheme.outlineVariant,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        );
+    final pickupButton = OutlinedButton(
+      style: rangeActionStyle(isError: false),
+      onPressed: () => setState(() => _fulfillment = 'pickup'),
+      child: const Text('Pickup'),
+    );
+    final movePinButton = OutlinedButton(
+      style: rangeActionStyle(isError: true),
+      onPressed: _openPinPicker,
+      child: const Text('Move pin'),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DeliveryPinMap(
-          pin: pin,
-          branch: branchLatLng,
-          height: 76,
-          showAdjustButton: false,
-          borderRadius: BorderRadius.circular(12),
-          pinColor: problem == null ? null : scheme.error,
-          onTap: _openPinPicker,
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _hairline(scheme)),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: DeliveryPinMap(
+            pin: pin,
+            branch: branchLatLng,
+            height: 92,
+            showAdjustButton: false,
+            borderRadius: BorderRadius.circular(11),
+            pinColor: problem == null ? null : scheme.error,
+            onTap: _openPinPicker,
+          ),
         ),
         const SizedBox(height: 8),
         if (problem == null)
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.check_circle_rounded, size: 16, color: ok),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      km == null
-                          ? 'Pin confirmed'
-                          : 'Pin confirmed · ${km.toStringAsFixed(1)} km',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: ok,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              TextButton(
-                style: _compactTextLinkStyle(minimumSize: const Size(44, 32)),
-                onPressed: _openPinPicker,
-                child: Text(
-                  'Adjust pin',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: scheme.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          )
+          stackPinRow
+              ? Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [pinStatus, adjustPinButton],
+                )
+              : Row(
+                  children: [
+                    Expanded(child: pinStatus),
+                    const SizedBox(width: 8),
+                    adjustPinButton,
+                  ],
+                )
         else
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: scheme.error.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
@@ -2999,35 +3213,23 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        minimumSize: const Size(0, 36),
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        backgroundColor: scheme.surfaceContainerLowest,
-                        foregroundColor: scheme.primary,
-                        shape: const StadiumBorder(),
+                const SizedBox(height: 12),
+                stackRangeActions
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          pickupButton,
+                          const SizedBox(height: 8),
+                          movePinButton,
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(child: pickupButton),
+                          const SizedBox(width: 8),
+                          Expanded(child: movePinButton),
+                        ],
                       ),
-                      onPressed: () => setState(() => _fulfillment = 'pickup'),
-                      child: const Text('Pickup'),
-                    ),
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        minimumSize: const Size(0, 36),
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        backgroundColor: scheme.surfaceContainerLowest,
-                        foregroundColor: scheme.error,
-                        shape: const StadiumBorder(),
-                      ),
-                      onPressed: _openPinPicker,
-                      child: const Text('Move pin'),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
@@ -3084,13 +3286,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           .add(labels[o.key] ?? o.key);
     }
 
-    final hairline = _hairline(scheme);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _cardHeader(title: 'Payment method'),
-        const SizedBox(height: 6),
+        const SizedBox(height: 12),
         if (_paymentAttempted &&
             !((_method == 'pickup' && _paymentMethod == 'cod') ||
                 quote.paymentOptions[_paymentMethod]?.available == true))
@@ -3099,7 +3299,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             key: _paymentErrorKey,
           ),
         for (var i = 0; i < shown.length; i++) ...[
-          if (i > 0) Divider(height: 1, indent: 32, color: hairline),
+          if (i > 0) const SizedBox(height: 8),
           _paymentOptionRow(
             methodKey: shown[i].key,
             label: labels[shown[i].key] ?? shown[i].key,
@@ -3112,7 +3312,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         ],
         for (final group in unavailableByReason.entries)
           Padding(
-            padding: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.only(top: 10),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -3146,6 +3346,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final dark = scheme.brightness == Brightness.dark;
     final hasFee =
         option.fee != null && (double.tryParse(option.fee!) ?? 0) > 0;
     final showSubtitle = (!option.available || selected) && subtitle.isNotEmpty;
@@ -3154,6 +3355,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         : methodKey == 'card'
         ? Icons.credit_card_rounded
         : Icons.account_balance_wallet_outlined;
+    final activeSelected = selected && option.available;
 
     return Semantics(
       selected: selected,
@@ -3162,86 +3364,107 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       button: true,
       child: Opacity(
         opacity: option.available ? 1 : 0.5,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: option.available
-              ? () => setState(() => _paymentMethod = methodKey)
-              : null,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 10),
-              child: Row(
-                children: [
-                  Icon(
-                    icon,
-                    size: 20,
-                    color: !option.available
-                        ? scheme.onSurfaceVariant
-                        : selected
-                        ? scheme.primary
-                        : scheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 2,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(
-                              label,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: selected
-                                    ? FontWeight.w700
-                                    : FontWeight.w600,
-                              ),
-                            ),
-                            if (option.available && hasFee)
+        child: Material(
+          color: activeSelected
+              ? scheme.primaryContainer.withValues(alpha: dark ? 0.35 : 0.45)
+              : Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: activeSelected ? scheme.primary : _hairline(scheme),
+              width: activeSelected ? 1.5 : 1,
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: option.available
+                ? () => setState(() => _paymentMethod = methodKey)
+                : null,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                child: Row(
+                  children: [
+                    _iconTile(
+                      icon,
+                      size: 19,
+                      background: !option.available
+                          ? scheme.surfaceContainer
+                          : selected
+                          ? scheme.primary.withValues(alpha: dark ? 0.28 : 0.14)
+                          : scheme.surfaceContainerLow,
+                      foreground: !option.available
+                          ? scheme.onSurfaceVariant
+                          : selected
+                          ? scheme.primary
+                          : scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 2,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
                               Text(
-                                '+ ${money(option.fee)}',
-                                style: theme.textTheme.labelMedium?.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                  fontWeight: FontWeight.w600,
+                                label,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontSize: 14.5,
+                                  fontWeight: selected
+                                      ? FontWeight.w700
+                                      : FontWeight.w600,
                                 ),
                               ),
-                          ],
-                        ),
-                        if (showSubtitle) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            subtitle,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: option.available
-                                  ? scheme.onSurfaceVariant
-                                  : scheme.error,
-                            ),
+                              if (option.available && hasFee)
+                                Text(
+                                  '+ ${money(option.fee)}',
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                            ],
                           ),
+                          if (showSubtitle) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              subtitle,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: option.available
+                                    ? scheme.onSurfaceVariant
+                                    : scheme.error,
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: selected && option.available
-                          ? scheme.surfaceContainerLowest
-                          : Colors.transparent,
-                      border: Border.all(
-                        color: selected && option.available
-                            ? scheme.primary
-                            : scheme.outlineVariant,
-                        width: selected && option.available ? 6 : 1.75,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 10),
+                    Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: activeSelected
+                            ? scheme.surfaceContainerLowest
+                            : Colors.transparent,
+                        border: Border.all(
+                          color: activeSelected
+                              ? scheme.primary
+                              : scheme.outlineVariant,
+                          width: activeSelected ? 6 : 1.75,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -3285,10 +3508,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          padding: const EdgeInsets.all(3),
+          padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             color: dark ? scheme.surfaceContainerLow : scheme.surfaceContainer,
-            borderRadius: BorderRadius.circular(stackSegment ? 14 : 999),
+            borderRadius: BorderRadius.circular(stackSegment ? 14 : 12),
+            border: Border.all(color: _hairline(scheme)),
           ),
           child: stackSegment
               ? Column(
@@ -3332,10 +3556,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ),
           ),
         ],
-        const SizedBox(height: 14),
         if (_method == 'pickup') ...[
+          const SizedBox(height: 14),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: sky.fill,
               borderRadius: BorderRadius.circular(12),
@@ -3381,11 +3605,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               ],
             ),
           ),
-          Divider(height: 22, color: _hairline(scheme)),
+          Divider(height: 26, color: _hairline(scheme)),
           _locationDetailsSection(quote),
         ] else ...[
+          if (closedUntil == null)
+            Divider(height: 28, color: _hairline(scheme))
+          else
+            const SizedBox(height: 14),
           _locationDetailsSection(quote),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           _pinSection(theme),
         ],
         // Keep validators mounted when the summary replaces the address editor.
@@ -3417,23 +3645,23 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       inMutuallyExclusiveGroup: true,
       child: Material(
         color: selected ? slab.fill : Colors.transparent,
-        shape: const StadiumBorder(),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: enabled ? () => setState(() => _fulfillment = value) : null,
           child: Opacity(
             opacity: enabled ? 1 : 0.45,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 40),
+              constraints: const BoxConstraints(minHeight: 44),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
-                  vertical: 8,
+                  vertical: 10,
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(icon, color: foreground, size: 17),
+                    Icon(icon, color: foreground, size: 18),
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(
@@ -3441,6 +3669,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.labelMedium?.copyWith(
+                          fontSize: 13,
                           color: foreground,
                           fontWeight: selected
                               ? FontWeight.w700
@@ -3500,27 +3729,46 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             const SizedBox(height: 12),
           ],
           if (pages.length < 10)
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(48, 48),
+            Builder(
+              builder: (context) {
+                final stackRxButtons =
+                    MediaQuery.sizeOf(context).width < 340 ||
+                    MediaQuery.textScalerOf(context).scale(14) > 20;
+                final buttonStyle = OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                );
+                final takePhotos = OutlinedButton.icon(
+                  style: buttonStyle,
                   onPressed: () => _pickPrescription(photo: true),
                   icon: const Icon(Icons.photo_camera_outlined, size: 20),
                   label: Text(pages.isEmpty ? 'Take photos' : 'Add photo'),
-                ),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(48, 48),
-                  ),
+                );
+                final uploadFile = OutlinedButton.icon(
+                  style: buttonStyle,
                   onPressed: () => _pickPrescription(photo: false),
                   icon: const Icon(Icons.upload_file_outlined, size: 20),
                   label: const Text('Upload file'),
-                ),
-              ],
+                );
+                return stackRxButtons
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          takePhotos,
+                          const SizedBox(height: 10),
+                          uploadFile,
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(child: takePhotos),
+                          const SizedBox(width: 10),
+                          Expanded(child: uploadFile),
+                        ],
+                      );
+              },
             ),
           const SizedBox(height: 12),
           Text(

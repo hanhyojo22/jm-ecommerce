@@ -451,6 +451,55 @@ void main() {
     expect(api.orderAttempts, 0);
   });
 
+  testWidgets('checkout footer stacks total above full-width Place order CTA', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _CheckoutApi(rx: true, seniorPwd: '20.00'),
+      locator: locator,
+      width: 390,
+      height: 844,
+    );
+    final totalRect = tester.getRect(find.text('Total (1 item)'));
+    final buttonFinder = find.widgetWithText(FilledButton, 'Place order');
+    expect(buttonFinder, findsOneWidget);
+    expect(find.byType(FilledButton), findsOneWidget);
+    final buttonRect = tester.getRect(buttonFinder);
+
+    expect(buttonRect.top, greaterThanOrEqualTo(totalRect.bottom));
+    expect(buttonRect.width, greaterThanOrEqualTo(350));
+    expect(buttonRect.left, closeTo(16, 1));
+    expect(390 - buttonRect.right, closeTo(16, 1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('pickup and out-of-range states render cleanly without extra primary buttons', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _CheckoutApi(rx: false),
+      locator: locator,
+      location: const _HereLocation(latitude: 14.65, longitude: 121.02),
+      width: 320,
+      height: 844,
+      brightness: Brightness.dark,
+    );
+    expect(find.text('Outside delivery area'), findsOneWidget);
+    expect(find.text('Pickup'), findsOneWidget);
+    expect(find.text('Move pin'), findsOneWidget);
+    expect(find.byType(FilledButton), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.ensureVisible(find.text('Pickup · Free'));
+    await tester.tap(find.text('Pickup · Free'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ready for pickup after confirmation'), findsOneWidget);
+    expect(find.byType(FilledButton), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final (width, height, scale) in [
     (320.0, 844.0, 1.0),
     (390.0, 844.0, 2.0),
