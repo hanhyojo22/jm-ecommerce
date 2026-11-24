@@ -329,6 +329,8 @@ class Product {
     this.thumbnailUrl,
     this.brand,
     this.genericName,
+    this.dosageForm,
+    this.strength,
     this.condition,
     this.description,
     this.sku,
@@ -364,6 +366,8 @@ class Product {
   final String? thumbnailUrl;
   final String? brand;
   final String? genericName;
+  final String? dosageForm;
+  final String? strength;
   final String? condition;
   final String? description;
   final String? sku;
@@ -422,6 +426,8 @@ class Product {
       thumbnailUrl: json['thumbnail_url'] as String?,
       brand: json['brand'] as String?,
       genericName: json['generic_name'] as String?,
+      dosageForm: json['dosage_form'] as String?,
+      strength: json['strength'] as String?,
       condition: json['condition'] as String?,
       description: json['description'] as String?,
       sku: json['sku'] as String?,

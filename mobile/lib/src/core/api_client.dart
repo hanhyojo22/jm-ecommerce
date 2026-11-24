@@ -264,6 +264,8 @@ class ApiClient {
                   ratingCount: 0,
                   thumbnailUrl: json['image_url'] as String?,
                   genericName: json['generic_name'] as String?,
+                  dosageForm: json['dosage_form'] as String?,
+                  strength: json['strength'] as String?,
                   requiresPrescription: boolean(json['requires_prescription']),
                   store: StoreInfo(
                     id: '',

@@ -195,8 +195,8 @@ class PushNotifications {
     _open(route);
   }
 
-  /// The in-app destination for an announcement link. Store and product pages
-  /// open their native screens; other same-site pages stay full browser links.
+  /// The in-app destination for an announcement link. Known pages open their
+  /// native screens; other trusted site links fall back to the app home screen.
   @visibleForTesting
   static String announcementDestination(String? url) {
     final uri = Uri.tryParse(url ?? '');
@@ -208,7 +208,7 @@ class PushNotifications {
       return '/';
     }
 
-    return pathDestination(uri.path) ?? uri.toString();
+    return pathDestination(uri.path) ?? '/';
   }
 
   /// The app screen for a JMMart web path, or null when the app has none.

@@ -31,6 +31,35 @@ void main() {
     );
     expect(medicine('Bandage', ' ').genericNameLabel, isNull);
     expect(medicine('Bandage', null).genericNameLabel, isNull);
+    final detailed = Product.fromJson({
+      'id': 'medicine',
+      'name': 'Biogesic',
+      'dosage_form': 'Tablet',
+      'strength': '500 mg',
+    });
+    expect(detailed.dosageForm, 'Tablet');
+    expect(detailed.strength, '500 mg');
+  });
+
+  testWidgets('medicine strength and form are clear on the product page', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _ProductApi()
+        ..genericName = 'Paracetamol'
+        ..dosageForm = 'Tablet'
+        ..strength = '500 mg'
+        ..requiresPrescription = true,
+    );
+
+    expect(find.text('PARACETAMOL'), findsOneWidget);
+    expect(find.text('Strength'), findsOneWidget);
+    expect(find.text('500 mg'), findsOneWidget);
+    expect(find.text('Form'), findsOneWidget);
+    expect(find.text('Tablet'), findsOneWidget);
+    expect(find.text('Rx · Prescription required'), findsOneWidget);
+    expect(find.text('Available now'), findsOneWidget);
   });
 
   for (final height in [640.0, 844.0]) {
@@ -601,6 +630,9 @@ class _ProductApi extends ApiClient {
   int? addedQuantity;
   bool inStock = true;
   bool requiresPrescription = false;
+  String? genericName;
+  String? dosageForm;
+  String? strength;
   bool failSelection = false;
   bool honorsBuyNow = false;
   bool sentBuyNow = false;
@@ -635,6 +667,9 @@ class _ProductApi extends ApiClient {
     'effective_price': effectivePrice,
     'in_stock': inStock,
     'requires_prescription': requiresPrescription,
+    'generic_name': genericName,
+    'dosage_form': dosageForm,
+    'strength': strength,
     'switch_with_care': switchWithCare,
     'stock_quantity': 5,
     'images': coloredVariants

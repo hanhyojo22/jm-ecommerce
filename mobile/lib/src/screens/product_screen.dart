@@ -459,8 +459,8 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
       ),
     );
 
-    final shortcuts = Row(
-      mainAxisSize: MainAxisSize.min,
+    final shortcuts = Wrap(
+      spacing: 8,
       children: [
         shortcut(
           'Pharmacy',
@@ -891,6 +891,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final largeText = MediaQuery.textScalerOf(context).scale(14) > 21;
     final images = _galleryImages;
     final effectivePrice = _variant == null
         ? product.effectivePrice
@@ -958,8 +959,28 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                         ),
                       ),
                     ],
+                    if ((product.strength?.trim().isNotEmpty ?? false) ||
+                        (product.dosageForm?.trim().isNotEmpty ?? false)) ...[
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (product.strength?.trim().isNotEmpty ?? false)
+                            _MedicineFact(
+                              label: 'Strength',
+                              value: product.strength!.trim(),
+                            ),
+                          if (product.dosageForm?.trim().isNotEmpty ?? false)
+                            _MedicineFact(
+                              label: 'Form',
+                              value: product.dosageForm!.trim(),
+                            ),
+                        ],
+                      ),
+                    ],
                     if (product.requiresPrescription) ...[
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       const PrescriptionBadge(),
                     ],
                     const SizedBox(height: 14),
@@ -1015,6 +1036,29 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                     if (!product.inStock) ...[
                       const SizedBox(height: 10),
                       StockedElsewhereNotice(productId: product.id),
+                    ] else ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.check_circle_rounded,
+                            size: 18,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            product.branchName == null
+                                ? 'Available now'
+                                : 'Available at ${product.branchName}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                     const SizedBox(height: 10),
                     Wrap(
@@ -1061,27 +1105,41 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 Column(
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: _infoRow(
-                            context,
-                            icon: PhosphorIconsRegular.motorcycle,
-                            title: 'Delivery from your branch',
-                            subtitle: 'Fee shown at checkout',
-                            highlight: false,
+                    if (largeText) ...[
+                      _infoRow(
+                        context,
+                        icon: PhosphorIconsRegular.motorcycle,
+                        title: 'Delivery from your branch',
+                        subtitle: 'Fee shown at checkout',
+                        highlight: false,
+                      ),
+                      _infoRow(
+                        context,
+                        icon: PhosphorIconsRegular.money,
+                        title: 'Cash on delivery',
+                      ),
+                    ] else
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _infoRow(
+                              context,
+                              icon: PhosphorIconsRegular.motorcycle,
+                              title: 'Delivery from your branch',
+                              subtitle: 'Fee shown at checkout',
+                              highlight: false,
+                            ),
                           ),
-                        ),
-                        Expanded(
-                          child: _infoRow(
-                            context,
-                            icon: PhosphorIconsRegular.money,
-                            title: 'Cash on delivery',
+                          Expanded(
+                            child: _infoRow(
+                              context,
+                              icon: PhosphorIconsRegular.money,
+                              title: 'Cash on delivery',
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
                     // A single variant is auto-selected, so there is nothing to choose.
                     if (product.variants.length > 1)
                       _infoRow(
@@ -1339,6 +1397,47 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _MedicineFact extends StatelessWidget {
+  const _MedicineFact({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      constraints: const BoxConstraints(minWidth: 96),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.onSurface,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
       ),
     );
   }

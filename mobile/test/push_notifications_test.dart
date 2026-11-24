@@ -242,7 +242,13 @@ void main() {
       PushNotifications.announcementDestination(
         'https://edp.jmsolutionitservices.com/products',
       ),
-      'https://edp.jmsolutionitservices.com/products',
+      '/',
+    );
+    expect(
+      PushNotifications.announcementDestination(
+        'https://edp.jmsolutionitservices.com/search?query=vitamin',
+      ),
+      '/',
     );
     expect(
       PushNotifications.announcementDestination(
@@ -326,6 +332,13 @@ void main() {
         'url': 'http://127.0.0.1:4173/stores/northwind/products/canvas-tote',
       }),
       '/product/northwind/canvas-tote',
+    );
+    expect(
+      PushNotifications.routeFor({
+        'type': 'announcement',
+        'url': 'https://edp.jmsolutionitservices.com/stores/northwind/products/paracetamol-500mg',
+      }),
+      '/product/northwind/paracetamol-500mg',
     );
     expect(
       PushNotifications.routeFor({
