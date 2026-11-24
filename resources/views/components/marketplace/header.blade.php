@@ -72,8 +72,160 @@
         }"
         x-init="$watch('drawerOpen', (open) => document.body.classList.toggle('overflow-hidden', open))"
         @keydown.escape.window="if (drawerOpen) closeDrawer(); if (accountOpen) closeAccount(); if (categoriesOpen) closeCategories()"
-        class="sticky top-0 z-40 border-b border-line bg-white"
+        class="sticky top-0 z-40 border-b border-line bg-white {{ $isSellerWorkspace ? 'sc-topbar' : '' }}"
     >
+        @if ($isSellerWorkspace)
+            @php
+                $sellerNameParts = collect(preg_split('/\s+/', trim((string) $user?->name)) ?: [])->filter();
+                $sellerInitials = $sellerNameParts->count() >= 2
+                    ? Str::upper(Str::substr((string) $sellerNameParts->first(), 0, 1).Str::substr((string) $sellerNameParts->last(), 0, 1))
+                    : Str::upper(Str::substr(trim((string) $user?->name), 0, 2));
+                $sellerInitials = $sellerInitials !== '' ? $sellerInitials : 'S';
+                $sellerRoleText = $sellerMember?->role === 'staff' && $sellerMember?->is_pharmacist
+                    ? 'Pharmacist'
+                    : ($sellerMember?->roleLabel() ?? 'Seller');
+            @endphp
+            <div class="sc-topbar-inner">
+                {{-- Left: Navigation Toggle + Modern Breadcrumb --}}
+                <div class="sc-topbar-left">
+                    <button type="button" @click="toggleDrawer($event)" :aria-expanded="drawerOpen.toString()" aria-controls="marketplace-drawer" class="sc-topbar-icon-btn lg:hidden" aria-label="Open navigation menu">
+                        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" /></svg>
+                    </button>
+
+                    <button type="button" @click="$dispatch('seller-sidebar-toggle')" class="sc-topbar-icon-btn hidden lg:grid" aria-label="Toggle Seller Center sidebar" title="Toggle sidebar">
+                        <svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5" /><path d="M9 4v16" /></svg>
+                    </button>
+
+                    <a href="{{ route('seller.dashboard') }}" class="sc-topbar-mobile-brand lg:hidden" aria-label="Everyday Pharmacy Seller Center overview">
+                        <span class="block truncate text-sm font-semibold leading-tight text-ink">{{ $sellerPageTitle }}</span>
+                        <span class="block truncate text-[11px] text-muted" data-seller-role>{{ $sellerMember?->placeLabel() ?? 'Seller Center' }} · {{ $sellerRoleText }}</span>
+                    </a>
+
+                    <div class="sc-topbar-crumb hidden lg:flex" data-seller-context>
+                        <span class="sc-topbar-scope">
+                            <span class="sc-topbar-scope-dot" aria-hidden="true"></span>
+                            <span class="truncate">{{ $sellerMember?->placeLabel() ?? 'Seller Center' }}</span>
+                        </span>
+                        <svg class="sc-topbar-sep" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6" /></svg>
+                        <strong class="sc-topbar-page">{{ $sellerPageTitle }}</strong>
+                    </div>
+                </div>
+
+                {{-- Center/Right: Command Search + Utility Cluster + Profile Pill --}}
+                <div class="sc-topbar-right">
+                    <form
+                        method="GET"
+                        action="{{ route('seller.products.index') }}"
+                        role="search"
+                        aria-label="Search your seller catalog"
+                        x-data="{ query: {{ Js::from(request('search', $search)) }}, focused: false, loading: false }"
+                        @submit="loading = true"
+                        class="sc-topbar-search-form"
+                    >
+                        <div data-header-search-shell class="sc-topbar-search" :class="focused && 'is-focused'">
+                            <label for="marketplace-search" class="sr-only">Search your products by name or SKU</label>
+                            <svg class="sc-topbar-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path stroke-linecap="round" d="m20 20-3.5-3.5" /></svg>
+                            <input
+                                id="marketplace-search"
+                                name="search"
+                                aria-label="Search your products by name or SKU"
+                                data-seller-shortcut="search"
+                                aria-keyshortcuts="S"
+                                x-model="query"
+                                @focus="focused = true"
+                                @blur="focused = false"
+                                value="{{ request('search', $search) }}"
+                                autocomplete="off"
+                                placeholder="Search products or SKU…"
+                                class="sc-topbar-search-input"
+                            >
+                            <button x-cloak x-show="query.length" type="button" @click="query = ''; $nextTick(() => $el.previousElementSibling.focus())" class="sc-topbar-search-clear" aria-label="Clear search">
+                                <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18" /></svg>
+                            </button>
+                            <kbd x-show="!query.length && !focused" class="sc-topbar-kbd hidden sm:inline-flex" aria-hidden="true">S</kbd>
+                            <button x-cloak x-show="query.length" type="submit" class="sc-topbar-search-submit">Go</button>
+                        </div>
+                    </form>
+
+                    <div class="sc-topbar-utils">
+                        @if ($webStoreEnabled)
+                            <a href="{{ route('home') }}" class="sc-topbar-shop-link hidden xl:inline-flex" title="View customer storefront">
+                                <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z"/></svg>
+                                <span>Storefront</span>
+                            </a>
+                        @endif
+
+                        @if ($canUseMessages)
+                            <livewire:message-header-badge :seller-workspace="true" />
+                        @endif
+
+                        @auth
+                            <livewire:notification-bell />
+
+                            <span class="sc-topbar-divider hidden sm:inline-block" aria-hidden="true"></span>
+
+                            <div class="relative" @click.outside="accountOpen = false">
+                                <button x-ref="accountButton" type="button" @click="toggleAccount($event)" :aria-expanded="accountOpen.toString()" aria-controls="header-account-menu" aria-label="Account menu" class="sc-topbar-account-btn" :class="accountOpen && 'is-open'">
+                                    <span class="sc-topbar-avatar" aria-hidden="true">{{ $sellerInitials }}</span>
+                                    <span class="sc-topbar-user-meta hidden lg:block">
+                                        <span class="sc-topbar-user-name">{{ Str::of($user->name)->before(' ') }}</span>
+                                        <span class="sc-topbar-user-role">{{ $sellerRoleText }}</span>
+                                    </span>
+                                    <svg class="sc-topbar-chevron hidden lg:block" :class="accountOpen && 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg>
+                                </button>
+                                <div id="header-account-menu" x-cloak x-show="accountOpen" x-transition.origin.top.right class="sc-topbar-menu absolute right-0 z-50 mt-2 w-72 max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl border border-line bg-white p-2">
+                                    <div class="sc-topbar-menu-head">
+                                        <span class="sc-topbar-menu-avatar" aria-hidden="true">{{ $sellerInitials }}</span>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="truncate text-sm font-semibold text-ink">{{ $user->name }}</p>
+                                            <p class="truncate text-xs text-muted">{{ $user->email }}</p>
+                                            <span class="sc-topbar-menu-role">{{ $sellerRoleText }}</span>
+                                        </div>
+                                    </div>
+                                    <nav aria-label="Account links" class="border-t border-line py-1.5">
+                                        @if ($canUseMessages)
+                                            <a href="{{ route('messages.index', ['context' => 'selling']) }}" class="sc-topbar-menu-item">
+                                                <svg class="size-[17px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z" /></svg>
+                                                <span>Messages</span>
+                                            </a>
+                                        @endif
+                                        <a href="{{ route('profile.edit') }}" class="sc-topbar-menu-item">
+                                            <svg class="size-[17px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" /></svg>
+                                            <span>My account</span>
+                                        </a>
+                                        @if ($user->isPlatformAdministrator())
+                                            <a href="{{ route('dashboard') }}" class="sc-topbar-menu-item">
+                                                <svg class="size-[17px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /></svg>
+                                                <span>Admin workspace</span>
+                                            </a>
+                                        @endif
+                                    </nav>
+                                    @if ($sellerTenant && $webStoreEnabled)
+                                        <div class="border-t border-line py-2">
+                                            <form method="POST" action="{{ route('profile.workspace.update') }}" data-workspace-switch>
+                                                @csrf
+                                                <input type="hidden" name="workspace" value="customer">
+                                                <button type="submit" class="sc-topbar-switch-btn">
+                                                    <svg class="size-[18px] shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h15m0 0-4-4m4 4-4 4M20 17H5m0 0 4-4m-4 4 4 4"/></svg>
+                                                    <span class="min-w-0 flex-1"><span class="block text-sm font-semibold text-brand">Switch Account</span><span class="block text-xs text-muted">Go to shopping</span></span>
+                                                    <svg class="size-4 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    @endif
+                                    <div class="border-t border-line pt-1.5">
+                                        <button type="button" data-clerk-sign-out class="sc-topbar-menu-item is-danger w-full text-left">
+                                            <svg class="size-[17px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" /><path d="m10 17 5-5-5-5M15 12H3" /></svg>
+                                            <span>Sign out</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        @endauth
+                    </div>
+                </div>
+            </div>
+        @else
         <div class="marketplace-container flex flex-wrap items-center gap-x-2.5 gap-y-3 py-3 sm:gap-x-5 sm:py-3.5">
             <div class="order-1 flex min-w-0 items-center gap-1.5 min-[641px]:order-none sm:gap-2.5">
                 <button type="button" @click="toggleDrawer($event)" :aria-expanded="drawerOpen.toString()" aria-controls="marketplace-drawer" class="{{ $isSellerWorkspace || $isCustomerWorkspace ? 'lg:hidden' : 'min-[641px]:hidden' }} grid size-11 shrink-0 place-items-center rounded-md text-muted transition hover:bg-canvas hover:text-brand focus-visible:ring-2 focus-visible:ring-brand" aria-label="Open navigation menu">
@@ -277,6 +429,7 @@
                 @endauth
             </div>
         </div>
+        @endif
 
         @unless ($isSellerWorkspace || $isCustomerWorkspace || ! $webStoreEnabled)
             <nav data-header-category-nav @click.outside="categoriesOpen = false" class="relative border-t border-line bg-white" aria-label="Marketplace sections">
