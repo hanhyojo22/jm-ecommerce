@@ -67,7 +67,9 @@ class AddStaffMember
     }
 
     /**
-     * Someone this company removed, or whose invitation lapsed, and who has not joined anyone since.
+     * Someone this company removed who has not joined anyone since. Only a person who signed in while on
+     * the team comes back at once. A place nobody claimed (a lapsed invitation, or a removal before the
+     * first sign-in) may have been a mistyped email, so a stranger who signed in with it later never qualifies.
      */
     private function isFormerEmployee(User $user, Tenant $tenant): bool
     {
@@ -75,9 +77,11 @@ class AddStaffMember
             && $user->account_type === 'buyer'
             && ! $user->tenantMemberships()->exists()
             && AuditLog::query()
-                ->whereIn('action', ['tenant_member.removed', 'tenant_member.invitation_expired'])
+                ->where('action', 'tenant_member.removed')
                 ->where('old_values->user_id', $user->id)
                 ->where('old_values->tenant_id', $tenant->id)
+                // Unclaimed still: adding them again is just a fresh invitation.
+                ->when($user->clerk_user_id !== null, fn ($query) => $query->where('old_values->signed_in', true))
                 ->exists();
     }
 

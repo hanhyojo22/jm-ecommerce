@@ -67,6 +67,26 @@ class StaffManagementTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_a_stranger_who_claimed_an_unused_place_never_gets_it_back(): void
+    {
+        [$tenant, $branch] = $this->pharmacy('botika');
+        $owner = $this->member($tenant, 'owner');
+        $this->actingAs($owner)->post(route('seller.staff.store'), ['email' => 'typo@example.com', 'role' => 'staff', 'store_id' => $branch->id]);
+        $placeholder = User::query()->where('email', 'typo@example.com')->sole();
+
+        // Removed before anyone signed in: adding the email again is just a fresh invitation.
+        $this->actingAs($owner)->delete(route('seller.staff.destroy', $placeholder->tenantMemberships()->sole()))->assertRedirect();
+        $this->actingAs($owner)->post(route('seller.staff.store'), ['email' => 'typo@example.com', 'role' => 'staff', 'store_id' => $branch->id])
+            ->assertSessionHas('status', fn (string $status): bool => str_starts_with($status, 'Invitation sent'));
+
+        // Removed again, then a stranger signs in with the address: they stay a customer.
+        $this->actingAs($owner)->delete(route('seller.staff.destroy', $placeholder->tenantMemberships()->sole()))->assertRedirect();
+        $placeholder->forceFill(['clerk_user_id' => 'user_stranger'])->save();
+        $this->actingAs($owner)->post(route('seller.staff.store'), ['email' => 'typo@example.com', 'role' => 'staff', 'store_id' => $branch->id])
+            ->assertSessionHasErrors('email');
+        $this->assertDatabaseMissing('tenant_members', ['user_id' => $placeholder->id]);
+    }
+
     public function test_head_office_adds_a_branch_pharmacist_by_email(): void
     {
         [$tenant, $branch] = $this->pharmacy('botika');
