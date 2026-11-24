@@ -74,19 +74,17 @@
 @endphp
 
 <nav @class([
-    'flex-1 space-y-5' => $mode === 'desktop',
-    'flex-1 space-y-5 overflow-y-auto' => $mode === 'mobile',
-    'px-1 py-4' => $mode === 'desktop',
-    'p-4' => $mode === 'mobile',
+    'flex-1 space-y-4 overflow-y-auto px-0 py-3.5' => $mode === 'desktop',
+    'flex-1 space-y-4 overflow-y-auto p-3.5' => $mode === 'mobile',
 ]) aria-label="Seller workspace navigation">
     @foreach ($groups as $group)
-        <div class="space-y-1">
+        <div class="space-y-0.5">
             @if ($group['label'])
                 <p class="workspace-nav-label">{{ $group['label'] }}</p>
             @endif
             @foreach ($group['items'] as $item)
                 <a href="{{ $item['href'] }}" @if ($item['label'] === 'Orders') data-seller-shortcut="orders" aria-keyshortcuts="O" @elseif ($item['label'] === 'Products') data-seller-shortcut="search" aria-keyshortcuts="S" @endif class="workspace-nav-link" {{ $item['active'] ? 'aria-current=page' : '' }}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         @switch($item['icon'])
                             @case('overview')<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />@break
                             @case('products')<path d="m12 3 9 5v8l-9 5-9-5V8z" /><path d="m3 8 9 5 9-5M12 13v8" />@break

@@ -176,6 +176,41 @@ class SellerDashboardTest extends TestCase
             ->assertDontSee(route('seller.branches.index'), false);
     }
 
+    public function test_seller_sidebar_shows_signed_in_user_name_and_role_badges(): void
+    {
+        [$owner, $tenant] = $this->seller();
+        $owner->update(['name' => 'Marco Santos']);
+        $branch = Store::create(['tenant_id' => $tenant->id, 'name' => 'Northwind Makati', 'slug' => 'northwind-makati-'.str()->lower(str()->random(6)), 'phone' => '+639171234567', 'address_line' => '10 Ayala Avenue', 'city' => 'Makati', 'status' => 'active']);
+
+        $manager = User::factory()->seller()->create(['name' => 'Elena Cruz', 'email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $tenant->id, 'user_id' => $manager->id, 'role' => 'manager']);
+
+        $pharmacist = User::factory()->seller()->create(['name' => 'Ramon Reyes', 'email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $tenant->id, 'store_id' => $branch->id, 'user_id' => $pharmacist->id, 'role' => 'staff', 'is_pharmacist' => true, 'license_number' => '0987654', 'license_expires_on' => now()->addYear()->toDateString()]);
+
+        TenantMember::where('user_id', $owner->id)->update(['is_pharmacist' => true, 'license_number' => '0112233', 'license_expires_on' => now()->addYear()->toDateString()]);
+
+        $this->actingAs($manager)->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('data-seller-user-card', false)
+            ->assertSee('Elena Cruz')
+            ->assertSee('data-role-tone="manager">Manager</span>', false)
+            ->assertSee('<span>Account</span>', false);
+
+        $this->actingAs($pharmacist)->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('Ramon Reyes')
+            ->assertSee('data-role-tone="pharmacist">Pharmacist</span>', false)
+            ->assertSee('Pharmacist</strong> · PRC 0987654', false);
+
+        $this->actingAs($owner)->get(route('profile.edit'))
+            ->assertOk()
+            ->assertSee('Marco Santos')
+            ->assertSee('data-role-tone="owner">Owner</span>', false)
+            ->assertSee('data-role-tone="pharmacist">Pharmacist</span>', false)
+            ->assertSee('aria-current=page', false);
+    }
+
     public function test_branch_manager_sees_city_when_the_branch_name_is_generic(): void
     {
         [, $tenant] = $this->seller();

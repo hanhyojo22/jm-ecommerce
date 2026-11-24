@@ -1,4 +1,4 @@
-{{-- Who is signed in to Seller Center: the pharmacy and where they work, then the person, their role and pharmacist license. --}}
+{{-- Where this seller works: the pharmacy, branch/head-office scope, and pharmacist PRC license status. --}}
 @php
     $member = auth()->user()?->sellerMembership();
     $workplace = $member?->store ?? $member?->tenant?->store;
@@ -16,19 +16,12 @@
                     {{ Str::upper(Str::substr($member->tenant->name, 0, 1)) }}
                 @endif
             </span>
-            <div class="min-w-0">
-                <p class="text-sm font-semibold leading-snug text-ink line-clamp-2 [overflow-wrap:anywhere]">{{ $member->tenant->name }}</p>
-                <p class="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted">
+            <div class="min-w-0 flex-1">
+                <p class="text-[13px] font-semibold leading-snug text-ink line-clamp-2 [overflow-wrap:anywhere]">{{ $member->tenant->name }}</p>
+                <p class="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11.5px] text-muted">
                     <span @class(['size-1.5 shrink-0 rounded-full', 'bg-success' => $workplace?->status === 'active', 'bg-danger' => $workplace?->status === 'suspended', 'bg-muted' => ! in_array($workplace?->status, ['active', 'suspended'], true)]) aria-hidden="true"></span>
                     <span class="truncate">{{ $member->placeLabel() }}@if ($workplace?->status === 'suspended') · suspended @endif</span>
                 </p>
-            </div>
-        </div>
-        <div class="workspace-identity-row workspace-identity-person">
-            <span class="workspace-identity-initials" aria-hidden="true">{{ Str::upper(collect(explode(' ', trim(auth()->user()->name)))->filter()->take(2)->map(fn (string $part): string => Str::substr($part, 0, 1))->implode('')) }}</span>
-            <div class="min-w-0">
-                <p class="truncate text-sm font-semibold text-ink">{{ auth()->user()->name }}</p>
-                <p class="workspace-identity-role">{{ $member->roleLabel() }}</p>
             </div>
         </div>
         @if ($licenseStatus)

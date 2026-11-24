@@ -377,11 +377,22 @@
         <div x-cloak x-show="drawerOpen" x-transition.opacity class="fixed inset-0 z-50 bg-slate-950/35 lg:hidden">
             <button type="button" @click="closeDrawer" class="h-full w-full" tabindex="-1" aria-label="Close navigation menu"></button>
         </div>
-        <aside id="marketplace-drawer" x-ref="drawer" x-cloak x-show="drawerOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-end="-translate-x-full" @keydown.tab="trap($event)" class="fixed inset-y-0 left-0 z-[60] flex w-[min(20rem,calc(100vw-2.5rem))] flex-col shadow-[0_16px_32px_rgba(15,23,42,.18)] lg:hidden {{ $isSellerWorkspace || $isCustomerWorkspace ? 'workspace-sidebar' : 'bg-surface text-ink' }}" role="dialog" aria-modal="true" aria-label="{{ $isSellerWorkspace ? 'Seller Center navigation' : ($isCustomerWorkspace ? 'My account navigation' : 'Marketplace navigation') }}">
-            <div class="flex h-[56px] items-center justify-between border-b border-line px-5">
+        <aside id="marketplace-drawer" x-ref="drawer" x-cloak x-show="drawerOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-end="-translate-x-full" @keydown.tab="trap($event)" class="fixed inset-y-0 left-0 z-[60] flex w-[min(20rem,calc(100vw-2.5rem))] flex-col shadow-[0_16px_32px_rgba(15,23,42,.18)] lg:hidden {{ $isSellerWorkspace ? 'workspace-sidebar seller-studio-drawer' : ($isCustomerWorkspace ? 'workspace-sidebar' : 'bg-surface text-ink') }}" role="dialog" aria-modal="true" aria-label="{{ $isSellerWorkspace ? 'Seller Center navigation' : ($isCustomerWorkspace ? 'My account navigation' : 'Marketplace navigation') }}">
+            <div class="flex h-[60px] shrink-0 items-center justify-between border-b border-line px-4">
                 <a href="{{ $isSellerWorkspace ? route('seller.dashboard') : ($isCustomerWorkspace ? route('orders.index') : route('home')) }}" data-drawer-focus @click="closeDrawer" class="workspace-sidebar-brand">
-                    @if ($isSellerWorkspace || $isCustomerWorkspace)<img src="{{ asset('favicon.svg') }}" alt="" class="size-8 rounded-md" width="32" height="32">@else<x-application-logo class="size-8 fill-current text-brand" />@endif
-                    <span class="workspace-sidebar-brand-name">{{ $isSellerWorkspace ? 'Seller Center' : ($isCustomerWorkspace ? 'My account' : 'Everyday Pharmacy') }}</span>
+                    @if ($isSellerWorkspace)
+                        <span class="seller-studio-mark" aria-hidden="true">EP</span>
+                        <span class="min-w-0">
+                            <span class="workspace-sidebar-brand-name truncate">Everyday Pharmacy</span>
+                            <span class="workspace-sidebar-brand-meta">Seller Center</span>
+                        </span>
+                    @elseif ($isCustomerWorkspace)
+                        <img src="{{ asset('favicon.svg') }}" alt="" class="size-8 rounded-md" width="32" height="32">
+                        <span class="workspace-sidebar-brand-name">My account</span>
+                    @else
+                        <x-application-logo class="size-8 fill-current text-brand" />
+                        <span class="workspace-sidebar-brand-name">Everyday Pharmacy</span>
+                    @endif
                 </a>
                 <button type="button" @click="closeDrawer" class="workspace-drawer-close grid size-11 place-items-center rounded-md text-muted transition hover:bg-canvas hover:text-ink focus-visible:ring-2 focus-visible:ring-brand" aria-label="Close navigation menu"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
             </div>
@@ -398,15 +409,9 @@
             @endif
 
             @if ($isSellerWorkspace)
-                <x-marketplace.seller-identity class="mx-4 mt-4" />
+                <x-marketplace.seller-identity class="mx-3.5 mt-3.5" />
                 <x-marketplace.seller-nav-links mode="mobile" />
-                <div class="space-y-1 border-t border-line p-4">
-                    @if ($sellerTenant && $webStoreEnabled)
-                        <a href="{{ route('home') }}" @click="closeDrawer" class="workspace-nav-link">View website</a>
-                    @endif
-                    <a href="{{ route('profile.edit') }}" @click="closeDrawer" class="workspace-nav-link">Account</a>
-                    <button type="button" data-clerk-sign-out @click="closeDrawer" class="workspace-nav-link w-full text-left">Sign out</button>
-                </div>
+                <x-marketplace.seller-account-footer mode="mobile" :seller-tenant="$sellerTenant" />
             @elseif ($isCustomerWorkspace)
                 <x-marketplace.customer-nav-links mode="mobile" />
                 <div class="border-t border-line p-4">
