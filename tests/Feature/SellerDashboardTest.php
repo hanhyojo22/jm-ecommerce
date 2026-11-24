@@ -303,6 +303,22 @@ class SellerDashboardTest extends TestCase
         $this->assertCount(0, array_filter($queries, fn (string $sql): bool => str_starts_with($sql, 'select exists(select * from "products"')));
     }
 
+    public function test_seller_center_defaults_to_dark_theme_with_appearance_toggle(): void
+    {
+        [$seller] = $this->seller();
+
+        $this->actingAs($seller)->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('data-seller-theme="dark"', false)
+            ->assertSee('aria-label="Appearance"', false)
+            ->assertSee('seller_center_theme', false);
+
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($buyer)->get(route('profile.edit'))
+            ->assertOk()
+            ->assertDontSee('data-seller-theme="dark"', false);
+    }
+
     private function createSellerOrder(Store $store, User $buyer, string $number, string $status, int $total): void
     {
         $order = Order::create([

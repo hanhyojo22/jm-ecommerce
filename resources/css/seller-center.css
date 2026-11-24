@@ -1562,3 +1562,190 @@ html.sc-map-lock { overflow: hidden; }
     .sc-stepper-btn { width: 44px; height: 44px; }
     .sc-stepper-input { flex: 1; min-height: 44px !important; }
 }
+
+/* ---- Seller Center Appearance Switcher (Light & Soft Dim Navy Dark) --- */
+.seller-theme-toggle {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px;
+    margin-bottom: 10px; border: 1px solid var(--sc-line); border-radius: 8px;
+    background: var(--sc-canvas); padding: 3px;
+}
+.seller-theme-btn {
+    display: inline-flex; min-height: 32px; align-items: center; justify-content: center; gap: 5px;
+    border: 0; border-radius: 6px; background: transparent; color: var(--sc-muted);
+    font-size: 11.5px; font-weight: 600; cursor: pointer;
+    transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.seller-theme-btn:hover { color: var(--sc-ink); }
+.seller-theme-btn:focus-visible { outline: 2px solid var(--sc-accent); outline-offset: -2px; }
+.seller-theme-btn[aria-pressed='true'] { background: var(--sc-surface); color: var(--sc-ink); box-shadow: 0 1px 2px rgb(15 23 42 / 12%); }
+.seller-studio-drawer .seller-theme-btn { min-height: 40px; }
+
+/* ---- Soft Dim Navy-Slate Dark Theme (Seller Center default) ----------- */
+html[data-seller-theme='dark'] {
+    color-scheme: dark;
+    --color-bg: #0f1828;
+    --color-surface: #18263e;
+    --color-paper: #142036;
+    --color-paper-deep: #1e2f4d;
+    --color-sunken: #121d31;
+    --color-fg: #eef3fb;
+    --color-muted: #93a6c2;
+    --color-border: #273957;
+    --color-border-strong: #364d72;
+    --color-line-soft: #1f2f49;
+    --color-selected: #1e2f4d;
+    --color-accent: #6094ff;
+    --color-accent-hover: #427bfa;
+    --color-success: #6ee7b7;
+    --color-success-soft: rgb(34 197 94 / 18%);
+    --color-success-line: rgb(74 222 128 / 28%);
+    --color-success-wash: rgb(34 197 94 / 13%);
+    --color-warning: #fbbf24;
+    --color-warning-text: #fcd34d;
+    --color-warning-line: rgb(251 191 36 / 30%);
+    --color-warning-wash: rgb(245 158 11 / 14%);
+    --color-danger: #fca5a5;
+    --color-danger-line: rgb(248 113 113 / 30%);
+    --color-danger-wash: rgb(239 68 68 / 14%);
+    --color-info: #93c5fd;
+    --color-info-line: rgb(96 148 255 / 34%);
+    --color-info-wash: rgb(96 148 255 / 14%);
+    --focus-ring: 0 0 0 3px rgb(96 148 255 / 24%);
+}
+
+html[data-seller-theme='dark'] .seller-workspace[data-workspace='seller'] {
+    --sc-canvas: #0f1828;
+    --sc-surface: #18263e;
+    --sc-sunken: #121d31;
+    --sc-line: #273957;
+    --sc-line-soft: #1f2f49;
+    --sc-ink: #eef3fb;
+    --sc-muted: #93a6c2;
+    --sc-accent: #6094ff;
+    --sc-accent-soft: rgb(96 148 255 / 14%);
+    --sc-sidebar: #142036;
+    --sc-hover: #1e2f4d;
+    --sc-input-bg: #111c2f;
+    --sc-btn-primary: #2f6df6;
+    --sc-btn-primary-hover: #427bfa;
+}
+
+/* Sidebar, Mobile Drawer & Top Header */
+html[data-seller-theme='dark'] .seller-workspace .workspace-sidebar,
+html[data-seller-theme='dark'] .seller-studio-drawer { background: #142036; color: var(--sc-ink); border-color: var(--sc-line); }
+html[data-seller-theme='dark'] .seller-workspace [data-header-role='seller'] { background: #142036; border-color: var(--sc-line); color: var(--sc-ink); }
+html[data-seller-theme='dark'] .seller-workspace .workspace-sidebar .workspace-sidebar-avatar { background: var(--sc-surface); border-color: var(--sc-line); color: var(--sc-ink); }
+html[data-seller-theme='dark'] .seller-studio-mark { background: #2f6df6; color: #fff; box-shadow: none; }
+html[data-seller-theme='dark'] .seller-studio-sidebar .workspace-identity,
+html[data-seller-theme='dark'] .seller-studio-drawer .workspace-identity,
+html[data-seller-theme='dark'] .seller-studio-user-card,
+html[data-seller-theme='dark'] .seller-theme-toggle { background: var(--sc-sunken); border-color: var(--sc-line-soft); }
+html[data-seller-theme='dark'] .seller-theme-btn[aria-pressed='true'] { background: var(--sc-surface); color: var(--sc-ink); box-shadow: 0 1px 2px rgb(0 0 0 / 28%); }
+html[data-seller-theme='dark'] .seller-workspace .workspace-sidebar .workspace-nav-label { color: #7e93b2; }
+html[data-seller-theme='dark'] .seller-workspace .workspace-sidebar .workspace-nav-link,
+html[data-seller-theme='dark'] .seller-studio-drawer .workspace-nav-link { color: #cdd8e8; }
+html[data-seller-theme='dark'] .seller-workspace .workspace-sidebar .workspace-nav-link svg,
+html[data-seller-theme='dark'] .seller-studio-drawer .workspace-nav-link svg { color: #8da2c0; }
+html[data-seller-theme='dark'] .seller-workspace .workspace-sidebar .workspace-nav-link:hover,
+html[data-seller-theme='dark'] .seller-studio-drawer .workspace-nav-link:hover { background: #1e2f4d; color: var(--sc-ink); }
+html[data-seller-theme='dark'] .seller-workspace .workspace-sidebar .workspace-nav-link[aria-current='page'],
+html[data-seller-theme='dark'] .seller-studio-drawer .workspace-nav-link[aria-current='page'] { background: var(--sc-accent-soft); color: var(--sc-accent); box-shadow: inset 0 0 0 1px rgb(96 148 255 / 24%); }
+html[data-seller-theme='dark'] .seller-workspace .workspace-sidebar .workspace-nav-count,
+html[data-seller-theme='dark'] .seller-studio-drawer .workspace-nav-count { background: #2f6df6; color: #fff; }
+html[data-seller-theme='dark'] .seller-workspace .workspace-sidebar .workspace-nav-note { background: var(--sc-sunken); border-color: var(--sc-line); color: var(--sc-muted); }
+html[data-seller-theme='dark'] .seller-studio-avatar[data-role-tone='owner'] { background: rgb(96 148 255 / 18%); color: #93c5fd; }
+html[data-seller-theme='dark'] .seller-studio-avatar[data-role-tone='manager'] { background: rgb(34 211 238 / 16%); color: #67e8f9; }
+html[data-seller-theme='dark'] .seller-studio-avatar[data-role-tone='pharmacist'] { background: rgb(34 197 94 / 16%); color: #6ee7b7; }
+html[data-seller-theme='dark'] .seller-studio-avatar[data-role-tone='staff'] { background: #223454; color: #cdd8e8; }
+html[data-seller-theme='dark'] .seller-studio-role-badge[data-role-tone='owner'] { border-color: rgb(96 148 255 / 34%); background: rgb(96 148 255 / 14%); color: #93c5fd; }
+html[data-seller-theme='dark'] .seller-studio-role-badge[data-role-tone='manager'] { border-color: rgb(34 211 238 / 32%); background: rgb(34 211 238 / 14%); color: #67e8f9; }
+html[data-seller-theme='dark'] .seller-studio-role-badge[data-role-tone='pharmacist'] { border-color: var(--color-success-line); background: var(--color-success-wash); color: var(--color-success); }
+html[data-seller-theme='dark'] .seller-studio-role-badge[data-role-tone='staff'] { border-color: var(--sc-line); background: var(--sc-surface); color: #cdd8e8; }
+html[data-seller-theme='dark'] .seller-studio-drawer .workspace-drawer-close:hover { background: #1e2f4d; color: var(--sc-ink); }
+
+/* Shared Buttons, Tables, Forms, Charts, Dialogs & Utility Surfaces */
+html[data-seller-theme='dark'] .seller-workspace .seller-primary-button,
+html[data-seller-theme='dark'] .seller-workspace .sc-rx-desk-button,
+html[data-seller-theme='dark'] .seller-workspace .sc-dock-save { background: #2f6df6; color: #fff; }
+html[data-seller-theme='dark'] .seller-workspace .seller-primary-button:hover:not(:disabled),
+html[data-seller-theme='dark'] .seller-workspace .sc-rx-desk-button:hover,
+html[data-seller-theme='dark'] .seller-workspace .sc-dock-save:hover:not(:disabled) { background: #427bfa; }
+html[data-seller-theme='dark'] .seller-workspace .seller-outline-button { background: var(--sc-surface); border-color: var(--color-border-strong); color: var(--sc-ink); }
+html[data-seller-theme='dark'] .seller-workspace .seller-outline-button:hover:not(:disabled) { background: #1e2f4d; border-color: var(--sc-accent); color: var(--sc-ink); }
+html[data-seller-theme='dark'] .seller-workspace .bg-white:not(.sc-logo-preview-box):not(.sc-buyer-card-logo) { background-color: var(--sc-surface); }
+html[data-seller-theme='dark'] .seller-workspace :is(.bg-slate-50, .bg-slate-100) { background-color: var(--sc-sunken); }
+html[data-seller-theme='dark'] .seller-workspace .sc-table thead th { background: var(--sc-sunken); color: var(--sc-muted); border-color: var(--sc-line); }
+html[data-seller-theme='dark'] .seller-workspace .sc-table tbody tr:hover { background: #1d2d49; }
+html[data-seller-theme='dark'] .seller-workspace :is(input:not([type='checkbox']):not([type='radio']), select, textarea, .field-control) { background-color: #111c2f; border-color: var(--color-border-strong); color: var(--sc-ink); }
+html[data-seller-theme='dark'] .seller-workspace :is(input, textarea)::placeholder { color: #6e83a3; }
+html[data-seller-theme='dark'] .seller-workspace select option { background: #142036; color: #eef3fb; }
+html[data-seller-theme='dark'] .seller-workspace .seller-sales-bar { background: #243859; }
+html[data-seller-theme='dark'] .seller-workspace .seller-sales-day:nth-last-child(-n+5) .seller-sales-bar { background: #4f86ff; }
+html[data-seller-theme='dark'] .seller-workspace ::selection { background: rgb(96 148 255 / 30%); color: #fff; }
+html[data-seller-theme='dark'] .sc-member-dialog { background: var(--sc-surface); color: var(--sc-ink); border: 1px solid var(--sc-line); }
+html[data-seller-theme='dark'] .sc-member-dialog::backdrop { background: rgb(5 10 20 / 68%); }
+
+/* Store Settings Dark Surfaces */
+html[data-seller-theme='dark'] .sc-error-summary { border-color: var(--color-danger-line); background: var(--color-danger-wash); color: var(--color-danger); }
+html[data-seller-theme='dark'] .sc-error-summary-list a { color: #fecaca; }
+html[data-seller-theme='dark'] .sc-logo-uploader { background: var(--sc-sunken); border-color: var(--color-border-strong); }
+html[data-seller-theme='dark'] .sc-logo-uploader:hover { background: #16243b; border-color: var(--sc-accent); }
+html[data-seller-theme='dark'] .sc-logo-removed-badge { background: var(--color-danger-wash); color: var(--color-danger); }
+html[data-seller-theme='dark'] .sc-copy-btn { background: var(--sc-surface); border-color: var(--color-border-strong); color: var(--sc-ink); }
+html[data-seller-theme='dark'] .sc-copy-btn:hover { background: #1e2f4d; border-color: var(--sc-accent); color: var(--sc-accent); }
+html[data-seller-theme='dark'] .sc-status-option { background: var(--sc-sunken); border-color: var(--sc-line); }
+html[data-seller-theme='dark'] .sc-status-option:hover { background: #1b2b46; border-color: var(--color-border-strong); }
+html[data-seller-theme='dark'] .sc-status-option[data-selected='true'][data-choice='active'] { border-color: #34d399; background: var(--color-success-wash); }
+html[data-seller-theme='dark'] .sc-status-option[data-selected='true'][data-choice='inactive'] { border-color: #64748b; background: #1b2a42; }
+html[data-seller-theme='dark'] .sc-status-radio { background: var(--sc-surface); border-color: var(--color-border-strong); }
+html[data-seller-theme='dark'] .sc-status-option[data-selected='true'][data-choice='active'] .sc-status-radio { border-color: #34d399; }
+html[data-seller-theme='dark'] .sc-status-option[data-selected='true'][data-choice='active'] .sc-status-radio::after { background: #34d399; }
+html[data-seller-theme='dark'] .sc-privacy-tag { background: #1e2f4d; color: var(--sc-muted); }
+html[data-seller-theme='dark'] .sc-preview-stage { background: #0d1626; }
+html[data-seller-theme='dark'] .sc-buyer-card { background: var(--sc-surface); border-color: var(--sc-line); box-shadow: 0 6px 18px rgb(0 0 0 / 28%); }
+html[data-seller-theme='dark'] .sc-buyer-card-banner { background: #111c2f; border-bottom: 1px solid var(--sc-line-soft); }
+html[data-seller-theme='dark'] .sc-buyer-chip[data-tone='success'] { border-color: var(--color-success-line); background: var(--color-success-wash); color: var(--color-success); }
+html[data-seller-theme='dark'] .sc-buyer-chip[data-tone='neutral'] { border-color: var(--sc-line); background: var(--sc-sunken); color: var(--sc-muted); }
+html[data-seller-theme='dark'] .sc-buyer-chip[data-tone='danger'] { border-color: var(--color-danger-line); background: var(--color-danger-wash); color: var(--color-danger); }
+html[data-seller-theme='dark'] .sc-progress-track { background: #263855; }
+html[data-seller-theme='dark'] .sc-check-item:hover { background: #1e2f4d; }
+html[data-seller-theme='dark'] .sc-check-dot { background: var(--sc-sunken); border-color: var(--color-border-strong); color: var(--sc-muted); }
+html[data-seller-theme='dark'] .sc-check-item.is-done .sc-check-dot { background: var(--color-success-wash); border-color: var(--color-success-line); color: var(--color-success); }
+html[data-seller-theme='dark'] .sc-save-dock { background: #0b1220; border-color: var(--color-border-strong); box-shadow: 0 18px 38px -12px rgb(0 0 0 / 55%); }
+html[data-seller-theme='dark'] .sc-map-toolbar,
+html[data-seller-theme='dark'] .sc-map-status { background: var(--sc-sunken); border-color: var(--sc-line); }
+html[data-seller-theme='dark'] .sc-map-results { background: var(--sc-surface); border-color: var(--sc-line); }
+
+/* Branch Stock Dark Surfaces */
+html[data-seller-theme='dark'] .sc-stock-signal { background: var(--sc-surface); border-color: var(--sc-line); }
+html[data-seller-theme='dark'] .sc-stock-signal:hover { background: #1d2e4a; border-color: var(--color-border-strong); }
+html[data-seller-theme='dark'] .sc-stock-signal[data-tone='warning'] { border-color: var(--color-warning-line); background: var(--color-warning-wash); }
+html[data-seller-theme='dark'] .sc-stock-signal[data-tone='warning'] .sc-stock-signal-value strong { color: var(--color-warning-text); }
+html[data-seller-theme='dark'] .sc-stock-signal[data-tone='danger'] { border-color: var(--color-danger-line); background: var(--color-danger-wash); }
+html[data-seller-theme='dark'] .sc-stock-signal[data-tone='danger'] .sc-stock-signal-value strong { color: var(--color-danger); }
+html[data-seller-theme='dark'] .sc-stock-signal-dot { background: #475d7f; }
+html[data-seller-theme='dark'] .sc-stock-signal[data-tone='warning'] .sc-stock-signal-dot { background: #fbbf24; }
+html[data-seller-theme='dark'] .sc-stock-signal[data-tone='danger'] .sc-stock-signal-dot { background: #f87171; }
+html[data-seller-theme='dark'] .sc-stock-chip { background: var(--sc-surface); border-color: var(--sc-line); color: var(--sc-muted); }
+html[data-seller-theme='dark'] .sc-stock-chip:hover { color: var(--sc-ink); border-color: var(--color-border-strong); }
+html[data-seller-theme='dark'] .sc-stock-chip[aria-pressed='true'] { background: #2f6df6; border-color: #2f6df6; color: #fff; }
+html[data-seller-theme='dark'] .sc-stock-chip-count { background: #223454; color: #cdd8e8; }
+html[data-seller-theme='dark'] .seller-workspace .sc-stock-table tbody tr.is-adjusting,
+html[data-seller-theme='dark'] .seller-workspace .sc-stock-count-table tbody tr.is-modified { background: rgb(96 148 255 / 10%); }
+html[data-seller-theme='dark'] .seller-workspace .sc-stock-table tbody tr.sc-stock-adjust-row td { background: var(--sc-sunken); border-color: var(--sc-line); }
+html[data-seller-theme='dark'] .sc-stock-expiry-note[data-tone='warning'] { color: var(--color-warning-text); }
+html[data-seller-theme='dark'] .sc-stock-expiry-note[data-tone='danger'] { color: var(--color-danger); }
+html[data-seller-theme='dark'] .sc-delta-chip[data-dir='up'] { background: var(--color-success-wash); color: var(--color-success); }
+html[data-seller-theme='dark'] .sc-delta-chip[data-dir='down'] { background: var(--color-danger-wash); color: var(--color-danger); }
+html[data-seller-theme='dark'] .sc-stock-count-foot { background: rgb(24 38 62 / 96%); border-color: var(--sc-line); }
+
+/* Seller Orders / Rose / Amber Tailwind Overrides in Dark Mode */
+html[data-seller-theme='dark'] .seller-workspace :is(.text-rose-600, .text-rose-700) { color: #fca5a5; }
+html[data-seller-theme='dark'] .seller-workspace .bg-rose-50 { background-color: var(--color-danger-wash); }
+html[data-seller-theme='dark'] .seller-workspace .border-rose-200 { border-color: var(--color-danger-line); }
+html[data-seller-theme='dark'] .seller-workspace .hover\:bg-rose-50:hover { background-color: var(--color-danger-wash); }
+html[data-seller-theme='dark'] .seller-workspace .hover\:bg-blue-50\/70:hover { background-color: var(--sc-accent-soft); }
+
+@media (prefers-reduced-motion: reduce) {
+    .seller-theme-btn { transition: none; }
+}
