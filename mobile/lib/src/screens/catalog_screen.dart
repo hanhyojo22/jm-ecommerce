@@ -1,7 +1,7 @@
 import 'dart:async';
+import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_icons/phosphor_icons.dart';
@@ -99,7 +99,8 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     final deals = ref.watch(dealsProvider).value;
     final boughtBefore = ref.watch(boughtBeforeProvider).value ?? const [];
     final bestSellers = ref.watch(bestSellersProvider).value ?? const [];
-    final locator = ref.watch(nearestStoreProvider).value;
+    final locatorAsync = ref.watch(nearestStoreProvider);
+    final locator = locatorAsync.value;
     // Stock and prices are per branch, so the list waits until one is known.
     final needsBranch =
         locator != null &&
@@ -113,9 +114,18 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     final online = ref.watch(isOnlineProvider).value ?? true;
 
     final scheme = theme.colorScheme;
-    final headerScaler = MediaQuery.textScalerOf(context)
-        .clamp(maxScaleFactor: 1.6);
+    final textScaler = MediaQuery.textScalerOf(context);
+    final headerScaler = textScaler.clamp(maxScaleFactor: 1.6);
     final barHeight = headerScaler.scale(48).clamp(48.0, 56.0);
+    final topPadding = MediaQuery.paddingOf(context).top;
+    final mediaSize = MediaQuery.sizeOf(context);
+    final reducedMotion = MediaQuery.disableAnimationsOf(context);
+    final hasCategoryItems = categories.value?.isNotEmpty ?? false;
+    // Short landscape viewports keep only the search bar pinned so cards still fit.
+    final pinCategories = mediaSize.height >= 480;
+    final dockCategoryRail = hasCategoryItems && pinCategories;
+    final slab = skySlab(scheme);
+
     // Looks like the search field, but opens the full search page, as tapping search does in
     // most shopping apps; the page has the keyboard, history and suggestions.
     final searchBar = Semantics(
@@ -159,30 +169,21 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
       ),
     );
 
-    final slab = skySlab(scheme);
-    // The shell drops its app bar on this tab, so this band sits behind the status bar.
-    final search = AnnotatedRegion<SystemUiOverlayStyle>(
-      value:
-          (ThemeData.estimateBrightnessForColor(slab.fill) == Brightness.dark
-                  ? SystemUiOverlayStyle.light
-                  : SystemUiOverlayStyle.dark)
-              .copyWith(statusBarColor: Colors.transparent),
-      child: Material(
-        color: slab.fill,
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
-        child: MediaQuery.withClampedTextScaling(
-          maxScaleFactor: 1.6,
-          child: Padding(
-            padding: EdgeInsetsDirectional.fromSTEB(
-              16,
-              MediaQuery.paddingOf(context).top + 10,
-              16,
-              16,
-            ),
-            child: BranchHeader(ink: slab.ink, searchBar: searchBar),
-          ),
-        ),
-      ),
+    final headerDelegate = SliverShopHeaderDelegate(
+      topPadding: topPadding,
+      viewportWidth: mediaSize.width,
+      textScaler: textScaler,
+      barHeight: barHeight,
+      slab: slab,
+      theme: theme,
+      locator: locatorAsync,
+      searchBar: searchBar,
+      reducedMotion: reducedMotion,
+      refreshing: refreshing,
+      dockCategoryRail: dockCategoryRail,
+      forceFlatBottom: dockCategoryRail && !browsing,
+      onTapBranch: () => showBranchSelectorSheet(context),
+      onRetryBranches: () => ref.invalidate(storeBranchesProvider),
     );
 
     return PopScope(
@@ -194,30 +195,6 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
       },
       child: Column(
         children: [
-          search,
-          // Offline, the app-wide bar already says so.
-          if (products.hasError && feed != null && online)
-            MaterialBanner(
-              content: Text(
-                products.error is ApiException &&
-                        (products.error! as ApiException).isNetwork
-                    ? 'No internet. Showing earlier products.'
-                    : 'Could not refresh products.',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: _refreshProducts,
-                  child: const Text('Try again'),
-                ),
-              ],
-            ),
-          if (refreshing)
-            LinearProgressIndicator(
-              minHeight: 2,
-              semanticsLabel: 'Updating products',
-              color: theme.colorScheme.primary,
-              backgroundColor: theme.colorScheme.surfaceContainerHighest,
-            ),
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -244,6 +221,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                     return false;
                   },
                   child: RefreshIndicator(
+                    edgeOffset: headerDelegate.minExtent,
                     onRefresh: _refreshProducts,
                     child: CustomScrollView(
                       controller: _scrollController,
@@ -251,6 +229,10 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                       keyboardDismissBehavior:
                           ScrollViewKeyboardDismissBehavior.onDrag,
                       slivers: [
+                        SliverPersistentHeader(
+                          pinned: true,
+                          delegate: headerDelegate,
+                        ),
                         if (browsing &&
                             !needsBranch &&
                             feed?.products.isNotEmpty == true)
@@ -262,45 +244,54 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                               ),
                             ),
                           ),
-                        SliverToBoxAdapter(
-                          child: Material(
-                            type: MaterialType.transparency,
-                            child: categories.when(
-                              data: (items) => items.isEmpty
-                                  ? const SizedBox.shrink()
-                                  : Padding(
-                                      padding: const EdgeInsets.only(top: 20),
-                                      child: _CategoryStrip(
-                                        categories: items,
-                                        selected: filter.category,
-                                        dealsActive: filter.onSale,
-                                        onSelected: _selectCategory,
-                                      ),
-                                    ),
-                              loading: () => const Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 16,
+                        categories.when(
+                          data: (items) => items.isEmpty
+                              ? const SliverToBoxAdapter(
+                                  child: SizedBox.shrink(),
+                                )
+                              : SliverPersistentHeader(
+                                  pinned: pinCategories,
+                                  delegate: _CategoryHeaderDelegate(
+                                    categories: items,
+                                    selected: filter.category,
+                                    dealsActive: filter.onSale,
+                                    compactOnly: !browsing,
+                                    pinCategories: pinCategories,
+                                    slab: slab,
+                                    theme: theme,
+                                    textScaler: textScaler,
+                                    reducedMotion: reducedMotion,
+                                    onSelected: _selectCategory,
+                                  ),
                                 ),
-                                child: LinearProgressIndicator(),
+                          loading: () => const SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 16,
                               ),
-                              // The products error below already offers the page's retry.
-                              error: (error, stack) =>
-                                  products.hasError && feed == null
-                                  ? const SizedBox.shrink()
-                                  : Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                      ),
-                                      child: TextButton.icon(
-                                        onPressed: () =>
-                                            ref.invalidate(categoriesProvider),
-                                        icon: const Icon(Icons.refresh_rounded),
-                                        label: const Text('Reload categories'),
-                                      ),
-                                    ),
+                              child: LinearProgressIndicator(),
                             ),
                           ),
+                          // The products error below already offers the page's retry.
+                          error: (error, stack) =>
+                              products.hasError && feed == null
+                              ? const SliverToBoxAdapter(
+                                  child: SizedBox.shrink(),
+                                )
+                              : SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    child: TextButton.icon(
+                                      onPressed: () =>
+                                          ref.invalidate(categoriesProvider),
+                                      icon: const Icon(Icons.refresh_rounded),
+                                      label: const Text('Reload categories'),
+                                    ),
+                                  ),
+                                ),
                         ),
                         if (browsing && needsBranch)
                           const SliverPadding(
@@ -315,7 +306,8 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                             child: EmptyState(
                               icon: Icons.storefront_outlined,
                               title: 'Choose your branch',
-                              message: 'We show the medicines your branch has in stock.',
+                              message:
+                                  'We show the medicines your branch has in stock.',
                               action: FilledButton(
                                 onPressed: () =>
                                     showBranchSelectorSheet(context),
@@ -377,6 +369,22 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
               },
             ),
           ),
+          // Offline, the app-wide bar already says so.
+          if (products.hasError && feed != null && online)
+            MaterialBanner(
+              content: Text(
+                products.error is ApiException &&
+                        (products.error! as ApiException).isNetwork
+                    ? 'No internet. Showing earlier products.'
+                    : 'Could not refresh products.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: _refreshProducts,
+                  child: const Text('Try again'),
+                ),
+              ],
+            ),
         ],
       ),
     );
@@ -747,29 +755,52 @@ IconData categoryIcon(String name) {
   return PhosphorIconsRegular.pill;
 }
 
-class _CategoryStrip extends StatelessWidget {
-  const _CategoryStrip({
+class _CategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _CategoryHeaderDelegate({
     required this.categories,
     required this.selected,
+    required this.dealsActive,
+    required this.compactOnly,
+    required this.pinCategories,
+    required this.slab,
+    required this.theme,
+    required this.textScaler,
+    required this.reducedMotion,
     required this.onSelected,
-    this.dealsActive = false,
   });
 
   final List<Category> categories;
   final String? selected;
-
-  /// The deals list is open, so "All" is offered as the way back.
   final bool dealsActive;
+  final bool compactOnly;
+  final bool pinCategories;
+  final ({Color fill, Color ink}) slab;
+  final ThemeData theme;
+  final TextScaler textScaler;
+  final bool reducedMotion;
   final ValueChanged<String?> onSelected;
 
+  TextScaler get _pillScaler => textScaler.clamp(maxScaleFactor: 1.6);
+
+  double get _pillVisualHeight => _pillScaler.scale(42).clamp(42.0, 50.0);
+
+  double get _pinnedExtent => (_pillVisualHeight + 14.0).clamp(56.0, 64.0);
+
+  double get _expandedExtent {
+    final style = theme.textTheme.labelMedium;
+    final labelHeight =
+        textScaler.scale(style?.fontSize ?? 12) * (style?.height ?? 1.5);
+    return 20.0 + 72.0 + labelHeight * 2 + 16.0;
+  }
+
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scaler = MediaQuery.textScalerOf(context);
-    final categoryLabelStyle = theme.textTheme.labelMedium;
-    final categoryLabelHeight =
-        scaler.scale(categoryLabelStyle?.fontSize ?? 12) *
-        (categoryLabelStyle?.height ?? 1.5);
+  double get minExtent =>
+      compactOnly || pinCategories ? _pinnedExtent : _expandedExtent;
+
+  @override
+  double get maxExtent => compactOnly ? _pinnedExtent : _expandedExtent;
+
+  List<({String name, String? slug})> _sortedOptions() {
     const categoryOrder = [
       'electronics',
       'fashion',
@@ -789,18 +820,147 @@ class _CategoryStrip extends StatelessWidget {
         final byCount = b.productCount.compareTo(a.productCount);
         return byCount != 0 ? byCount : a.name.compareTo(b.name);
       });
-    final options = <({String name, String? slug})>[
+
+    return <({String name, String? slug})>[
       if (selected != null || dealsActive) (name: 'All', slug: null),
       for (final category in sortedCategories)
         (name: category.name, slug: category.slug),
     ];
+  }
 
-    return Semantics(
-      container: true,
-      label: 'Shop by category',
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final delta = maxExtent - minExtent;
+    final rawT = delta <= 0 ? 1.0 : (shrinkOffset / delta).clamp(0.0, 1.0);
+    final visualT = compactOnly
+        ? 1.0
+        : (reducedMotion
+              ? (rawT >= 0.5 ? 1.0 : 0.0)
+              : Curves.easeOutCubic.transform(rawT));
+    final options = _sortedOptions();
+    final showPills = visualT >= 0.55;
+    final bgColor = Color.lerp(
+      theme.scaffoldBackgroundColor,
+      slab.fill,
+      visualT,
+    )!;
+    final bottomRadius = lerpDouble(0.0, 18.0, visualT)!;
+    final scheme = theme.colorScheme;
+    final borderAlpha = ((visualT - 0.6) / 0.4).clamp(0.0, 1.0);
+
+    return ColoredBox(
+      color: theme.scaffoldBackgroundColor,
+      child: Material(
+        color: bgColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(bottomRadius),
+          ),
+          side: borderAlpha > 0
+              ? BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: borderAlpha),
+                  width: 0.8,
+                )
+              : BorderSide.none,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Semantics(
+          container: true,
+          label: 'Shop by category',
+          child: showPills
+              ? Opacity(
+                  opacity: compactOnly || reducedMotion
+                      ? 1.0
+                      : ((visualT - 0.55) / 0.45).clamp(0.0, 1.0),
+                  child: MediaQuery(
+                    data: MediaQuery.of(
+                      context,
+                    ).copyWith(textScaler: _pillScaler),
+                    child: _CategoryPillsRail(
+                      options: options,
+                      selected: selected,
+                      dealsActive: dealsActive,
+                      hitHeight: (_pinnedExtent - 6.0).clamp(50.0, 58.0),
+                      pillHeight: _pillVisualHeight,
+                      reducedMotion: reducedMotion,
+                      onSelected: onSelected,
+                    ),
+                  ),
+                )
+              : ClipRect(
+                  child: OverflowBox(
+                    alignment: Alignment.topCenter,
+                    minHeight: _expandedExtent,
+                    maxHeight: _expandedExtent,
+                    child: Opacity(
+                      opacity: reducedMotion
+                          ? 1.0
+                          : (1.0 - visualT / 0.55).clamp(0.0, 1.0),
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 20),
+                        child: _CategoryCirclesStrip(
+                          options: options,
+                          selected: selected,
+                          dealsActive: dealsActive,
+                          onSelected: onSelected,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _CategoryHeaderDelegate oldDelegate) =>
+      categories != oldDelegate.categories ||
+      selected != oldDelegate.selected ||
+      dealsActive != oldDelegate.dealsActive ||
+      compactOnly != oldDelegate.compactOnly ||
+      pinCategories != oldDelegate.pinCategories ||
+      slab != oldDelegate.slab ||
+      theme != oldDelegate.theme ||
+      textScaler != oldDelegate.textScaler ||
+      reducedMotion != oldDelegate.reducedMotion;
+}
+
+class _CategoryPillsRail extends StatelessWidget {
+  const _CategoryPillsRail({
+    required this.options,
+    required this.selected,
+    required this.dealsActive,
+    required this.hitHeight,
+    required this.pillHeight,
+    required this.reducedMotion,
+    required this.onSelected,
+  });
+
+  final List<({String name, String? slug})> options;
+  final String? selected;
+  final bool dealsActive;
+  final double hitHeight;
+  final double pillHeight;
+  final bool reducedMotion;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final dark = scheme.brightness == Brightness.dark;
+
+    return Align(
+      alignment: Alignment.topCenter,
       child: SizedBox(
-        height: 72 + categoryLabelHeight * 2 + 16,
+        height: hitHeight,
         child: ListView.separated(
+          key: const PageStorageKey('shop-category-pills'),
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: options.length,
@@ -810,88 +970,110 @@ class _CategoryStrip extends StatelessWidget {
             final active =
                 option.slug == selected &&
                 !(option.slug == null && dealsActive);
-            final scheme = theme.colorScheme;
+            final fill = active
+                ? (dark ? scheme.tertiary : scheme.primary)
+                : scheme.surfaceContainerLowest;
+            final fg = active
+                ? (dark ? scheme.onTertiary : scheme.onPrimary)
+                : scheme.onSurface;
 
-            return SizedBox(
-              // Wide enough at 2× text that one-word names like "Electronics" never split mid-word.
-              width: scaler.scale(92).clamp(92, 184),
-              child: Semantics(
-                button: true,
-                selected: active,
-                label: option.name,
-                onTap: () => onSelected(active ? null : option.slug),
-                excludeSemantics: true,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(appSurfaceRadius),
-                    onTap: () => onSelected(active ? null : option.slug),
-                    child: Column(
-                      children: [
-                        AnimatedContainer(
-                          duration: MediaQuery.disableAnimationsOf(context)
-                              ? Duration.zero
-                              : const Duration(milliseconds: 200),
-                          curve: Curves.easeOutCubic,
-                          width: 72,
-                          height: 72,
-                          decoration: BoxDecoration(
-                            color: active
-                                ? scheme.primaryContainer
-                                : scheme.secondaryContainer,
-                            shape: BoxShape.circle,
-                            border: Border.all(
+            return Semantics(
+              button: true,
+              selected: active,
+              label: option.name,
+              onTap: () => onSelected(active ? null : option.slug),
+              excludeSemantics: true,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  customBorder: const StadiumBorder(),
+                  onTap: () => onSelected(active ? null : option.slug),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minWidth: 52,
+                      minHeight: hitHeight,
+                      maxHeight: hitHeight,
+                    ),
+                    child: Center(
+                      child: AnimatedContainer(
+                        duration: reducedMotion
+                            ? Duration.zero
+                            : const Duration(milliseconds: 180),
+                        curve: Curves.easeOutCubic,
+                        height: pillHeight,
+                        padding: const EdgeInsetsDirectional.fromSTEB(
+                          5,
+                          0,
+                          14,
+                          0,
+                        ),
+                        decoration: ShapeDecoration(
+                          color: fill,
+                          shape: StadiumBorder(
+                            side: BorderSide(
                               color: active
-                                  ? scheme.primary
-                                  : Colors.transparent,
-                              width: 2,
+                                  ? Colors.transparent
+                                  : scheme.outlineVariant,
                             ),
                           ),
-                          clipBehavior: Clip.antiAlias,
-                          child: option.slug == null
-                              ? Icon(
-                                  active
-                                      ? PhosphorIconsBold.check
-                                      : PhosphorIconsRegular.squaresFour,
-                                  size: 26,
-                                  color: active
-                                      ? scheme.onPrimaryContainer
-                                      : scheme.onSecondaryContainer,
-                                )
-                              : Padding(
-                                  padding: const EdgeInsets.all(8),
-                                  child: Image.asset(
-                                    'assets/categories/${option.slug}.webp',
-                                    fit: BoxFit.contain,
-                                    cacheWidth: 192,
-                                    excludeFromSemantics: true,
-                                    errorBuilder:
-                                        (context, error, stackTrace) => Icon(
-                                          categoryIcon(option.name),
-                                          size: 26,
-                                          color: active
-                                              ? scheme.onPrimaryContainer
-                                              : scheme.onSecondaryContainer,
-                                        ),
-                                  ),
-                                ),
                         ),
-                        const SizedBox(height: 10),
-                        Text(
-                          option.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: active
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.onSurface,
-                            fontWeight: active
-                                ? FontWeight.w700
-                                : FontWeight.w600,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: active
+                                    ? scheme.surfaceContainerLowest
+                                    : scheme.secondaryContainer,
+                                shape: BoxShape.circle,
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: option.slug == null
+                                  ? Icon(
+                                      active
+                                          ? PhosphorIconsBold.check
+                                          : PhosphorIconsRegular.squaresFour,
+                                      size: 17,
+                                      color: active
+                                          ? scheme.primary
+                                          : scheme.onSecondaryContainer,
+                                    )
+                                  : Padding(
+                                      padding: const EdgeInsets.all(4),
+                                      child: Image.asset(
+                                        'assets/categories/${option.slug}.webp',
+                                        fit: BoxFit.contain,
+                                        cacheWidth: 96,
+                                        excludeFromSemantics: true,
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                Icon(
+                                                  categoryIcon(option.name),
+                                                  size: 17,
+                                                  color: active
+                                                      ? scheme.primary
+                                                      : scheme
+                                                            .onSecondaryContainer,
+                                                ),
+                                      ),
+                                    ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              option.name,
+                              maxLines: 1,
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: fg,
+                                fontWeight: active
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -899,6 +1081,131 @@ class _CategoryStrip extends StatelessWidget {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _CategoryCirclesStrip extends StatelessWidget {
+  const _CategoryCirclesStrip({
+    required this.options,
+    required this.selected,
+    required this.dealsActive,
+    required this.onSelected,
+  });
+
+  final List<({String name, String? slug})> options;
+  final String? selected;
+  final bool dealsActive;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scaler = MediaQuery.textScalerOf(context);
+    final categoryLabelStyle = theme.textTheme.labelMedium;
+    final categoryLabelHeight =
+        scaler.scale(categoryLabelStyle?.fontSize ?? 12) *
+        (categoryLabelStyle?.height ?? 1.5);
+
+    return SizedBox(
+      height: 72 + categoryLabelHeight * 2 + 16,
+      child: ListView.separated(
+        key: const PageStorageKey('shop-category-circles'),
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: options.length,
+        separatorBuilder: (context, index) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final option = options[index];
+          final active =
+              option.slug == selected && !(option.slug == null && dealsActive);
+          final scheme = theme.colorScheme;
+
+          return SizedBox(
+            // Wide enough at 2× text that one-word names like "Electronics" never split mid-word.
+            width: scaler.scale(92).clamp(92, 184),
+            child: Semantics(
+              button: true,
+              selected: active,
+              label: option.name,
+              onTap: () => onSelected(active ? null : option.slug),
+              excludeSemantics: true,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(appSurfaceRadius),
+                  onTap: () => onSelected(active ? null : option.slug),
+                  child: Column(
+                    children: [
+                      AnimatedContainer(
+                        duration: MediaQuery.disableAnimationsOf(context)
+                            ? Duration.zero
+                            : const Duration(milliseconds: 200),
+                        curve: Curves.easeOutCubic,
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: active
+                              ? scheme.primaryContainer
+                              : scheme.secondaryContainer,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: active ? scheme.primary : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: option.slug == null
+                            ? Icon(
+                                active
+                                    ? PhosphorIconsBold.check
+                                    : PhosphorIconsRegular.squaresFour,
+                                size: 26,
+                                color: active
+                                    ? scheme.onPrimaryContainer
+                                    : scheme.onSecondaryContainer,
+                              )
+                            : Padding(
+                                padding: const EdgeInsets.all(8),
+                                child: Image.asset(
+                                  'assets/categories/${option.slug}.webp',
+                                  fit: BoxFit.contain,
+                                  cacheWidth: 192,
+                                  excludeFromSemantics: true,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Icon(
+                                        categoryIcon(option.name),
+                                        size: 26,
+                                        color: active
+                                            ? scheme.onPrimaryContainer
+                                            : scheme.onSecondaryContainer,
+                                      ),
+                                ),
+                              ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        option.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: active
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurface,
+                          fontWeight: active
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

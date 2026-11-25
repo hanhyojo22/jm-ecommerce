@@ -387,6 +387,65 @@ void main() {
   });
 
   testWidgets(
+    'scrolling collapses the branch band to search only and pins category artwork pills',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      try {
+        final api = _CatalogApi();
+        await _pumpCatalog(
+          tester,
+          api,
+          locator: const StoreLocatorState(
+            branches: [
+              BranchDistance(
+                StoreBranch(
+                  id: 'cebu',
+                  branchId: 'B-CEBU',
+                  name: 'Everyday Pharmacy Cebu Capitol',
+                  address: 'Cebu',
+                  latitude: 10.3,
+                  longitude: 123.9,
+                  deliveryFee: '45.00',
+                  freeDeliveryMinimum: '500.00',
+                  open24Hours: true,
+                ),
+                1.2,
+              ),
+            ],
+          ),
+        );
+
+        expect(find.text('1.2 km'), findsOneWidget);
+        expect(find.text('24 hours'), findsOneWidget);
+
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -650));
+        await tester.pumpAndSettle();
+
+        // Branch header & fulfillment strip collapse away completely; only search stays pinned.
+        expect(find.text('1.2 km'), findsNothing);
+        expect(find.text('Cebu Capitol'), findsNothing);
+        expect(
+          find.bySemanticsLabel('Search medicines').hitTestable(),
+          findsOneWidget,
+        );
+
+        // Category rail stays pinned with circular artwork badges right below search.
+        final categoryPill = find.text('Fashion');
+        expect(categoryPill.hitTestable(), findsOneWidget);
+        expect(tester.getBottomLeft(categoryPill).dy, lessThan(180));
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+
+        await tester.tap(categoryPill);
+        await tester.pumpAndSettle();
+        expect(api.lastCategory, 'fashion');
+        expect(tester.takeException(), isNull);
+      } finally {
+        semantics.dispose();
+      }
+    },
+  );
+
+  testWidgets(
     'offline, Shop shows one message whose retry reloads everything',
     (tester) async {
       final api = _CatalogApi()
