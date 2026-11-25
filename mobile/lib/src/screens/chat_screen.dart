@@ -17,7 +17,6 @@ import '../providers/auth_providers.dart';
 import '../providers/chat_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
-import '../widgets/feedback_popup.dart';
 import '../widgets/image_viewer.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -350,7 +349,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return;
     }
 
-    AppFeedback.of(context).show(message);
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _sendPending(_PendingMessage item) async {
@@ -413,7 +413,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
 
       setState(() => item.status = _PendingStatus.failed);
-      AppFeedback.of(context).show(error.friendly);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.friendly)));
     } catch (_) {
       if (mounted) {
         setState(() => item.status = _PendingStatus.failed);
@@ -727,8 +728,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 onTap: () {
                   Navigator.pop(sheetContext);
                   Clipboard.setData(ClipboardData(text: text));
-                  AppFeedback.of(context)
-                      .show('Message copied', kind: FeedbackKind.success);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Message copied')),
+                  );
                 },
               ),
             if (image != null)
@@ -765,13 +767,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _saveImage(ChatAttachment image) async {
-    final feedback = AppFeedback.of(context);
+    final messenger = ScaffoldMessenger.of(context);
 
     try {
       await ref.read(imageSaverProvider)(image.url!, image.name);
-      feedback.show('Saved to gallery', kind: FeedbackKind.success);
+      messenger.showSnackBar(const SnackBar(content: Text('Saved to gallery')));
     } catch (_) {
-      feedback.show('Could not save the image. Try again.');
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could not save the image. Try again.')),
+      );
     }
   }
 
@@ -812,7 +816,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return;
     }
 
-    final feedback = AppFeedback.of(context);
+    final messenger = ScaffoldMessenger.of(context);
 
     try {
       await ref
@@ -822,12 +826,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             messageId: message.id,
             reason: reason,
           );
-      feedback.show(
-        'Report submitted. Our team will review it.',
-        kind: FeedbackKind.success,
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Report submitted. Our team will review it.'),
+        ),
       );
     } on ApiException catch (error) {
-      feedback.show(error.friendly);
+      messenger.showSnackBar(SnackBar(content: Text(error.friendly)));
     }
   }
 
@@ -1570,7 +1575,8 @@ class _Bubble extends StatelessWidget {
                                             radius: photoOnly
                                                 ? 0
                                                 : appDetailRadius,
-                                            errorLabel: 'This photo is no longer available',
+                                            errorLabel:
+                                                'This photo is no longer available',
                                           ),
                                         ),
                                       ),
@@ -1878,7 +1884,10 @@ class _OrderInquiryCard extends StatelessWidget {
                           spacing: 4,
                           children: [
                             if (isCod)
-                              _Badge(label: 'COD', background: scheme.tertiary),
+                              _Badge(
+                                label: 'COD',
+                                background: scheme.tertiary,
+                              ),
                             if (freeShipping)
                               _Badge(
                                 label: 'FREE SHIPPING',

@@ -14,7 +14,6 @@ import '../models/store_branch.dart';
 import '../providers/store_locator_providers.dart';
 import '../providers/auth_providers.dart';
 import '../theme.dart';
-import '../widgets/feedback_popup.dart';
 
 /// Kilometres from the branch to the pin, measured the way the API checks it.
 double pinDistanceKm(StoreBranch branch, LatLng pin) =>
@@ -95,9 +94,10 @@ class _DeliveryPinScreenState extends ConsumerState<DeliveryPinScreen> {
       });
     } on LocationFailure {
       if (mounted) {
-        AppFeedback.of(context).show(
-          'Turn on location to find you, or drag the map.',
-          kind: FeedbackKind.info,
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Turn on location to find you, or drag the map.'),
+          ),
         );
       }
     }
@@ -133,7 +133,9 @@ class _DeliveryPinScreenState extends ConsumerState<DeliveryPinScreen> {
       mode: LaunchMode.externalApplication,
     );
     if (!opened && mounted) {
-      AppFeedback.of(context).show('Could not open Street View.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open Street View.')),
+      );
     }
   }
 

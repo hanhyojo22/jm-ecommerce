@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'config.dart';
 import 'router.dart';
 import 'theme.dart';
-import 'widgets/feedback_popup.dart';
 import 'widgets/offline_bar.dart';
 
 class JmMartApp extends StatelessWidget {
@@ -33,7 +32,7 @@ class JmMartApp extends StatelessWidget {
         theme: buildAppTheme(),
         debugShowCheckedModeBanner: false,
         routerConfig: appRouter,
-        // The listener presents authentication failures through the root navigator.
+        // ClerkErrorListener needs MaterialApp's ScaffoldMessenger.
         builder: (context, child) => ClerkErrorListener(
           handler: showClerkError,
           child: OfflineBar(child: child ?? const SizedBox.shrink()),
@@ -55,7 +54,7 @@ const clerkOfflineMessage =
 
 DateTime? _lastOfflineNotice;
 
-/// Authentication feedback, excluding WebView sub-resource failures:
+/// Same snackbar as Clerk's default, minus WebView sub-resource failures:
 /// the SDK reports every failed request inside the Facebook login page
 /// (e.g. net::ERR_CONNECTION_REFUSED) even though sign-in still works.
 /// Network failures from Clerk's background token refresh get one plain
@@ -74,16 +73,16 @@ void showClerkError(BuildContext context, clerk.ClerkError error) {
       return;
     }
     _lastOfflineNotice = now;
-    AppFeedback.of(
-      context,
-      navigatorKey: appNavigatorKey,
-    ).show(clerkOfflineMessage);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text(clerkOfflineMessage)));
     return;
   }
-  AppFeedback.of(
-    context,
-    navigatorKey: appNavigatorKey,
-  ).show(error.localizedMessage(ClerkAuth.localizationsOf(context)));
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(error.localizedMessage(ClerkAuth.localizationsOf(context))),
+    ),
+  );
 }
 
 class MissingConfigScreen extends StatelessWidget {

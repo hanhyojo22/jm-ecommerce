@@ -7,7 +7,6 @@ import '../core/api_exception.dart';
 import '../models/models.dart';
 import '../providers/auth_providers.dart';
 import '../widgets/common.dart';
-import '../widgets/feedback_popup.dart';
 import 'account_screen.dart';
 
 /// Full name, birth date, mobile number and sex. With [completing] it is the
@@ -95,7 +94,7 @@ class _ProfileFormState extends ConsumerState<ProfileForm> {
       return;
     }
     setState(() => _saving = true);
-    final feedback = AppFeedback.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     try {
       await ref
@@ -107,10 +106,10 @@ class _ProfileFormState extends ConsumerState<ProfileForm> {
             sex: _sex,
           );
       ref.invalidate(meProvider);
-      feedback.show('Profile saved.', kind: FeedbackKind.success);
+      messenger.showSnackBar(const SnackBar(content: Text('Profile saved.')));
       navigator.pop();
     } on ApiException catch (error) {
-      feedback.show(error.friendly);
+      messenger.showSnackBar(SnackBar(content: Text(error.friendly)));
     } finally {
       if (mounted) {
         setState(() => _saving = false);
@@ -148,12 +147,12 @@ class _ProfileFormState extends ConsumerState<ProfileForm> {
       return;
     }
 
-    final feedback = AppFeedback.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     setState(() => _deleting = true);
     try {
       await ref.read(apiClientProvider).deleteAccount();
     } on ApiException catch (error) {
-      feedback.show(error.friendly);
+      messenger.showSnackBar(SnackBar(content: Text(error.friendly)));
       if (mounted) {
         setState(() => _deleting = false);
       }
@@ -165,7 +164,9 @@ class _ProfileFormState extends ConsumerState<ProfileForm> {
     final navigator = Navigator.of(context);
     await signOutOfApp(ClerkAuth.of(context), ref);
     navigator.popUntil((route) => route.isFirst);
-    feedback.show('Your account was deleted.', kind: FeedbackKind.success);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Your account was deleted.')),
+    );
   }
 
   @override

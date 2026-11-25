@@ -10,7 +10,6 @@ import '../models/models.dart';
 import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../widgets/common.dart';
-import '../widgets/feedback_popup.dart';
 import 'auth_gate.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
@@ -43,9 +42,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     try {
       await action();
     } on ApiException catch (error) {
-      _showFeedback(error.friendly);
+      _snack(error.friendly);
     } catch (_) {
-      _showFeedback('Could not update your cart. Please try again.');
+      _snack('Could not update your cart. Please try again.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -318,9 +317,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     });
   }
 
-  void _showFeedback(String message, {FeedbackKind kind = FeedbackKind.error}) {
+  void _snack(String message) {
     if (mounted) {
-      AppFeedback.of(context).show(message, kind: kind);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
     }
   }
 }

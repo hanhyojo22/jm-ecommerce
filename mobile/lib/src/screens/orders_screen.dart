@@ -11,7 +11,6 @@ import '../providers/cart_providers.dart';
 import '../providers/order_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
-import '../widgets/feedback_popup.dart';
 import '../widgets/shell.dart';
 
 class OrdersScreen extends ConsumerStatefulWidget {
@@ -884,22 +883,25 @@ class _BuyAgainActionState extends ConsumerState<_BuyAgainAction> {
 
   Future<void> _buyAgain() async {
     setState(() => _busy = true);
-    final feedback = AppFeedback.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final skipped = await ref
           .read(cartProvider.notifier)
           .reorder(widget.orderId);
-      feedback.show(
-        skipped.isEmpty
-            ? 'Added to your cart.'
-            : 'Added to your cart. Your branch doesn’t have ${skipped.join(', ')} right now.',
-        kind: skipped.isEmpty ? FeedbackKind.success : FeedbackKind.info,
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            skipped.isEmpty
+                ? 'Added to your cart.'
+                : 'Added to your cart. Your branch doesn’t have ${skipped.join(', ')} right now.',
+          ),
+        ),
       );
       if (mounted) {
         context.push('/cart');
       }
     } on ApiException catch (error) {
-      feedback.show(error.friendly);
+      messenger.showSnackBar(SnackBar(content: Text(error.friendly)));
     } finally {
       if (mounted) {
         setState(() => _busy = false);

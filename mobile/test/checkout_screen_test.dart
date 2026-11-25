@@ -88,7 +88,10 @@ void main() {
   ) async {
     final api = _CheckoutApi(rx: true);
     await _pump(tester, api, locator: locator);
-    expect(find.text('1 step left: Add prescription photo'), findsOneWidget);
+    expect(
+      find.text('1 step left: Add prescription photo'),
+      findsOneWidget,
+    );
     await tester.tap(find.text('1 step left: Add prescription photo'));
     await tester.pumpAndSettle();
     expect(find.text('Take photos'), findsOneWidget);
@@ -337,7 +340,7 @@ void main() {
     final api = _CheckoutApi(rx: false);
     await _pump(tester, api, locator: locator, location: const _NoLocation());
     await tester.tap(find.text('Place order'));
-    await tester.pumpAndSettle();
+    await tester.pump();
     expect(
       find.text('Set the delivery pin so the rider can find you.'),
       findsOneWidget,
@@ -471,32 +474,31 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-    'pickup and out-of-range states render cleanly without extra primary buttons',
-    (tester) async {
-      await _pump(
-        tester,
-        _CheckoutApi(rx: false),
-        locator: locator,
-        location: const _HereLocation(latitude: 14.65, longitude: 121.02),
-        width: 320,
-        height: 844,
-        brightness: Brightness.dark,
-      );
-      expect(find.text('Outside delivery area'), findsOneWidget);
-      expect(find.text('Pickup'), findsOneWidget);
-      expect(find.text('Move pin'), findsOneWidget);
-      expect(find.byType(FilledButton), findsOneWidget);
-      expect(tester.takeException(), isNull);
+  testWidgets('pickup and out-of-range states render cleanly without extra primary buttons', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _CheckoutApi(rx: false),
+      locator: locator,
+      location: const _HereLocation(latitude: 14.65, longitude: 121.02),
+      width: 320,
+      height: 844,
+      brightness: Brightness.dark,
+    );
+    expect(find.text('Outside delivery area'), findsOneWidget);
+    expect(find.text('Pickup'), findsOneWidget);
+    expect(find.text('Move pin'), findsOneWidget);
+    expect(find.byType(FilledButton), findsOneWidget);
+    expect(tester.takeException(), isNull);
 
-      await tester.ensureVisible(find.text('Pickup · Free'));
-      await tester.tap(find.text('Pickup · Free'));
-      await tester.pumpAndSettle();
-      expect(find.text('Ready for pickup after confirmation'), findsOneWidget);
-      expect(find.byType(FilledButton), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
+    await tester.ensureVisible(find.text('Pickup · Free'));
+    await tester.tap(find.text('Pickup · Free'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ready for pickup after confirmation'), findsOneWidget);
+    expect(find.byType(FilledButton), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   for (final (width, height, scale) in [
     (320.0, 844.0, 1.0),
