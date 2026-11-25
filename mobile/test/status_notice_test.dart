@@ -6,7 +6,7 @@ import 'package:jmmart/src/widgets/status_notice.dart';
 import 'package:phosphor_icons/phosphor_icons.dart';
 
 void main() {
-  testWidgets('success is nonblocking and expires without an extra tap', (
+  testWidgets('success uses the previous plain snackbar and expires', (
     tester,
   ) async {
     var taps = 0;
@@ -15,32 +15,35 @@ void main() {
     AppNotice.of(key.currentContext!)
         .show('Your review was published.', kind: NoticeKind.success);
     await tester.pumpAndSettle();
-    expect(find.byIcon(PhosphorIconsRegular.checkCircle), findsOneWidget);
+    expect(find.byType(StatusNoticeCard), findsNothing);
+    expect(find.byIcon(PhosphorIconsRegular.checkCircle), findsNothing);
+    expect(find.text('Your review was published.'), findsOneWidget);
     expect(find.byType(Dialog), findsNothing);
     await tester.tap(find.text('Keep shopping'));
     expect(taps, 1);
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
-    expect(find.byType(StatusNoticeCard), findsNothing);
+    expect(find.text('Your review was published.'), findsNothing);
   });
 
-  testWidgets('failure persists and Retry runs once without leaving the page', (
-    tester,
-  ) async {
-    var retries = 0;
-    final key = GlobalKey<ScaffoldState>();
-    await _pump(tester, key);
-    AppNotice.of(key.currentContext!)
-        .show('Could not send your message.', onAction: () => retries++);
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(seconds: 10));
-    expect(find.byIcon(PhosphorIconsRegular.warningCircle), findsOneWidget);
-    await tester.tap(find.text('Retry'));
-    await tester.pumpAndSettle();
-    expect(retries, 1);
-    expect(find.byType(StatusNoticeCard), findsNothing);
-    expect(find.text('Keep shopping'), findsOneWidget);
-  });
+  testWidgets(
+    'Retry runs once before the error expires without leaving the page',
+    (tester) async {
+      var retries = 0;
+      final key = GlobalKey<ScaffoldState>();
+      await _pump(tester, key);
+      AppNotice.of(key.currentContext!)
+          .show('Could not send your message.', onAction: () => retries++);
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byIcon(PhosphorIconsRegular.warningCircle), findsOneWidget);
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+      expect(retries, 1);
+      expect(find.byType(StatusNoticeCard), findsNothing);
+      expect(find.text('Keep shopping'), findsOneWidget);
+    },
+  );
 
   testWidgets('a failed retry keeps its error and recovery action available', (
     tester,
@@ -82,18 +85,37 @@ void main() {
     expect(find.byType(StatusNoticeCard), findsNothing);
   });
 
-  testWidgets('success stays available in screen reader mode', (tester) async {
-    final key = GlobalKey<ScaffoldState>();
-    await _pump(tester, key, accessible: true);
-    AppNotice.of(key.currentContext!)
-        .show('Profile saved.', kind: NoticeKind.success);
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(seconds: 10));
-    expect(find.text('Profile saved.'), findsOneWidget);
-    await tester.tap(find.byTooltip('Dismiss message'));
-    await tester.pumpAndSettle();
-    expect(find.byType(StatusNoticeCard), findsNothing);
-  });
+  testWidgets(
+    'error auto-dismisses after three seconds in screen reader mode',
+    (tester) async {
+      final key = GlobalKey<ScaffoldState>();
+      await _pump(tester, key, accessible: true);
+      AppNotice.of(key.currentContext!)
+          .show('Could not refresh.', onAction: () {});
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.text('Could not refresh.'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 1200));
+      await tester.pumpAndSettle();
+      expect(find.byType(StatusNoticeCard), findsNothing);
+    },
+  );
+
+  for (final kind in [NoticeKind.error, NoticeKind.info]) {
+    testWidgets('$kind dismisses after three seconds without a tap', (
+      tester,
+    ) async {
+      final key = GlobalKey<ScaffoldState>();
+      await _pump(tester, key);
+      AppNotice.of(key.currentContext!).show('Temporary notice.', kind: kind);
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.byType(StatusNoticeCard), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 1200));
+      await tester.pumpAndSettle();
+      expect(find.byType(StatusNoticeCard), findsNothing);
+    });
+  }
 
   testWidgets('the card clears the checkout controls', (tester) async {
     final key = GlobalKey<ScaffoldState>();
@@ -131,8 +153,15 @@ void main() {
           );
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
-          expect(find.byType(StatusNoticeCard), findsOneWidget);
-          await tester.tap(find.byTooltip('Dismiss message'));
+          expect(
+            find.byType(StatusNoticeCard),
+            kind == NoticeKind.success ? findsNothing : findsOneWidget,
+          );
+          if (kind == NoticeKind.success) {
+            await tester.pump(const Duration(seconds: 4));
+          } else {
+            await tester.tap(find.byTooltip('Dismiss message'));
+          }
           await tester.pumpAndSettle();
         },
       );

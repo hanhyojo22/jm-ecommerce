@@ -248,7 +248,7 @@ void main() {
     expect(api.reports, ['store-text:Spam']);
 
     // You can't report your own message.
-    await tester.tap(find.byTooltip('Dismiss message'));
+    await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
     await tester.longPress(find.text('Ok'));
     await tester.pumpAndSettle();

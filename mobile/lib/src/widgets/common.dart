@@ -957,8 +957,7 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
       unawaited(
         landed.then((_) {
           if (mounted) {
-            AppNotice.of(context)
-                .show('Added to cart', kind: NoticeKind.success);
+            showAddedToCartToast(context);
           }
         }),
       );

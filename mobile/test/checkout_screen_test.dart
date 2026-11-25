@@ -132,8 +132,11 @@ void main() {
         ),
         findsOneWidget,
       );
-      await tester.tap(find.byTooltip('Dismiss message'));
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.byType(StatusNoticeCard), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 1200));
       await tester.pumpAndSettle();
+      expect(find.byType(StatusNoticeCard), findsNothing);
       picker.fail = false;
       await tester.tap(find.text('Take photos'));
       await tester.pumpAndSettle();

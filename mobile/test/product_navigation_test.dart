@@ -340,11 +340,9 @@ void main() {
     );
     api.pending!.complete(api.addedCart);
     await tester.pump();
-    // The floating confirmation follows the thumbnail landing in the cart.
+    // The centred confirmation follows the thumbnail landing in the cart.
     await tester.pump(const Duration(milliseconds: 1200));
-    await tester.pumpAndSettle();
     expect(find.text('Added to cart'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
     expect(find.text('Added to cart'), findsNothing);
     expect(find.text('3'), findsOneWidget);

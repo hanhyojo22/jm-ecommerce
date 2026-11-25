@@ -11,11 +11,16 @@ enum NoticeKind { success, error, info }
 class AppNotice {
   AppNotice.of(BuildContext context, {this.bottomInset = 0})
     : _messenger = ScaffoldMessenger.of(context),
-      _accessible = MediaQuery.maybeOf(context)?.accessibleNavigation ?? false,
+      _messageHeight =
+          ((MediaQuery.sizeOf(context).height -
+                      MediaQuery.viewInsetsOf(context).bottom -
+                      bottomInset) *
+                  0.25)
+              .clamp(48.0, 160.0),
       _reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
   final ScaffoldMessengerState _messenger;
-  final bool _accessible;
+  final double _messageHeight;
   final bool _reduceMotion;
   final double bottomInset;
 
@@ -29,6 +34,19 @@ class AppNotice {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_messenger.mounted) return;
       _messenger.removeCurrentSnackBar();
+      if (kind == NoticeKind.success) {
+        _messenger.showSnackBar(
+          SnackBar(
+            content: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: _messageHeight),
+              child: SingleChildScrollView(child: Text(message)),
+            ),
+            duration: const Duration(seconds: 3),
+            persist: false,
+          ),
+        );
+        return;
+      }
       _messenger.showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
@@ -38,8 +56,8 @@ class AppNotice {
           margin: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomInset),
           clipBehavior: Clip.none,
           dismissDirection: DismissDirection.horizontal,
-          duration: Duration(seconds: kind == NoticeKind.success ? 3 : 4),
-          persist: kind == NoticeKind.error || _accessible,
+          duration: const Duration(seconds: 3),
+          persist: false,
           content: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 560),

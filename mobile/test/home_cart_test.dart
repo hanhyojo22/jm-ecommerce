@@ -84,11 +84,9 @@ void main() {
       await tester.pump();
       expect(api.adds, 1);
       api.pending!.complete(_cart(3));
-      await tester.pumpAndSettle();
+      await tester.pump();
       expect(find.text('Added to cart'), findsOneWidget);
       await _settleQuantity(tester);
-      await tester.pump(const Duration(seconds: 4));
-      await tester.pumpAndSettle();
       expect(find.text('Added to cart'), findsNothing);
       expect(api.updatedTo, 4);
       expect(find.text('Cart quantity: 4'), findsOneWidget);
@@ -379,10 +377,8 @@ void main() {
     expect(find.text('Added to cart'), findsNothing);
 
     await tester.pump(const Duration(milliseconds: 1100));
-    await tester.pumpAndSettle();
     expect(find.text('Added to cart'), findsOneWidget);
 
-    await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
     expect(find.text('Added to cart'), findsNothing);
     expect(find.byType(ClipOval), findsNothing);

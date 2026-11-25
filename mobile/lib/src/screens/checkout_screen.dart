@@ -695,13 +695,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       _documentsNoticeTimer?.cancel();
       _documentsNotice = (message: message, kind: kind);
       _refreshDocumentsSheet();
-      if (kind != NoticeKind.error &&
-          !MediaQuery.accessibleNavigationOf(context)) {
-        _documentsNoticeTimer = Timer(
-          Duration(seconds: kind == NoticeKind.success ? 3 : 4),
-          _clearDocumentsNotice,
-        );
-      }
+      _documentsNoticeTimer = Timer(
+        const Duration(seconds: 3),
+        _clearDocumentsNotice,
+      );
       return;
     }
     AppNotice.of(context).show(message, kind: kind);
@@ -1635,11 +1632,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               padding: const EdgeInsets.only(bottom: 12),
                               child: Semantics(
                                 liveRegion: true,
-                                child: StatusNoticeCard(
-                                  message: notice.message,
-                                  kind: notice.kind,
-                                  onDismiss: _clearDocumentsNotice,
-                                ),
+                                child: notice.kind == NoticeKind.success
+                                    ? Text(notice.message)
+                                    : StatusNoticeCard(
+                                        message: notice.message,
+                                        kind: notice.kind,
+                                        onDismiss: _clearDocumentsNotice,
+                                      ),
                               ),
                             ),
                           prescription

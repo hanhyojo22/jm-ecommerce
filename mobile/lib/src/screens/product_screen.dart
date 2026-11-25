@@ -329,8 +329,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
       // Confirm only once the server agreed and the thumbnail has landed.
       landed?.then((_) {
         if (mounted) {
-          AppNotice.of(context)
-              .show('Added to cart', kind: NoticeKind.success);
+          showAddedToCartToast(context);
         }
       });
       if (buyNow) {
@@ -1565,8 +1564,6 @@ class _ProductReviewsState extends ConsumerState<_ProductReviews> {
       );
       if (!mounted) return;
       setState(() => _pendingReview = saved);
-      AppNotice.of(context)
-          .show('Your review was published.', kind: NoticeKind.success);
       ref.invalidate(
         productReviewsProvider((product: widget.productKey, page: 1)),
       );

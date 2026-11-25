@@ -65,10 +65,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Sending...'), findsNothing);
-    expect(
-      tester.widget<StatusNoticeCard>(find.byType(StatusNoticeCard)).kind,
-      NoticeKind.success,
-    );
+    expect(find.byType(StatusNoticeCard), findsNothing);
   });
 
   testWidgets('product shows written comments and paginates reviews', (
