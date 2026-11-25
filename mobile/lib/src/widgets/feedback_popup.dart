@@ -8,14 +8,11 @@ enum FeedbackKind { success, error, info }
 
 /// Captures the root navigator so feedback still works after a screen closes.
 class AppFeedback {
-  AppFeedback.of(
-    BuildContext context, {
-    GlobalKey<NavigatorState>? navigatorKey,
-  }) : _navigator = Navigator.maybeOf(context, rootNavigator: true),
-       _navigatorKey = navigatorKey;
+  AppFeedback.of(BuildContext context, {this.navigatorKey})
+    : _navigator = Navigator.maybeOf(context, rootNavigator: true);
 
   final NavigatorState? _navigator;
-  final GlobalKey<NavigatorState>? _navigatorKey;
+  final GlobalKey<NavigatorState>? navigatorKey;
   static final _visible =
       <
         NavigatorState,
@@ -25,7 +22,7 @@ class AppFeedback {
   void show(String message, {FeedbackKind kind = FeedbackKind.error}) {
     // Navigation and form sheets finish first; feedback then appears above them.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final navigator = _navigatorKey?.currentState ?? _navigator;
+      final navigator = navigatorKey?.currentState ?? _navigator;
       if (navigator == null || !navigator.mounted) return;
       final previous = _visible[navigator];
       if (previous != null && previous.route.isActive) {
