@@ -13,6 +13,7 @@ import '../providers/discount_card_providers.dart';
 import '../providers/order_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/status_notice.dart';
 import '../widgets/shell.dart';
 import '../widgets/store_locator.dart';
 
@@ -122,18 +123,14 @@ class AccountScreen extends ConsumerWidget {
                   ),
                   value: account.cartReminders,
                   onChanged: (enabled) async {
-                    final messenger = ScaffoldMessenger.of(context);
+                    final feedback = AppNotice.of(context);
                     try {
                       await ref
                           .read(apiClientProvider)
                           .updateCartReminders(enabled);
                       ref.invalidate(meProvider);
                     } catch (_) {
-                      messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Could not save. Try again.'),
-                        ),
-                      );
+                      feedback.show('Could not save. Try again.');
                     }
                   },
                 ),
@@ -572,18 +569,41 @@ class _SavedDiscountCardsSection extends ConsumerWidget {
     WidgetRef ref,
     DiscountCard card,
   ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Remove saved ID?'),
+        content: const Text(
+          'You will need to enter this ID and upload its photo again to use it on a future order.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Keep ID'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+              foregroundColor: Theme.of(dialogContext).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Remove ID'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
     try {
       await ref.read(apiClientProvider).deleteDiscountCard(card.id);
       ref.invalidate(discountCardsProvider);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Saved ID removed.')));
+        AppNotice.of(context)
+            .show('Saved ID removed.', kind: NoticeKind.success);
       }
     } on ApiException catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.friendly)));
+        AppNotice.of(context).show(error.friendly);
       }
     }
   }

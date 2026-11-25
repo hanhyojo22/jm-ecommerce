@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jmmart/src/widgets/status_notice.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jmmart/src/core/api_client.dart';
@@ -88,10 +89,7 @@ void main() {
   ) async {
     final api = _CheckoutApi(rx: true);
     await _pump(tester, api, locator: locator);
-    expect(
-      find.text('1 step left: Add prescription photo'),
-      findsOneWidget,
-    );
+    expect(find.text('1 step left: Add prescription photo'), findsOneWidget);
     await tester.tap(find.text('1 step left: Add prescription photo'));
     await tester.pumpAndSettle();
     expect(find.text('Take photos'), findsOneWidget);
@@ -106,6 +104,46 @@ void main() {
     expect(find.text('1 step left: Add prescription photo'), findsNothing);
     expect(find.text('Ready'), findsOneWidget);
   });
+
+  testWidgets(
+    'upload errors stay visible inside the document sheet and allow another photo',
+    (tester) async {
+      final picker = _OversizedRx();
+      await _pump(
+        tester,
+        _CheckoutApi(rx: true),
+        locator: locator,
+        picker: picker,
+      );
+      await tester.tap(find.text('1 step left: Add prescription photo'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Take photos'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Take a photo'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Choose a file under 5 MB.').hitTestable(),
+        findsOneWidget,
+      );
+      expect(
+        find.ancestor(
+          of: find.byType(StatusNoticeCard),
+          matching: find.byType(BottomSheet),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.byTooltip('Dismiss message'));
+      await tester.pumpAndSettle();
+      picker.fail = false;
+      await tester.tap(find.text('Take photos'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Take a photo'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      expect(find.text('Ready'), findsOneWidget);
+    },
+  );
 
   testWidgets('SC/PWD switch applies saved ID with photo in one tap', (
     tester,
@@ -340,7 +378,7 @@ void main() {
     final api = _CheckoutApi(rx: false);
     await _pump(tester, api, locator: locator, location: const _NoLocation());
     await tester.tap(find.text('Place order'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(
       find.text('Set the delivery pin so the rider can find you.'),
       findsOneWidget,
@@ -474,31 +512,32 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('pickup and out-of-range states render cleanly without extra primary buttons', (
-    tester,
-  ) async {
-    await _pump(
-      tester,
-      _CheckoutApi(rx: false),
-      locator: locator,
-      location: const _HereLocation(latitude: 14.65, longitude: 121.02),
-      width: 320,
-      height: 844,
-      brightness: Brightness.dark,
-    );
-    expect(find.text('Outside delivery area'), findsOneWidget);
-    expect(find.text('Pickup'), findsOneWidget);
-    expect(find.text('Move pin'), findsOneWidget);
-    expect(find.byType(FilledButton), findsOneWidget);
-    expect(tester.takeException(), isNull);
+  testWidgets(
+    'pickup and out-of-range states render cleanly without extra primary buttons',
+    (tester) async {
+      await _pump(
+        tester,
+        _CheckoutApi(rx: false),
+        locator: locator,
+        location: const _HereLocation(latitude: 14.65, longitude: 121.02),
+        width: 320,
+        height: 844,
+        brightness: Brightness.dark,
+      );
+      expect(find.text('Outside delivery area'), findsOneWidget);
+      expect(find.text('Pickup'), findsOneWidget);
+      expect(find.text('Move pin'), findsOneWidget);
+      expect(find.byType(FilledButton), findsOneWidget);
+      expect(tester.takeException(), isNull);
 
-    await tester.ensureVisible(find.text('Pickup · Free'));
-    await tester.tap(find.text('Pickup · Free'));
-    await tester.pumpAndSettle();
-    expect(find.text('Ready for pickup after confirmation'), findsOneWidget);
-    expect(find.byType(FilledButton), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+      await tester.ensureVisible(find.text('Pickup · Free'));
+      await tester.tap(find.text('Pickup · Free'));
+      await tester.pumpAndSettle();
+      expect(find.text('Ready for pickup after confirmation'), findsOneWidget);
+      expect(find.byType(FilledButton), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   for (final (width, height, scale) in [
     (320.0, 844.0, 1.0),
@@ -532,6 +571,7 @@ Future<void> _pump(
   double scale = 1,
   Brightness brightness = Brightness.light,
   String idPhotoText = '',
+  AttachmentPicker picker = const _PickedRx(),
 }) async {
   tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
@@ -565,7 +605,7 @@ Future<void> _pump(
         activeBranchIdProvider.overrideWith((ref) async => 'B-MAKATI'),
         nearestStoreProvider.overrideWith(() => _FixedLocator(locator)),
         locationServiceProvider.overrideWithValue(location),
-        attachmentPickerProvider.overrideWithValue(const _PickedRx()),
+        attachmentPickerProvider.overrideWithValue(picker),
         discountIdReaderProvider.overrideWithValue(_IdText(idPhotoText)),
       ],
       child: MaterialApp.router(
@@ -635,6 +675,15 @@ class _IdText implements DiscountIdReader {
 
   @override
   Future<String> readText(PickedAttachment photo) async => text;
+}
+
+class _OversizedRx extends _PickedRx {
+  bool fail = true;
+  @override
+  Future<PickedAttachment?> takePhoto() {
+    if (fail) throw const AttachmentTooLargeException();
+    return super.takePhoto();
+  }
 }
 
 class _PickedRx implements AttachmentPicker {

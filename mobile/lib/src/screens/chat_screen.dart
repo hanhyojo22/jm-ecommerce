@@ -17,6 +17,7 @@ import '../providers/auth_providers.dart';
 import '../providers/chat_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/status_notice.dart';
 import '../widgets/image_viewer.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -57,6 +58,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String? _pendingSellerOrderId;
   ChatMessage? _replyTo;
   final _composerFocus = FocusNode();
+  final _composerAreaKey = GlobalKey();
+
+  AppNotice get _notice => AppNotice.of(
+    context,
+    bottomInset: _composerAreaKey.currentContext?.size?.height ?? 0,
+  );
 
   @override
   void initState() {
@@ -349,8 +356,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    _notice.show(message);
   }
 
   Future<void> _sendPending(_PendingMessage item) async {
@@ -413,11 +419,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
 
       setState(() => item.status = _PendingStatus.failed);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.friendly)));
+      _notice.show(
+        error.friendly,
+        onAction: error.isNetwork || (error.statusCode ?? 0) >= 500
+            ? () {
+                if (mounted) return _sendPending(item);
+              }
+            : null,
+      );
     } catch (_) {
       if (mounted) {
         setState(() => item.status = _PendingStatus.failed);
+        _notice.show(
+          'Could not send your message. Try again.',
+          onAction: () => _sendPending(item),
+        );
       }
     }
   }
@@ -562,136 +578,157 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       body: Column(
         children: [
           Expanded(child: _body(messages, theme, conversation?.store)),
-          if (_pendingProductId != null || _pendingSellerOrderId != null)
-            ListTile(
-              dense: true,
-              title: Text(
-                _pendingProductId != null ? 'Product inquiry' : 'Order inquiry',
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.close),
-                tooltip: 'Remove context',
-                onPressed: () => setState(() {
-                  _pendingProductId = null;
-                  _pendingSellerOrderId = null;
-                }),
-              ),
-            ),
-          if (_replyTo case final replyTo?)
-            Container(
-              key: const ValueKey('replying-to'),
-              margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-              padding: const EdgeInsets.only(left: 10),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withValues(
-                  alpha: 0.35,
-                ),
-                border: Border(
-                  left: BorderSide(color: theme.colorScheme.primary, width: 3),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          KeyedSubtree(
+            key: _composerAreaKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_pendingProductId != null || _pendingSellerOrderId != null)
+                  ListTile(
+                    dense: true,
+                    title: Text(
+                      _pendingProductId != null
+                          ? 'Product inquiry'
+                          : 'Order inquiry',
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.close),
+                      tooltip: 'Remove context',
+                      onPressed: () => setState(() {
+                        _pendingProductId = null;
+                        _pendingSellerOrderId = null;
+                      }),
+                    ),
+                  ),
+                if (_replyTo case final replyTo?)
+                  Container(
+                    key: const ValueKey('replying-to'),
+                    margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                    padding: const EdgeInsets.only(left: 10),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer.withValues(
+                        alpha: 0.35,
+                      ),
+                      border: Border(
+                        left: BorderSide(
+                          color: theme.colorScheme.primary,
+                          width: 3,
+                        ),
+                      ),
+                    ),
+                    child: Row(
                       children: [
-                        Text(
-                          replyTo.isMine
-                              ? 'Replying to yourself'
-                              : 'Replying to ${conversation?.store?.name ?? 'store'}',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: theme.colorScheme.primary,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                replyTo.isMine
+                                    ? 'Replying to yourself'
+                                    : 'Replying to ${conversation?.store?.name ?? 'store'}',
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                              Text(
+                                _quoteText(
+                                  replyTo.contextSnapshot?['type'] == 'product'
+                                      ? replyTo.contextSnapshot!['title']
+                                            as String?
+                                      : replyTo.contextSnapshot?['type'] ==
+                                            'order'
+                                      ? 'Order ${replyTo.contextSnapshot!['number']}'
+                                      : null,
+                                  replyTo.body.trim().isEmpty &&
+                                          replyTo.attachments.isNotEmpty
+                                      ? 'Attachment'
+                                      : replyTo.body,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
                         ),
-                        Text(
-                          _quoteText(
-                            replyTo.contextSnapshot?['type'] == 'product'
-                                ? replyTo.contextSnapshot!['title'] as String?
-                                : replyTo.contextSnapshot?['type'] == 'order'
-                                ? 'Order ${replyTo.contextSnapshot!['number']}'
-                                : null,
-                            replyTo.body.trim().isEmpty &&
-                                    replyTo.attachments.isNotEmpty
-                                ? 'Attachment'
-                                : replyTo.body,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          tooltip: 'Cancel reply',
+                          onPressed: () => setState(() => _replyTo = null),
                         ),
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    tooltip: 'Cancel reply',
-                    onPressed: () => setState(() => _replyTo = null),
-                  ),
-                ],
-              ),
-            ),
-          if (_typing)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 4),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '${conversation?.store?.name ?? 'Pharmacy'} is typing…',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-            ),
-          SafeArea(
-            top: false,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(4, 8, 8, 8),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerLowest,
-                border: Border(
-                  top: BorderSide(color: theme.colorScheme.outlineVariant),
-                ),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  IconButton(
-                    onPressed: _pickingAttachment ? null : _showAttachmentSheet,
-                    tooltip: 'Attach photo or document',
-                    icon: _pickingAttachment
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.attach_file_rounded),
-                  ),
-                  Expanded(
-                    child: TextField(
-                      controller: _composer,
-                      focusNode: _composerFocus,
-                      autofocus: widget.focusComposer,
-                      onChanged: _onComposerChanged,
-                      minLines: 1,
-                      maxLines: 4,
-                      textCapitalization: TextCapitalization.sentences,
-                      decoration: const InputDecoration(
-                        hintText: 'Write a message',
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
+                if (_typing)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 4),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '${conversation?.store?.name ?? 'Pharmacy'} is typing…',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontStyle: FontStyle.italic,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  IconButton.filled(
-                    onPressed: _send,
-                    icon: const Icon(Icons.send_rounded),
+                SafeArea(
+                  top: false,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(4, 8, 8, 8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerLowest,
+                      border: Border(
+                        top: BorderSide(
+                          color: theme.colorScheme.outlineVariant,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        IconButton(
+                          onPressed: _pickingAttachment
+                              ? null
+                              : _showAttachmentSheet,
+                          tooltip: 'Attach photo or document',
+                          icon: _pickingAttachment
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.attach_file_rounded),
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: _composer,
+                            focusNode: _composerFocus,
+                            autofocus: widget.focusComposer,
+                            onChanged: _onComposerChanged,
+                            minLines: 1,
+                            maxLines: 4,
+                            textCapitalization: TextCapitalization.sentences,
+                            decoration: const InputDecoration(
+                              hintText: 'Write a message',
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        IconButton.filled(
+                          onPressed: _send,
+                          icon: const Icon(Icons.send_rounded),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],
@@ -728,9 +765,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 onTap: () {
                   Navigator.pop(sheetContext);
                   Clipboard.setData(ClipboardData(text: text));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Message copied')),
-                  );
+                  _notice.show('Message copied', kind: NoticeKind.success);
                 },
               ),
             if (image != null)
@@ -767,14 +802,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _saveImage(ChatAttachment image) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final feedback = _notice;
 
     try {
       await ref.read(imageSaverProvider)(image.url!, image.name);
-      messenger.showSnackBar(const SnackBar(content: Text('Saved to gallery')));
+      feedback.show('Saved to gallery', kind: NoticeKind.success);
     } catch (_) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Could not save the image. Try again.')),
+      feedback.show(
+        'Could not save the image. Try again.',
+        onAction: () {
+          if (mounted) return _saveImage(image);
+        },
       );
     }
   }
@@ -816,7 +854,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return;
     }
 
-    final messenger = ScaffoldMessenger.of(context);
+    final feedback = _notice;
 
     try {
       await ref
@@ -826,13 +864,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             messageId: message.id,
             reason: reason,
           );
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Report submitted. Our team will review it.'),
-        ),
+      feedback.show(
+        'Report submitted. Our team will review it.',
+        kind: NoticeKind.success,
       );
     } on ApiException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.friendly)));
+      feedback.show(error.friendly);
     }
   }
 
@@ -1575,8 +1612,7 @@ class _Bubble extends StatelessWidget {
                                             radius: photoOnly
                                                 ? 0
                                                 : appDetailRadius,
-                                            errorLabel:
-                                                'This photo is no longer available',
+                                            errorLabel: 'This photo is no longer available',
                                           ),
                                         ),
                                       ),
@@ -1884,10 +1920,7 @@ class _OrderInquiryCard extends StatelessWidget {
                           spacing: 4,
                           children: [
                             if (isCod)
-                              _Badge(
-                                label: 'COD',
-                                background: scheme.tertiary,
-                              ),
+                              _Badge(label: 'COD', background: scheme.tertiary),
                             if (freeShipping)
                               _Badge(
                                 label: 'FREE SHIPPING',

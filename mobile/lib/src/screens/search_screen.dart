@@ -14,6 +14,7 @@ import '../providers/catalog_providers.dart';
 import '../providers/store_locator_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/status_notice.dart';
 import '../widgets/product_feed.dart';
 import '../widgets/store_locator.dart';
 import 'auth_gate.dart';
@@ -43,8 +44,7 @@ Future<void> openBranchChat(BuildContext context, WidgetRef ref) async {
     }
   } on ApiException catch (error) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.friendly)));
+      AppNotice.of(context).show(error.friendly);
     }
   }
 }

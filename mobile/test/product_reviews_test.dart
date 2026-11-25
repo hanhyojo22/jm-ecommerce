@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jmmart/src/widgets/status_notice.dart';
 import 'package:jmmart/src/core/api_client.dart';
 import 'package:jmmart/src/core/api_exception.dart';
 import 'package:jmmart/src/models/models.dart';
@@ -32,8 +33,15 @@ void main() {
     expect(find.text('My rating draft'), findsOneWidget);
     expect(
       find.text('Could not confirm your rating. Refresh before trying again.'),
-      findsOneWidget,
+      findsNWidgets(2),
     );
+    expect(
+      tester.widget<StatusNoticeCard>(find.byType(StatusNoticeCard)).kind,
+      NoticeKind.error,
+    );
+    await tester.tap(find.byTooltip('Dismiss message'));
+    await tester.pumpAndSettle();
+    expect(find.text('My rating draft'), findsOneWidget);
   });
 
   testWidgets('product rating appears while the review request is pending', (
@@ -57,6 +65,10 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Sending...'), findsNothing);
+    expect(
+      tester.widget<StatusNoticeCard>(find.byType(StatusNoticeCard)).kind,
+      NoticeKind.success,
+    );
   });
 
   testWidgets('product shows written comments and paginates reviews', (

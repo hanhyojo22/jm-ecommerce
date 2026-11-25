@@ -15,6 +15,7 @@ import '../providers/checkout_providers.dart';
 import '../providers/store_locator_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/status_notice.dart';
 import '../widgets/fly_to_cart.dart';
 import '../widgets/image_viewer.dart';
 import '../widgets/store_locator.dart';
@@ -328,7 +329,8 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
       // Confirm only once the server agreed and the thumbnail has landed.
       landed?.then((_) {
         if (mounted) {
-          showAddedToCartToast(context);
+          AppNotice.of(context)
+              .show('Added to cart', kind: NoticeKind.success);
         }
       });
       if (buyNow) {
@@ -339,7 +341,10 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
             )
             .firstOrNull;
         if (line == null) {
-          _snack('Added to your cart. Open Cart to continue checkout.');
+          _showFeedback(
+            'Added to your cart. Open Cart to continue checkout.',
+            kind: NoticeKind.info,
+          );
           return;
         }
         // An API that predates buy_now leaves other lines ticked; only then
@@ -358,7 +363,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
       }
     } on ApiException catch (error) {
       if (mounted) {
-        _snack(
+        _showFeedback(
           added && buyNow
               ? 'Added to cart, but checkout could not open. ${error.friendly}'
               : error.friendly,
@@ -391,7 +396,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
       }
     } on ApiException catch (error) {
       if (mounted) {
-        _snack(error.friendly);
+        _showFeedback(error.friendly);
       }
     } finally {
       if (mounted) {
@@ -400,9 +405,8 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
     }
   }
 
-  void _snack(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+  void _showFeedback(String message, {NoticeKind kind = NoticeKind.error}) {
+    AppNotice.of(context).show(message, kind: kind);
   }
 
   Future<void> _refreshProduct() async {
@@ -1485,8 +1489,7 @@ class _SaveProductButtonState extends ConsumerState<SaveProductButton> {
       await ref.read(savedProductsProvider.future);
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.message)));
+        AppNotice.of(context).show(error.friendly);
       }
     } finally {
       if (mounted) {
@@ -1537,12 +1540,9 @@ class _ProductReviewsState extends ConsumerState<_ProductReviews> {
       final orderItemId = await api.eligibleReviewOrderItem(product.id);
       if (!mounted) return;
       if (orderItemId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Ratings are available after a delivered purchase of this product.',
-            ),
-          ),
+        AppNotice.of(context).show(
+          'Ratings are available after a delivered purchase of this product.',
+          kind: NoticeKind.info,
         );
         return;
       }
@@ -1565,6 +1565,8 @@ class _ProductReviewsState extends ConsumerState<_ProductReviews> {
       );
       if (!mounted) return;
       setState(() => _pendingReview = saved);
+      AppNotice.of(context)
+          .show('Your review was published.', kind: NoticeKind.success);
       ref.invalidate(
         productReviewsProvider((product: widget.productKey, page: 1)),
       );
@@ -1576,6 +1578,7 @@ class _ProductReviewsState extends ConsumerState<_ProductReviews> {
               ? 'Could not confirm your rating. Refresh before trying again.'
               : error.friendly,
         );
+        AppNotice.of(context).show(_ratingError!);
       }
     } catch (_) {
       if (mounted) {
@@ -1583,6 +1586,7 @@ class _ProductReviewsState extends ConsumerState<_ProductReviews> {
           () => _ratingError =
               'Could not confirm your rating. Refresh before trying again.',
         );
+        AppNotice.of(context).show(_ratingError!);
       }
     } finally {
       if (mounted) setState(() => _ratingBusy = false);

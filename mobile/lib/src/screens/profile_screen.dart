@@ -7,6 +7,7 @@ import '../core/api_exception.dart';
 import '../models/models.dart';
 import '../providers/auth_providers.dart';
 import '../widgets/common.dart';
+import '../widgets/status_notice.dart';
 import 'account_screen.dart';
 
 /// Full name, birth date, mobile number and sex. With [completing] it is the
@@ -94,7 +95,7 @@ class _ProfileFormState extends ConsumerState<ProfileForm> {
       return;
     }
     setState(() => _saving = true);
-    final messenger = ScaffoldMessenger.of(context);
+    final feedback = AppNotice.of(context);
     final navigator = Navigator.of(context);
     try {
       await ref
@@ -106,10 +107,17 @@ class _ProfileFormState extends ConsumerState<ProfileForm> {
             sex: _sex,
           );
       ref.invalidate(meProvider);
-      messenger.showSnackBar(const SnackBar(content: Text('Profile saved.')));
+      feedback.show('Profile saved.', kind: NoticeKind.success);
       navigator.pop();
     } on ApiException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.friendly)));
+      feedback.show(
+        error.friendly,
+        onAction: error.isNetwork || (error.statusCode ?? 0) >= 500
+            ? () {
+                if (mounted) return _save();
+              }
+            : null,
+      );
     } finally {
       if (mounted) {
         setState(() => _saving = false);
@@ -147,12 +155,12 @@ class _ProfileFormState extends ConsumerState<ProfileForm> {
       return;
     }
 
-    final messenger = ScaffoldMessenger.of(context);
+    final feedback = AppNotice.of(context);
     setState(() => _deleting = true);
     try {
       await ref.read(apiClientProvider).deleteAccount();
     } on ApiException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.friendly)));
+      feedback.show(error.friendly);
       if (mounted) {
         setState(() => _deleting = false);
       }
@@ -164,9 +172,7 @@ class _ProfileFormState extends ConsumerState<ProfileForm> {
     final navigator = Navigator.of(context);
     await signOutOfApp(ClerkAuth.of(context), ref);
     navigator.popUntil((route) => route.isFirst);
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Your account was deleted.')),
-    );
+    feedback.show('Your account was deleted.', kind: NoticeKind.success);
   }
 
   @override

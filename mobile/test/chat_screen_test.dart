@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jmmart/src/widgets/status_notice.dart';
 import 'package:jmmart/src/core/api_client.dart';
 import 'package:jmmart/src/core/api_exception.dart';
 import 'package:jmmart/src/core/attachment_picker.dart';
@@ -247,6 +248,8 @@ void main() {
     expect(api.reports, ['store-text:Spam']);
 
     // You can't report your own message.
+    await tester.tap(find.byTooltip('Dismiss message'));
+    await tester.pumpAndSettle();
     await tester.longPress(find.text('Ok'));
     await tester.pumpAndSettle();
     expect(find.text('Report'), findsNothing);
@@ -414,14 +417,22 @@ void main() {
     api.sends.single.completeError(
       const ApiException(code: 'network.error', message: 'No connection.'),
     );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
 
     expect(find.text('Not sent'), findsOneWidget);
-    expect(find.text('Retry'), findsOneWidget);
+    expect(find.text('Retry'), findsNWidgets(2));
     expect(find.text('Can you ship today?'), findsOneWidget);
+    expect(
+      tester.getBottomLeft(find.byType(StatusNoticeCard)).dy,
+      lessThan(tester.getTopLeft(find.byType(TextField)).dy),
+    );
 
-    await tester.tap(find.text('Retry'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(StatusNoticeCard),
+        matching: find.text('Retry'),
+      ),
+    );
     await tester.pump();
 
     expect(api.sendCount, 2);
@@ -1111,14 +1122,18 @@ void main() {
     api.attachmentSends.single.completeError(
       const ApiException(code: 'network.error', message: 'No connection.'),
     );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
 
     expect(find.text('Not sent'), findsOneWidget);
-    expect(find.text('Retry'), findsOneWidget);
+    expect(find.text('Retry'), findsNWidgets(2));
     expect(find.byKey(ValueKey('pending-image-$clientId')), findsOneWidget);
 
-    await tester.tap(find.text('Retry'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(StatusNoticeCard),
+        matching: find.text('Retry'),
+      ),
+    );
     await tester.pump();
 
     expect(api.attachmentSends, hasLength(2));

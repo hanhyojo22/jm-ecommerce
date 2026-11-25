@@ -84,9 +84,11 @@ void main() {
       await tester.pump();
       expect(api.adds, 1);
       api.pending!.complete(_cart(3));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.text('Added to cart'), findsOneWidget);
       await _settleQuantity(tester);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
       expect(find.text('Added to cart'), findsNothing);
       expect(api.updatedTo, 4);
       expect(find.text('Cart quantity: 4'), findsOneWidget);
@@ -149,7 +151,7 @@ void main() {
     await _pumpCard(tester, api, stock: 2);
 
     await tester.tap(find.byTooltip('Add to cart'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('Only 2 left at this branch.'), findsOneWidget);
     await _settleQuantity(tester);
     expect(api.updates, 0);
@@ -169,7 +171,7 @@ void main() {
     await tester.pump();
 
     await tester.tap(find.byTooltip('Add to cart'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(
       find.text("No internet connection. Your cart wasn't changed."),
       findsOneWidget,
@@ -377,8 +379,10 @@ void main() {
     expect(find.text('Added to cart'), findsNothing);
 
     await tester.pump(const Duration(milliseconds: 1100));
+    await tester.pumpAndSettle();
     expect(find.text('Added to cart'), findsOneWidget);
 
+    await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
     expect(find.text('Added to cart'), findsNothing);
     expect(find.byType(ClipOval), findsNothing);

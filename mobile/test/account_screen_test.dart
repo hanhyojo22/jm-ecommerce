@@ -11,6 +11,37 @@ import 'package:jmmart/src/widgets/shell.dart';
 import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
+  testWidgets(
+    'saved ID removal requires confirmation and cancel keeps the ID',
+    (tester) async {
+      final api = _AccountApi()
+        ..cards = [
+          const DiscountCard(
+            id: 'id-1',
+            type: 'pwd',
+            name: 'QA Buyer',
+            idNumberMasked: '****1234',
+          ),
+        ];
+      await _pump(tester, api);
+      await tester.scrollUntilVisible(find.byTooltip('Delete'), 200);
+      await tester.tap(find.byTooltip('Delete'));
+      await tester.pumpAndSettle();
+      expect(api.deletedIds, isEmpty);
+      await tester.tap(find.text('Keep ID'));
+      await tester.pumpAndSettle();
+      expect(api.deletedIds, isEmpty);
+      expect(find.text('QA Buyer'), findsWidgets);
+      await tester.tap(find.byTooltip('Delete'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Remove ID'));
+      await tester.pumpAndSettle();
+      expect(api.deletedIds, ['id-1']);
+      expect(find.text('Saved ID removed.'), findsOneWidget);
+      expect(find.byTooltip('Delete'), findsNothing);
+    },
+  );
+
   test('cart reminders default on unless the account turned them off', () {
     Account parse(Map<String, dynamic> extra) => Account.fromJson({
       'id': 'u1',
@@ -125,6 +156,8 @@ class _AccountApi extends ApiClient {
   bool cartReminders = true;
   bool fail = false;
   final List<bool> updates = [];
+  List<DiscountCard> cards = [];
+  final deletedIds = <String>[];
 
   Account _account() => Account(
     id: 'buyer-1',
@@ -140,7 +173,13 @@ class _AccountApi extends ApiClient {
   Future<Account> me() async => _account();
 
   @override
-  Future<List<DiscountCard>> discountCards() async => const [];
+  Future<List<DiscountCard>> discountCards() async => cards;
+
+  @override
+  Future<void> deleteDiscountCard(String id) async {
+    deletedIds.add(id);
+    cards = cards.where((card) => card.id != id).toList();
+  }
 
   @override
   Future<Account> updateCartReminders(bool enabled) async {

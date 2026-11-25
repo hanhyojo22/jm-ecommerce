@@ -10,6 +10,7 @@ import '../models/models.dart';
 import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../widgets/common.dart';
+import '../widgets/status_notice.dart';
 import 'auth_gate.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
@@ -42,9 +43,19 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     try {
       await action();
     } on ApiException catch (error) {
-      _snack(error.friendly);
+      if (mounted) {
+        AppNotice.of(context).show(
+          error.friendly,
+          actionLabel: 'Refresh cart',
+          onAction: error.isNetwork || (error.statusCode ?? 0) >= 500
+              ? () {
+                  if (mounted) return ref.read(cartProvider.notifier).refresh();
+                }
+              : null,
+        );
+      }
     } catch (_) {
-      _snack('Could not update your cart. Please try again.');
+      _showFeedback('Could not update your cart. Please try again.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -317,10 +328,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     });
   }
 
-  void _snack(String message) {
+  void _showFeedback(String message, {NoticeKind kind = NoticeKind.error}) {
     if (mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      AppNotice.of(context).show(message, kind: kind);
     }
   }
 }

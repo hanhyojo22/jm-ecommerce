@@ -16,6 +16,7 @@ import '../providers/checkout_providers.dart';
 import '../providers/order_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/status_notice.dart';
 import 'order_support_screen.dart';
 
 class OrderDetailScreen extends ConsumerStatefulWidget {
@@ -378,12 +379,12 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     try {
       picked = photo ? await picker.pickImages() : await picker.pickDocuments();
     } on AttachmentTooLargeException {
-      _snack('Choose a file under 5 MB.');
+      _showFeedback('Choose a file under 5 MB.');
       return;
     }
     if (picked.isEmpty || !mounted) return;
     if (picked.length > 10) {
-      _snack('A prescription can have up to 10 pages.');
+      _showFeedback('A prescription can have up to 10 pages.');
       return;
     }
 
@@ -391,9 +392,12 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     try {
       await ref.read(apiClientProvider).resubmitPrescription(order.id, picked);
       ref.invalidate(orderProvider(widget.orderId));
-      _snack('Thanks. A pharmacist will check your new pages.');
+      _showFeedback(
+        'Thanks. A pharmacist will check your new pages.',
+        kind: NoticeKind.success,
+      );
     } on ApiException catch (error) {
-      _snack(error.friendly);
+      _showFeedback(error.friendly);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1054,7 +1058,10 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                           ClipboardData(text: order.number),
                         );
                         if (mounted) {
-                          _snack('Order number copied.');
+                          _showFeedback(
+                            'Order number copied.',
+                            kind: NoticeKind.success,
+                          );
                         }
                       },
                       child: Container(
@@ -1389,11 +1396,11 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       _refreshOrders(container);
 
       if (!opened && mounted) {
-        _snack('Could not open payment. Please try again.');
+        _showFeedback('Could not open payment. Please try again.');
       }
     } on ApiException catch (error) {
       if (mounted) {
-        _snack(error.friendly);
+        _showFeedback(error.friendly);
       }
     } finally {
       if (mounted) {
@@ -1438,13 +1445,14 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       _refreshOrders(container);
 
       if (mounted) {
-        _snack(
+        _showFeedback(
           'Thanks for confirming your ${sellerOrder.store?.name ?? 'store'} order.',
+          kind: NoticeKind.success,
         );
       }
     } on ApiException catch (error) {
       if (mounted) {
-        _snack(error.friendly);
+        _showFeedback(error.friendly);
       }
     } finally {
       if (mounted) {
@@ -1464,15 +1472,16 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       if (!mounted) {
         return;
       }
-      _snack(
+      _showFeedback(
         skipped.isEmpty
             ? 'Added to your cart.'
             : 'Added to your cart. Your branch doesn’t have ${skipped.join(', ')} right now.',
+        kind: skipped.isEmpty ? NoticeKind.success : NoticeKind.info,
       );
       context.push('/cart');
     } on ApiException catch (error) {
       if (mounted) {
-        _snack(error.friendly);
+        _showFeedback(error.friendly);
       }
     } finally {
       if (mounted) {
@@ -1499,7 +1508,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       }
     } on ApiException catch (error) {
       if (mounted) {
-        _snack(error.friendly);
+        _showFeedback(error.friendly);
       }
     } finally {
       if (mounted) {
@@ -1529,11 +1538,11 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       _refreshOrders(container);
 
       if (mounted) {
-        _snack('Your review was published.');
+        _showFeedback('Your review was published.', kind: NoticeKind.success);
       }
     } on ApiException catch (error) {
       if (mounted) {
-        _snack(error.friendly);
+        _showFeedback(error.friendly);
       }
     } finally {
       if (mounted) {
@@ -1542,9 +1551,8 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     }
   }
 
-  void _snack(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+  void _showFeedback(String message, {NoticeKind kind = NoticeKind.error}) {
+    AppNotice.of(context).show(message, kind: kind);
   }
 }
 
