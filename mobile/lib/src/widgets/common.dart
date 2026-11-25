@@ -858,6 +858,7 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
 
   /// Taps made while the first add is still on its way; each still counts.
   int _queuedTaps = 0;
+  int _quantityRequest = 0;
 
   late final _pop = AnimationController(
     vsync: this,
@@ -989,17 +990,28 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
           .show('Only $stock left at this branch.', kind: NoticeKind.info);
       return false;
     }
-    ref.read(cartProvider.notifier).setQuantity(lineId, wanted).catchError((
-      Object error,
-    ) {
-      if (mounted) {
-        AppNotice.of(context).show(
-          error is ApiException
-              ? error.friendly
-              : 'Could not update your cart. Try again.',
-        );
-      }
-    });
+    final request = ++_quantityRequest;
+    // Queued taps during the first add already share its flight and confirmation.
+    final landed = _adding ? null : _fly();
+    ref
+        .read(cartProvider.notifier)
+        .setQuantity(lineId, wanted)
+        .then((_) async {
+          if (landed == null) return;
+          await landed;
+          if (mounted && request == _quantityRequest) {
+            showAddedToCartToast(context);
+          }
+        })
+        .catchError((Object error) {
+          if (mounted) {
+            AppNotice.of(context).show(
+              error is ApiException
+                  ? error.friendly
+                  : 'Could not update your cart. Try again.',
+            );
+          }
+        });
     return true;
   }
 
@@ -1051,11 +1063,7 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
         padding: EdgeInsets.zero,
         onPressed: line == null || _adding
             ? _add
-            : () {
-                if (_addMore(line.id, line.quantity)) {
-                  _fly();
-                }
-              },
+            : () => _addMore(line.id, line.quantity),
         // The Cart tab's tote, so the icon says where the item goes.
         icon: _adding && line == null
             ? SizedBox.square(

@@ -144,6 +144,56 @@ void main() {
     expect(api.adds, 0);
   });
 
+  testWidgets(
+    'homepage repeat adds show the product-page confirmation only after the server accepts the burst',
+    (tester) async {
+      final api = _CartApi()
+        ..cartProduct = 'shirt'
+        ..pendingUpdate = Completer<Cart>();
+      await _pumpCard(tester, api);
+      for (var tap = 0; tap < 3; tap++) {
+        await tester.tap(find.byTooltip('Add to cart'));
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.text('Added to cart'), findsNothing);
+      }
+      await tester.pump(CartNotifier.quantityDebounce);
+      expect(api.updates, 1);
+      expect(find.text('Added to cart'), findsNothing);
+
+      api.pendingUpdate!.complete(_cart(5, productId: 'shirt'));
+      await tester.pump();
+      expect(find.text('Added to cart'), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+      expect(find.text('Added to cart'), findsNothing);
+    },
+  );
+
+  testWidgets('a refused repeat add never shows a success confirmation', (
+    tester,
+  ) async {
+    final api = _CartApi()
+      ..cartProduct = 'shirt'
+      ..pendingUpdate = Completer<Cart>();
+    await _pumpCard(tester, api);
+    await tester.tap(find.byTooltip('Add to cart'));
+    await tester.pump(CartNotifier.quantityDebounce);
+    expect(find.text('Added to cart'), findsNothing);
+    api.pendingUpdate!.completeError(
+      const ApiException(
+        code: 'cart.stock',
+        message: 'Only 2 left at this branch.',
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Added to cart'), findsNothing);
+    expect(_inCart(2), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.text('Only 2 left at this branch.'), findsOneWidget);
+  });
+
   testWidgets('taps stop at the branch stock and say why', (tester) async {
     final api = _CartApi()..cartProduct = 'shirt';
     await _pumpCard(tester, api, stock: 2);
@@ -151,6 +201,7 @@ void main() {
     await tester.tap(find.byTooltip('Add to cart'));
     await tester.pumpAndSettle();
     expect(find.text('Only 2 left at this branch.'), findsOneWidget);
+    expect(find.text('Added to cart'), findsNothing);
     await _settleQuantity(tester);
     expect(api.updates, 0);
     expect(_inCart(2), findsOneWidget);
@@ -551,6 +602,7 @@ class _CartApi extends ApiClient {
     ],
   });
   Completer<Cart>? pending;
+  Completer<Cart>? pendingUpdate;
 
   /// Which product the starting cart holds; 'other' keeps the card on its Add button.
   String cartProduct = 'other';
@@ -575,6 +627,7 @@ class _CartApi extends ApiClient {
       );
     }
     updatedTo = quantity;
+    if (pendingUpdate != null) return pendingUpdate!.future;
     if (twoLines) {
       _twoLineQuantities[id] = quantity;
       return _twoLineCart();
