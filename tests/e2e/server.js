@@ -1,4 +1,18 @@
 import { spawn, spawnSync } from 'node:child_process';
+import { resolve } from 'node:path';
+
+if (
+    process.env.APP_ENV !== 'testing'
+    || process.env.DB_CONNECTION !== 'sqlite'
+    || resolve(process.env.DB_DATABASE ?? '') !== resolve('database/playwright.sqlite')
+    || process.env.DB_URL
+) {
+    console.error('The QA server requires the isolated SQLite test database. Start it through npm run test:e2e.');
+    process.exit(1);
+}
+
+// A shared cached config can override the explicitly selected test database.
+process.env.APP_CONFIG_CACHE = resolve(`bootstrap/cache/config-playwright-${process.pid}.php`);
 
 const run = (command, args) => {
     const result = spawnSync(command, args, {
