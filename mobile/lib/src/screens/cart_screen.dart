@@ -13,11 +13,19 @@ import '../widgets/common.dart';
 import 'auth_gate.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
-  const CartScreen({super.key, this.embedded = false, this.onBrowseProducts});
+  const CartScreen({
+    super.key,
+    this.embedded = false,
+    this.active = true,
+    this.onBrowseProducts,
+  });
 
   /// When true the screen is rendered inside the shell's tab stack, which
   /// already supplies the scaffold and bottom navigation.
   final bool embedded;
+
+  /// A kept-alive tab must not change checkout selection while another tab is open.
+  final bool active;
   final VoidCallback? onBrowseProducts;
 
   @override
@@ -56,14 +64,23 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   /// unselected by an older app version are selected again here so the
   /// total and checkout always cover the whole cart.
   void _selectEverythingAvailable(Cart cart) {
+    if (!widget.active || ModalRoute.of(context)?.isCurrent == false) return;
     final available = cart.lines.where((line) => line.available).toList();
-    if (_busy || available.every((line) => line.selected)) return;
+    if (_busy) return;
+    if (available.every((line) => line.selected)) {
+      _selectAttempt = null;
+      return;
+    }
     // Once per set of lines, so a refused request cannot retry in a loop.
     final attempt = available.map((line) => line.id).join(',');
     if (attempt == _selectAttempt) return;
     _selectAttempt = attempt;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted ||
+          !widget.active ||
+          ModalRoute.of(context)?.isCurrent == false) {
+        return;
+      }
       _runCartAction(
         () => ref
             .read(cartProvider.notifier)

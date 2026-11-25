@@ -230,7 +230,94 @@ void main() {
     expect(api.adds, 1);
     expect(api.sentBuyNow, isTrue);
     expect(api.selectionRequests, 0);
+    expect(api.current.lines.map((line) => line.id), [
+      'shirt-line',
+      'other-line',
+    ]);
+    expect(
+      api.current.lines.where((line) => line.selected).map((line) => line.id),
+      ['shirt-line'],
+    );
     expect(find.text('Checkout route'), findsOneWidget);
+  });
+
+  testWidgets('buy now skips the picker when there is only one option', (
+    tester,
+  ) async {
+    final api = _ProductApi()
+      ..variants = true
+      ..singleVariant = true
+      ..honorsBuyNow = true;
+    await _pump(tester, api);
+    await tester.tap(find.text('Buy now'));
+    await tester.pumpAndSettle();
+    expect(api.adds, 1);
+    expect(api.variantId, 'small');
+    expect(api.selectionRequests, 0);
+    expect(find.text('Checkout route'), findsOneWidget);
+  });
+
+  testWidgets('buy now ignores repeated taps before the next frame', (
+    tester,
+  ) async {
+    final api = _ProductApi()..pending = Completer<Cart>();
+    await _pump(tester, api);
+    await tester.tap(find.text('Buy now'));
+    await tester.tap(find.text('Buy now'));
+    await tester.pump();
+    expect(api.adds, 1);
+    api.pending!.complete(api.addedCart);
+    await tester.pumpAndSettle();
+    expect(find.text('Checkout route'), findsOneWidget);
+  });
+
+  testWidgets('buy now uses the selected option without asking again', (
+    tester,
+  ) async {
+    final api = _ProductApi()..variants = true;
+    await _pump(tester, api);
+    await _openVariations(tester);
+    await tester.tap(find.text('Small'));
+    await tester.pumpAndSettle();
+    await _closeSheet(tester);
+    await tester.tap(find.text('Buy now'));
+    await tester.pumpAndSettle();
+    expect(api.adds, 1);
+    expect(api.variantId, 'small');
+    expect(find.text('Checkout route'), findsOneWidget);
+  });
+
+  testWidgets('buy now continues after choosing a branch', (tester) async {
+    final api = _ProductApi()..honorsBuyNow = true;
+    await _pump(tester, api, useLocatorBranch: true);
+    await tester.tap(find.text('Buy now'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose a branch'), findsOneWidget);
+    expect(api.adds, 0);
+    await tester.tap(find.text('Makati branch'));
+    await tester.pumpAndSettle();
+    expect(api.adds, 1);
+    expect(api.addedBranch, 'B-MAKATI');
+    expect(api.selectionRequests, 0);
+    expect(find.text('Checkout route'), findsOneWidget);
+  });
+
+  testWidgets('dismissing the branch picker does not add an item', (
+    tester,
+  ) async {
+    final api = _ProductApi();
+    await _pump(tester, api, useLocatorBranch: true);
+    await tester.tap(find.text('Buy now'));
+    await tester.pumpAndSettle();
+    await _closeSheet(tester);
+    expect(api.adds, 0);
+    expect(find.text('Checkout route'), findsNothing);
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Buy now'))
+          .onPressed,
+      isNotNull,
+    );
   });
 
   testWidgets('add to cart blocks duplicate taps and updates the cart badge', (
@@ -540,6 +627,7 @@ Future<void> _pump(
   double scale = 1,
   BranchDistance? stockedElsewhere,
   String? branch = 'B-TEST',
+  bool useLocatorBranch = false,
 }) async {
   tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
@@ -566,7 +654,8 @@ Future<void> _pump(
       overrides: [
         isSignedInProvider.overrideWithValue(true),
         apiClientProvider.overrideWithValue(api),
-        activeBranchIdProvider.overrideWith((ref) async => branch),
+        if (!useLocatorBranch)
+          activeBranchIdProvider.overrideWith((ref) async => branch),
         nearestStoreProvider.overrideWith(
           () => _FixedLocator(
             const StoreLocatorState(
@@ -621,6 +710,7 @@ class _ProductApi extends ApiClient {
     : super(baseUrl: 'http://localhost', tokenProvider: () async => null);
   int adds = 0;
   bool variants = false;
+  bool singleVariant = false;
   bool withStore = false;
   bool withSameMedicine = false;
   bool switchWithCare = false;
@@ -628,6 +718,7 @@ class _ProductApi extends ApiClient {
   bool largeInStock = true;
   String effectivePrice = '250.00';
   int? addedQuantity;
+  String? addedBranch;
   bool inStock = true;
   bool requiresPrescription = false;
   String? genericName;
@@ -703,7 +794,7 @@ class _ProductApi extends ApiClient {
     'has_variants': variants,
     'variants': variants
         ? [
-            for (final size in ['Small', 'Large'])
+            for (final size in ['Small', if (!singleVariant) 'Large'])
               {
                 'id': size.toLowerCase(),
                 'label': coloredVariants
@@ -734,6 +825,8 @@ class _ProductApi extends ApiClient {
   @override
   Future<Cart> cart() async => current;
   @override
+  Future<Cart> setCartBranch(String branchId) async => current;
+  @override
   Future<Cart> addToCart({
     String? branch,
     required String productId,
@@ -743,6 +836,7 @@ class _ProductApi extends ApiClient {
   }) async {
     expect(productId, 'shirt');
     adds++;
+    addedBranch = branch;
     addedQuantity = quantity;
     this.variantId = variantId;
     sentBuyNow = buyNow;

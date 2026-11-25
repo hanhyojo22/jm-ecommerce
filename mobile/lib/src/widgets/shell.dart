@@ -252,6 +252,7 @@ class _AppShellState extends ConsumerState<AppShell>
             if (tab.loaded.contains(3))
               CartScreen(
                 embedded: true,
+                active: index == 3,
                 onBrowseProducts: () =>
                     ref.read(shellTabProvider.notifier).select(0),
               )

@@ -32,6 +32,7 @@ class ProductScreen extends ConsumerWidget {
     final product = ref.watch(productProvider(productKey));
 
     return product.when(
+      skipLoadingOnReload: true,
       data: (value) => _ProductBody(product: value, productKey: productKey),
       loading: () => Scaffold(
         appBar: AppBar(title: const Text('Product')),
@@ -127,6 +128,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
   /// null while idle; otherwise whether the request in flight is Buy now.
   /// A notifier, not setState, so a tap repaints only the purchase bar.
   final _purchase = ValueNotifier<bool?>(null);
+  bool _startingPurchase = false;
   final _cartIconKey = GlobalKey<CartBadgeIconState>();
   final _addButtonKey = GlobalKey();
   bool _chatting = false;
@@ -209,7 +211,17 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
   }
 
   Future<void> _openVariationSheet({required bool buyNow}) async {
-    final choice = await showModalBottomSheet<bool>(
+    if (_startingPurchase || _purchase.value != null) {
+      return;
+    }
+    final choice = await _chooseVariation(buyNow: buyNow);
+    if (choice != null && mounted) {
+      await _addToCart(buyNow: choice, optionsConfirmed: true);
+    }
+  }
+
+  Future<bool?> _chooseVariation({required bool buyNow}) {
+    return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -223,9 +235,6 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
         onChanged: _applySheetChoice,
       ),
     );
-    if (choice != null && mounted) {
-      await _addToCart(buyNow: choice, optionsConfirmed: true);
-    }
   }
 
   @override
@@ -253,54 +262,62 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
     bool buyNow = false,
     bool optionsConfirmed = false,
   }) async {
-    if (_purchase.value != null ||
+    if (_startingPurchase ||
+        _purchase.value != null ||
         !product.inStock ||
         (_variant != null && !_variant!.inStock)) {
       return;
     }
-    if (!await requireSignIn(context, ref) || !mounted) {
-      return;
-    }
-    if (product.variants.isNotEmpty && !optionsConfirmed) {
-      await _openVariationSheet(buyNow: buyNow);
-      return;
-    }
-    // The cart buys from one branch, so one has to be chosen first.
-    if (await ref.read(activeBranchIdProvider.future) == null) {
-      if (mounted) {
-        await showBranchSelectorSheet(context);
-      }
-      return;
-    }
-    if (!mounted) {
-      return;
-    }
-
-    _purchase.value = buyNow;
-    Future<void>? landed;
-    if (!buyNow) {
-      // Feedback lands on the tap, not after the server round trip.
-      final images = _galleryImages;
-      landed = flyToCart(
-        context: context,
-        source: _addButtonKey,
-        target: _cartIconKey,
-        imageUrl: images.isEmpty
-            ? product.thumbnailUrl
-            : images[_imageIndex.clamp(0, images.length - 1)].url,
-      );
-    }
+    _startingPurchase = true;
     var added = false;
 
     try {
+      if (!await requireSignIn(context, ref) || !mounted) {
+        return;
+      }
+      if (product.variants.isNotEmpty &&
+          !optionsConfirmed &&
+          (!buyNow || _variant == null)) {
+        if (await _chooseVariation(buyNow: buyNow) == null || !mounted) {
+          return;
+        }
+      }
+      // Continue the same purchase once a branch is chosen; dismissal cancels it.
+      if (await ref.read(activeBranchIdProvider.future) == null) {
+        if (!mounted) {
+          return;
+        }
+        await showBranchSelectorSheet(context);
+        if (!mounted || await ref.read(activeBranchIdProvider.future) == null) {
+          return;
+        }
+      }
+      if (!mounted) {
+        return;
+      }
+      _purchase.value = buyNow;
+      final variantId = _variantId;
+      final quantity = _quantity;
+      Future<void>? landed;
+      if (!buyNow) {
+        final images = _galleryImages;
+        landed = flyToCart(
+          context: context,
+          source: _addButtonKey,
+          target: _cartIconKey,
+          imageUrl: images.isEmpty
+              ? product.thumbnailUrl
+              : images[_imageIndex.clamp(0, images.length - 1)].url,
+        );
+      }
       // Buy now is one request: the server adds the line and makes it the only
       // selected item, so checkout opens after a single round trip.
       final cart = await ref
           .read(cartProvider.notifier)
           .add(
             productId: product.id,
-            quantity: _quantity,
-            variantId: _variantId,
+            quantity: quantity,
+            variantId: variantId,
             buyNow: buyNow,
           );
 
@@ -318,7 +335,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
         final line = cart.lines
             .where(
               (line) =>
-                  line.productId == product.id && line.variantId == _variantId,
+                  line.productId == product.id && line.variantId == variantId,
             )
             .firstOrNull;
         if (line == null) {
@@ -337,7 +354,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
           }
         }
         ref.invalidate(checkoutQuoteProvider);
-        context.push('/checkout');
+        await context.push('/checkout');
       }
     } on ApiException catch (error) {
       if (mounted) {
@@ -348,6 +365,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
         );
       }
     } finally {
+      _startingPurchase = false;
       if (mounted) {
         _purchase.value = null;
       }

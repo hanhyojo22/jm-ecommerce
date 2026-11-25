@@ -31,6 +31,32 @@ void main() {
     );
   });
 
+  testWidgets('an inactive cart does not change Buy now selection', (
+    tester,
+  ) async {
+    final api = _CartApi()..startSelected = false;
+    await _pump(tester, api, inactive: true);
+    expect(api.lastSelection, isNull);
+  });
+
+  testWidgets('a cart covered by another route does not change selection', (
+    tester,
+  ) async {
+    final api = _CartApi();
+    await _pump(tester, api);
+    final context = tester.element(find.byType(CartScreen));
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const Scaffold(body: Text('Buy now checkout')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    api.startSelected = false;
+    ProviderScope.containerOf(context).invalidate(cartProvider);
+    await tester.pumpAndSettle();
+    expect(api.lastSelection, isNull);
+  });
+
   testWidgets('failed removal leaves the item and allows retry', (
     tester,
   ) async {
@@ -250,6 +276,7 @@ Future<void> _pump(
   double width = 390,
   double scale = 1,
   bool dark = false,
+  bool inactive = false,
   VoidCallback? onBrowseProducts,
 }) async {
   tester.view.physicalSize = Size(width, 844);
@@ -272,7 +299,13 @@ Future<void> _pump(
               .copyWith(textScaler: TextScaler.linear(scale)),
           child: child!,
         ),
-        home: CartScreen(onBrowseProducts: onBrowseProducts),
+        home: IndexedStack(
+          index: inactive ? 1 : 0,
+          children: [
+            CartScreen(active: !inactive, onBrowseProducts: onBrowseProducts),
+            const SizedBox(),
+          ],
+        ),
       ),
     ),
   );
