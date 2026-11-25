@@ -10,6 +10,7 @@ import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/providers/catalog_providers.dart';
 import 'package:jmmart/src/screens/product_screen.dart';
 import 'package:jmmart/src/theme.dart';
+import 'package:jmmart/src/widgets/feedback_popup.dart';
 import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
@@ -31,9 +32,21 @@ void main() {
 
     expect(find.text('My rating draft'), findsOneWidget);
     expect(
-      find.text('Could not confirm your rating. Refresh before trying again.'),
+      find.descendant(
+        of: find.byType(FeedbackPopup),
+        matching: find.text(
+          'Could not confirm your rating. Refresh before trying again.',
+        ),
+      ),
       findsOneWidget,
     );
+    expect(
+      tester.widget<FeedbackPopup>(find.byType(FeedbackPopup)).kind,
+      FeedbackKind.error,
+    );
+    await tester.tap(find.text('Got it'));
+    await tester.pumpAndSettle();
+    expect(find.text('My rating draft'), findsOneWidget);
   });
 
   testWidgets('product rating appears while the review request is pending', (
@@ -57,6 +70,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Sending...'), findsNothing);
+    expect(find.text('Your review was published.'), findsOneWidget);
+    expect(
+      tester.widget<FeedbackPopup>(find.byType(FeedbackPopup)).kind,
+      FeedbackKind.success,
+    );
   });
 
   testWidgets('product shows written comments and paginates reviews', (

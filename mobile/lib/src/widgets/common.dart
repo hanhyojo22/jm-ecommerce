@@ -18,6 +18,7 @@ import '../providers/connectivity_providers.dart';
 import '../providers/store_locator_providers.dart';
 import '../screens/auth_gate.dart';
 import '../theme.dart';
+import 'feedback_popup.dart';
 import 'fly_to_cart.dart';
 import 'store_locator.dart';
 
@@ -914,11 +915,8 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
     if (ref.read(isOnlineProvider).value ?? true) {
       return false;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("No internet connection. Your cart wasn't changed."),
-      ),
-    );
+    AppFeedback.of(context)
+        .show("No internet connection. Your cart wasn't changed.");
     return true;
   }
 
@@ -959,14 +957,14 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
       unawaited(
         landed.then((_) {
           if (mounted) {
-            showAddedToCartToast(context);
+            AppFeedback.of(context)
+                .show('Added to cart', kind: FeedbackKind.success);
           }
         }),
       );
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.friendly)));
+        AppFeedback.of(context).show(error.friendly);
       }
     } finally {
       _queuedTaps = 0;
@@ -988,23 +986,18 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
         ? stock
         : quantity + count;
     if (wanted <= quantity) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Only $stock left at this branch.')),
-      );
+      AppFeedback.of(context)
+          .show('Only $stock left at this branch.', kind: FeedbackKind.info);
       return false;
     }
     ref.read(cartProvider.notifier).setQuantity(lineId, wanted).catchError((
       Object error,
     ) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              error is ApiException
-                  ? error.friendly
-                  : 'Could not update your cart. Try again.',
-            ),
-          ),
+        AppFeedback.of(context).show(
+          error is ApiException
+              ? error.friendly
+              : 'Could not update your cart. Try again.',
         );
       }
     });

@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import 'providers/catalog_providers.dart';
@@ -15,7 +16,10 @@ import 'screens/search_screen.dart';
 import 'screens/store_screen.dart';
 import 'widgets/shell.dart';
 
+final appNavigatorKey = GlobalKey<NavigatorState>();
+
 final appRouter = GoRouter(
+  navigatorKey: appNavigatorKey,
   initialLocation: '/',
   routes: [
     GoRoute(path: '/', builder: (context, state) => const AppShell()),

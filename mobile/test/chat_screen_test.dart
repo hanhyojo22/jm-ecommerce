@@ -236,6 +236,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(saved, ['http://localhost/media/photo-1|black.png']);
     expect(find.text('Saved to gallery'), findsOneWidget);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
 
     await tester.longPress(find.text('Pay me outside the app'));
     await tester.pumpAndSettle();
@@ -245,6 +247,8 @@ void main() {
     await tester.tap(find.text('Spam'));
     await tester.pumpAndSettle();
     expect(api.reports, ['store-text:Spam']);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
 
     // You can't report your own message.
     await tester.longPress(find.text('Ok'));
@@ -299,6 +303,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(saved, ['http://localhost/media/photo-1|receipt.png']);
+    await tester.tap(find.text('Continue'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
 
     await tester.tap(find.byTooltip('Close'));
     await tester.pump();
@@ -421,6 +428,8 @@ void main() {
     expect(find.text('Retry'), findsOneWidget);
     expect(find.text('Can you ship today?'), findsOneWidget);
 
+    await tester.tap(find.text('Got it'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Retry'));
     await tester.pump();
 
@@ -1118,6 +1127,8 @@ void main() {
     expect(find.text('Retry'), findsOneWidget);
     expect(find.byKey(ValueKey('pending-image-$clientId')), findsOneWidget);
 
+    await tester.tap(find.text('Got it'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Retry'));
     await tester.pump();
 

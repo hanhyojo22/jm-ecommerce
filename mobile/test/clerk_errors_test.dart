@@ -26,7 +26,7 @@ void main() {
       );
 
       await tester.tap(find.text('Report connection error'));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
       expect(find.text(clerkOfflineMessage), findsOneWidget);

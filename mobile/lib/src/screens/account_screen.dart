@@ -13,6 +13,7 @@ import '../providers/discount_card_providers.dart';
 import '../providers/order_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/feedback_popup.dart';
 import '../widgets/shell.dart';
 import '../widgets/store_locator.dart';
 
@@ -122,18 +123,14 @@ class AccountScreen extends ConsumerWidget {
                   ),
                   value: account.cartReminders,
                   onChanged: (enabled) async {
-                    final messenger = ScaffoldMessenger.of(context);
+                    final feedback = AppFeedback.of(context);
                     try {
                       await ref
                           .read(apiClientProvider)
                           .updateCartReminders(enabled);
                       ref.invalidate(meProvider);
                     } catch (_) {
-                      messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Could not save. Try again.'),
-                        ),
-                      );
+                      feedback.show('Could not save. Try again.');
                     }
                   },
                 ),
@@ -577,13 +574,12 @@ class _SavedDiscountCardsSection extends ConsumerWidget {
       ref.invalidate(discountCardsProvider);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Saved ID removed.')));
+        AppFeedback.of(context)
+            .show('Saved ID removed.', kind: FeedbackKind.success);
       }
     } on ApiException catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.friendly)));
+        AppFeedback.of(context).show(error.friendly);
       }
     }
   }

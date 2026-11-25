@@ -9,6 +9,7 @@ import '../providers/address_providers.dart';
 import '../providers/auth_providers.dart';
 import '../providers/store_locator_providers.dart';
 import '../widgets/common.dart';
+import '../widgets/feedback_popup.dart';
 
 class AddressesScreen extends ConsumerWidget {
   const AddressesScreen({super.key});
@@ -116,18 +117,14 @@ class AddressesScreen extends ConsumerWidget {
       ref.invalidate(addressesProvider);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              existing == null ? 'Address saved.' : 'Address updated.',
-            ),
-          ),
+        AppFeedback.of(context).show(
+          existing == null ? 'Address saved.' : 'Address updated.',
+          kind: FeedbackKind.success,
         );
       }
     } on ApiException catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.friendly)));
+        AppFeedback.of(context).show(error.friendly);
       }
     }
   }
@@ -166,13 +163,12 @@ class AddressesScreen extends ConsumerWidget {
       ref.invalidate(addressesProvider);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Address removed.')));
+        AppFeedback.of(context)
+            .show('Address removed.', kind: FeedbackKind.success);
       }
     } on ApiException catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.friendly)));
+        AppFeedback.of(context).show(error.friendly);
       }
     }
   }

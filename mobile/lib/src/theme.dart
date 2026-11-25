@@ -135,18 +135,6 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
         borderRadius: BorderRadius.circular(appModalRadius),
       ),
     ),
-    snackBarTheme: SnackBarThemeData(
-      behavior: SnackBarBehavior.floating,
-      backgroundColor: scheme.inverseSurface,
-      contentTextStyle: textTheme.bodyMedium?.copyWith(
-        color: scheme.onInverseSurface,
-        fontWeight: FontWeight.w600,
-      ),
-      actionTextColor: scheme.inversePrimary,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(appSurfaceRadius),
-      ),
-    ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: surfaceLowest,

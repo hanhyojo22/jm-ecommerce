@@ -19,6 +19,7 @@ import '../providers/store_locator_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/delivery_pin_map.dart';
+import '../widgets/feedback_popup.dart';
 import 'delivery_pin_screen.dart';
 import 'checkout_success_screen.dart';
 import '../widgets/store_locator.dart';
@@ -246,10 +247,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   bool _validateDelivery(CheckoutQuote quote) {
     if (_address(quote) == null) {
-      _snack(
+      _showFeedback(
         _method == 'pickup'
             ? 'Add contact details for pickup.'
             : 'Choose a delivery address.',
+        kind: FeedbackKind.info,
       );
       return false;
     }
@@ -261,12 +263,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     if (_method == 'delivery') {
       if (_pin == null || !_pinConfirmed) {
-        _snack('Set the delivery pin so the rider can find you.');
+        _showFeedback(
+          'Set the delivery pin so the rider can find you.',
+          kind: FeedbackKind.info,
+        );
         return false;
       }
       final problem = _pinProblem;
       if (problem != null) {
-        _snack(problem);
+        _showFeedback(problem);
         return false;
       }
     }
@@ -439,7 +444,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           _openDocumentsSheet(quote, prescription: false);
         }
 
-        _snack(
+        _showFeedback(
           lostSavedCard
               ? 'That saved ID is no longer available. Type it again and place the order.'
               : error.friendly,
@@ -497,7 +502,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
       final room = 10 - _prescriptions.length;
       if (room <= 0) {
-        _snack('A prescription can have up to 10 pages.');
+        _showFeedback('A prescription can have up to 10 pages.');
         return;
       }
 
@@ -506,10 +511,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       );
       _refreshDocumentsSheet();
       if (picked.length > room) {
-        _snack('Only the first $room pages were added.');
+        _showFeedback(
+          'Only the first $room pages were added.',
+          kind: FeedbackKind.info,
+        );
       }
     } on AttachmentTooLargeException {
-      _snack('Choose a file under 5 MB.');
+      _showFeedback('Choose a file under 5 MB.');
     }
   }
 
@@ -575,7 +583,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       } on AttachmentTooLargeException {
         rethrow;
       } catch (_) {
-        _snack('Your ID photos could not be read. Try again.');
+        _showFeedback('Your ID photos could not be read. Try again.');
         return;
       }
       if (!mounted) {
@@ -586,7 +594,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       // Only the front: the back can carry an emergency contact's name.
       await _fillFromCardPhoto(front);
     } on AttachmentTooLargeException {
-      _snack('Choose a photo under 5 MB.');
+      _showFeedback('Choose a photo under 5 MB.');
     }
   }
 
@@ -654,7 +662,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
     if (filled) {
       _refreshDocumentsSheet();
-      _snack('Filled in from your ID photo. Check it matches your card.');
+      _showFeedback(
+        'Filled in from your ID photo. Check it matches your card.',
+        kind: FeedbackKind.success,
+      );
     }
   }
 
@@ -672,9 +683,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       ? quote.seniorPwdDiscount
       : null;
 
-  void _snack(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+  void _showFeedback(String message, {FeedbackKind kind = FeedbackKind.error}) {
+    AppFeedback.of(context).show(message, kind: kind);
   }
 
   /// Highest-priority incomplete or blocking checkout item for the readiness strip.
@@ -698,55 +708,54 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         !((_method == 'pickup' && _paymentMethod == 'cod') ||
             quote.paymentOptions[_paymentMethod]?.available == true);
 
-    final blockers =
-        <({bool isError, String message, VoidCallback onTap})>[
-          if (addressMissing)
-            (
-              isError: false,
-              message: _method == 'pickup'
-                  ? 'Add contact details'
-                  : 'Add delivery address',
-              onTap: () => _openAddressEditor(quote),
-            ),
-          if (_method == 'delivery' && closedUntil != null)
-            (
-              isError: true,
-              message: 'Delivery closed · Switch to pickup',
-              onTap: () => setState(() => _fulfillment = 'pickup'),
-            ),
-          if (pinMissing)
-            (
-              isError: false,
-              message: 'Set delivery pin so the rider can find you',
-              onTap: _pin != null
-                  ? _openPinPicker
-                  : () => setState(() => _fulfillment = 'pickup'),
-            ),
-          if (pinOutOfRange)
-            (
-              isError: true,
-              message: 'Outside delivery area · Adjust pin',
-              onTap: _openPinPicker,
-            ),
-          if (rxMissing)
-            (
-              isError: false,
-              message: 'Add prescription photo',
-              onTap: () => _openDocumentsSheet(quote, prescription: true),
-            ),
-          if (discountErr != null)
-            (
-              isError: false,
-              message: discountErr,
-              onTap: () => _openDocumentsSheet(quote, prescription: false),
-            ),
-          if (paymentUnavailable)
-            (
-              isError: true,
-              message: 'Choose another payment method or switch to pickup',
-              onTap: () => _reveal(null, key: _paymentCardKey),
-            ),
-        ];
+    final blockers = <({bool isError, String message, VoidCallback onTap})>[
+      if (addressMissing)
+        (
+          isError: false,
+          message: _method == 'pickup'
+              ? 'Add contact details'
+              : 'Add delivery address',
+          onTap: () => _openAddressEditor(quote),
+        ),
+      if (_method == 'delivery' && closedUntil != null)
+        (
+          isError: true,
+          message: 'Delivery closed · Switch to pickup',
+          onTap: () => setState(() => _fulfillment = 'pickup'),
+        ),
+      if (pinMissing)
+        (
+          isError: false,
+          message: 'Set delivery pin so the rider can find you',
+          onTap: _pin != null
+              ? _openPinPicker
+              : () => setState(() => _fulfillment = 'pickup'),
+        ),
+      if (pinOutOfRange)
+        (
+          isError: true,
+          message: 'Outside delivery area · Adjust pin',
+          onTap: _openPinPicker,
+        ),
+      if (rxMissing)
+        (
+          isError: false,
+          message: 'Add prescription photo',
+          onTap: () => _openDocumentsSheet(quote, prescription: true),
+        ),
+      if (discountErr != null)
+        (
+          isError: false,
+          message: discountErr,
+          onTap: () => _openDocumentsSheet(quote, prescription: false),
+        ),
+      if (paymentUnavailable)
+        (
+          isError: true,
+          message: 'Choose another payment method or switch to pickup',
+          onTap: () => _reveal(null, key: _paymentCardKey),
+        ),
+    ];
 
     if (blockers.isEmpty) {
       return null;
@@ -939,10 +948,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         minimumSize: minimumSize,
         padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 2, 8),
         alignment: AlignmentDirectional.centerEnd,
-        textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-          fontSize: 13.5,
-          fontWeight: FontWeight.w700,
-        ),
+        textStyle: Theme.of(context).textTheme.labelLarge
+            ?.copyWith(fontSize: 13.5, fontWeight: FontWeight.w700),
       );
 
   Widget _checkoutCard({Key? key, required Widget child}) {
@@ -966,11 +973,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Widget _cardHeader({
-    required String title,
-    Widget? badge,
-    Widget? action,
-  }) {
+  Widget _cardHeader({required String title, Widget? badge, Widget? action}) {
     final theme = Theme.of(context);
     final wrapHeader =
         MediaQuery.textScalerOf(context).scale(14) > 20 &&
@@ -1845,10 +1848,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                     '${blocker.count == 1 ? '1 step left' : '${blocker.count} steps left'}: ${blocker.message}',
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.labelMedium?.copyWith(
-                                      color: stripFg,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                    style: theme.textTheme.labelMedium
+                                        ?.copyWith(
+                                          color: stripFg,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                   ),
                                 ),
                                 Icon(
@@ -3041,9 +3045,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             Text(
               'We could not find your location. Put a pin on your door so the rider knows where to go.',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: dark
-                    ? const Color(0xFFFFE3A3)
-                    : const Color(0xFF6B4400),
+                color: dark ? const Color(0xFFFFE3A3) : const Color(0xFF6B4400),
               ),
             ),
             const SizedBox(height: 12),
