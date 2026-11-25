@@ -1746,6 +1746,10 @@ html[data-seller-theme='dark'] .seller-workspace[data-workspace='seller'] {
     --sc-input-bg: #111c2f;
     --sc-btn-primary: #2f6df6;
     --sc-btn-primary-hover: #427bfa;
+    /* The page body keeps the light-theme ink, so anything without its own text
+       colour (table cells, prices, checkbox labels) inherited dark text on the
+       dark canvas. Set the default at the workspace root instead. */
+    color: var(--sc-ink);
 }
 
 /* Sidebar, Mobile Drawer & Top Header */
