@@ -10,6 +10,7 @@ use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class CartApiTest extends TestCase
@@ -62,6 +63,26 @@ class CartApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(0, 'data.items')
             ->assertJsonPath('data.subtotal', '0.00');
+    }
+
+    public function test_cart_items_stay_in_the_order_they_were_added(): void
+    {
+        [$buyer, $product] = $this->buyerAndProduct();
+        $this->actingAs($buyer)
+            ->postJson('/api/v1/cart/items', ['branch' => $product->store_id, 'product_id' => $product->id, 'quantity' => 1])
+            ->assertCreated();
+        $second = $product->replicate()->fill(['slug' => $product->slug.'-2', 'sku' => $product->sku.'-2']);
+        $second->save();
+        // Saved after the first item but added a minute earlier, so the order cannot come from storage.
+        $earlier = $buyer->cart->items()->make(['product_id' => $second->id, 'quantity' => 1, 'selected' => true]);
+        $earlier->id = Str::lower((string) Str::ulid(now()->subMinute()));
+        $earlier->save();
+
+        $this->actingAs($buyer)
+            ->getJson('/api/v1/cart')
+            ->assertOk()
+            ->assertJsonPath('data.items.0.id', $earlier->id)
+            ->assertJsonPath('data.items.1.product_id', $product->id);
     }
 
     public function test_buy_now_adds_and_selects_only_that_item_in_one_request(): void

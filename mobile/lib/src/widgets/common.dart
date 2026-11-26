@@ -912,7 +912,7 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
 
   /// True, with a message, when the phone has no network: the item must not fly to a cart
   /// it cannot reach.
-  bool _offline() {
+  bool _blockIfOffline() {
     if (ref.read(isOnlineProvider).value ?? true) {
       return false;
     }
@@ -922,7 +922,7 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
   }
 
   Future<void> _add() async {
-    if (_offline()) {
+    if (_blockIfOffline()) {
       return;
     }
     if (_adding) {
@@ -978,7 +978,7 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
   /// number at once, sends the last of quick taps, and puts the real quantity back if the
   /// server refuses.
   bool _addMore(String lineId, int quantity, [int count = 1]) {
-    if (_offline()) {
+    if (_blockIfOffline()) {
       return false;
     }
     final stock = widget.product.stockQuantity;
@@ -1008,7 +1008,7 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
             AppNotice.of(context).show(
               error is ApiException
                   ? error.friendly
-                  : 'Could not update your cart. Try again.',
+                  : 'Could not update your cart. Please try again.',
             );
           }
         });

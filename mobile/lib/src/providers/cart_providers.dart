@@ -10,30 +10,19 @@ class CartNotifier extends AsyncNotifier<Cart> {
   /// How long the stepper waits after the last tap before telling the server.
   static const quantityDebounce = Duration(milliseconds: 350);
 
-  /// Quantities shown on screen that the server has not confirmed yet, by line.
-  final _unconfirmed = <String, int>{};
-
-  /// Each line as the server last had it before a burst of taps, for going back offline.
-  final _confirmedLines = <String, CartLine?>{};
-  final _timers = <String, Timer>{};
-  final _waiters = <String, Completer<void>>{};
-  final _latestRequest = <String, int>{};
+  /// Lines with a quantity on screen that the server has not confirmed yet.
+  final _pending = <String, _PendingLine>{};
   int _requestCount = 0;
   int _appliedRequest = 0;
 
   @override
   Future<Cart> build() async {
+    // Unsent taps are dropped without an outcome: they were neither added nor refused.
     ref.onDispose(() {
-      for (final timer in _timers.values) {
-        timer.cancel();
+      for (final line in _pending.values) {
+        line.drop();
       }
-      for (final waiter in _waiters.values) {
-        waiter.complete();
-      }
-      _timers.clear();
-      _waiters.clear();
-      _unconfirmed.clear();
-      _confirmedLines.clear();
+      _pending.clear();
     });
     if (!ref.watch(isSignedInProvider)) {
       return const Cart(lines: [], selectedCount: 0, subtotal: '0.00');
@@ -49,8 +38,8 @@ class CartNotifier extends AsyncNotifier<Cart> {
     }
     _appliedRequest = request;
     var shown = cart;
-    for (final MapEntry(key: lineId, value: quantity) in _unconfirmed.entries) {
-      shown = shown.withLineQuantity(lineId, quantity);
+    for (final MapEntry(key: lineId, value: line) in _pending.entries) {
+      shown = shown.withLineQuantity(lineId, line.quantity);
     }
     state = AsyncData(shown);
   }
@@ -103,76 +92,81 @@ class CartNotifier extends AsyncNotifier<Cart> {
     return result.skipped;
   }
 
-  Future<void> updateQuantity(String itemId, int quantity) async {
-    final request = ++_requestCount;
-    _applyServerCart(
-      await ref.read(apiClientProvider).updateCartItem(itemId, quantity),
-      request,
-    );
-  }
+  /// Whether a quantity on screen still waits for the server, so the subtotal is not final.
+  bool get isUpdating => _pending.isNotEmpty;
+
+  /// Whether [itemId]'s quantity on screen still waits for the server.
+  bool isUpdatingItem(String itemId) => _pending.containsKey(itemId);
 
   /// Shows [quantity] for [itemId] at once and sends only the last of a burst of taps.
   /// The server's cart replaces the guess when it answers; if it refuses, the cart is
   /// fetched again (or the line put back when offline) and only the last tap's future
-  /// fails, so one refusal shows one message. Zero removes the line straight away, but
-  /// never as part of a burst: a double tap on "−" at 2 stops at 1. Prices and totals
-  /// stay the server's throughout.
+  /// fails, so one refusal shows one message. Removing a line goes through [remove].
+  /// Prices and totals stay the server's throughout.
   Future<void> setQuantity(String itemId, int quantity) {
+    assert(quantity > 0, 'Use remove() to take a line out of the cart.');
     final current = state.value;
-    if (current == null || (quantity == 0 && _timers.containsKey(itemId))) {
+    if (current == null) {
       return Future.value();
     }
-    _confirmedLines.putIfAbsent(
+    final pending = _pending.putIfAbsent(
       itemId,
-      () => current.lines.where((line) => line.id == itemId).firstOrNull,
-    );
-    _unconfirmed[itemId] = quantity;
+      () => _PendingLine(
+        current.lines.where((line) => line.id == itemId).firstOrNull,
+      ),
+    )..quantity = quantity;
     state = AsyncData(current.withLineQuantity(itemId, quantity));
 
     // The earlier tap of this burst is superseded; only the newest one reports.
-    _waiters.remove(itemId)?.complete();
-    final waiter = _waiters[itemId] = Completer<void>();
-    _timers.remove(itemId)?.cancel();
-    if (quantity == 0) {
-      _sendQuantity(itemId);
-    } else {
-      _timers[itemId] = Timer(quantityDebounce, () => _sendQuantity(itemId));
-    }
+    pending.waiter?.complete();
+    final waiter = pending.waiter = Completer<void>();
+    pending.timer?.cancel();
+    pending.timer = Timer(quantityDebounce, () => _sendQuantity(itemId));
 
     return waiter.future;
   }
 
   Future<void> _sendQuantity(String itemId) async {
-    _timers.remove(itemId);
-    final quantity = _unconfirmed[itemId];
-    final waiter = _waiters.remove(itemId);
-    if (quantity == null) {
-      waiter?.complete();
+    final pending = _pending[itemId];
+    if (pending == null) {
       return;
     }
-    final request = _latestRequest[itemId] = ++_requestCount;
+    final waiter = pending.waiter;
+    pending
+      ..timer = null
+      ..waiter = null;
+    final request = pending.request = ++_requestCount;
     final api = ref.read(apiClientProvider);
     // Whether no newer tap on this line is queued or in flight behind this request.
     bool isLatest() =>
-        _latestRequest[itemId] == request && !_timers.containsKey(itemId);
+        identical(_pending[itemId], pending) &&
+        pending.request == request &&
+        pending.timer == null;
 
     try {
-      final cart = quantity == 0
-          ? await api.removeCartItem(itemId)
-          : await api.updateCartItem(itemId, quantity);
+      final cart = await api.updateCartItem(itemId, pending.quantity);
       if (isLatest()) {
-        _settle(itemId);
+        _forget(itemId);
+      } else if (identical(_pending[itemId], pending)) {
+        // A newer tap is still to come; if it fails offline, this is what to go back to.
+        pending.confirmedLine = cart.lines
+            .where((line) => line.id == itemId)
+            .firstOrNull;
       }
       _applyServerCart(cart, request);
-      waiter?.complete();
+      if (!pending.dropped) {
+        waiter?.complete();
+      }
     } catch (error, stack) {
+      if (pending.dropped) {
+        return;
+      }
       if (!isLatest()) {
         // A newer tap decides what this line ends up as, and reports its own outcome.
         waiter?.complete();
         return;
       }
-      final confirmedLine = _confirmedLines[itemId];
-      _settle(itemId);
+      _forget(itemId);
       final refetch = ++_requestCount;
       try {
         _applyServerCart(await api.cart(), refetch);
@@ -180,39 +174,30 @@ class CartNotifier extends AsyncNotifier<Cart> {
         // Offline: put back only this line as the server last had it.
         final current = state.value;
         if (ref.mounted && current != null) {
-          state = AsyncData(_restoreLine(current, itemId, confirmedLine));
+          state = AsyncData(current.withLine(itemId, pending.confirmedLine));
         }
       }
       waiter?.completeError(error, stack);
     }
   }
 
-  void _settle(String itemId) {
-    _unconfirmed.remove(itemId);
-    _confirmedLines.remove(itemId);
-    _latestRequest.remove(itemId);
+  /// Takes [itemId] out of the unconfirmed lines. Watchers are told even when no new cart
+  /// is shown, because [isUpdating] may have changed.
+  void _forget(String itemId) {
+    if (_pending.remove(itemId) != null && ref.mounted) {
+      ref.notifyListeners();
+    }
   }
 
-  static Cart _restoreLine(Cart cart, String itemId, CartLine? line) {
-    final lines = [
-      for (final current in cart.lines)
-        if (current.id != itemId) current,
-    ];
-    if (line != null) {
-      final index = cart.lines.indexWhere((current) => current.id == itemId);
-      lines.insert(index < 0 ? lines.length : index, line);
-    }
-
-    return Cart(
-      id: cart.id,
-      branchId: cart.branchId,
-      lines: lines,
-      selectedCount: cart.selectedCount,
-      subtotal: cart.subtotal,
-    );
+  /// Forgets [itemId]'s taps, so they cannot overwrite its removal.
+  /// Their futures never complete: the taps were neither added nor refused.
+  void _dropPending(String itemId) {
+    _pending[itemId]?.drop();
+    _forget(itemId);
   }
 
   Future<void> remove(String itemId) async {
+    _dropPending(itemId);
     final request = ++_requestCount;
     _applyServerCart(
       await ref.read(apiClientProvider).removeCartItem(itemId),
@@ -247,6 +232,32 @@ class CartNotifier extends AsyncNotifier<Cart> {
 
   Future<void> clearSelection() async {
     await selectOnly(const []);
+  }
+}
+
+/// One cart line's taps that the server has not confirmed yet.
+class _PendingLine {
+  _PendingLine(this.confirmedLine);
+
+  /// The line as the server last had it, to put back when a tap fails offline.
+  CartLine? confirmedLine;
+  int quantity = 0;
+
+  /// Sends the burst once the taps pause.
+  Timer? timer;
+
+  /// Reports the newest tap's outcome.
+  Completer<void>? waiter;
+
+  /// The newest request sent for this line.
+  int? request;
+
+  /// Set once a removal or a closed cart overtook these taps; a reply then reports nothing.
+  bool dropped = false;
+
+  void drop() {
+    dropped = true;
+    timer?.cancel();
   }
 }
 

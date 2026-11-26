@@ -76,6 +76,8 @@ void main() {
       final down = ApiException.fromDio(_dioError(status: 503));
 
       expect(down.isNetwork, isFalse);
+      expect(down.isRetryable, isTrue);
+      expect(ApiException.fromDio(_dioError(status: 422)).isRetryable, isFalse);
       expect(down.message, contains("Can't reach Everyday Pharmacy"));
     });
   });

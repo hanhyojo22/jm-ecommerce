@@ -112,7 +112,7 @@ class _ProfileFormState extends ConsumerState<ProfileForm> {
     } on ApiException catch (error) {
       feedback.show(
         error.friendly,
-        onAction: error.isNetwork || (error.statusCode ?? 0) >= 500
+        onAction: error.isRetryable
             ? () {
                 if (mounted) return _save();
               }

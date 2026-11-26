@@ -343,6 +343,107 @@ void main() {
     expect(outcomes, ['ok', 'ok', 'error']);
   });
 
+  testWidgets('removing a line drops its unsent tap instead of sending it', (
+    tester,
+  ) async {
+    final api = _CartApi()..cartProduct = 'shirt';
+    final container = _container(api);
+    container.listen(cartProvider, (_, _) {});
+    await container.read(cartProvider.future);
+
+    final notifier = container.read(cartProvider.notifier);
+    var tapSettled = false;
+    notifier.setQuantity('line', 3).whenComplete(() => tapSettled = true);
+    await notifier.remove('line');
+    await tester.pump(CartNotifier.quantityDebounce);
+    await tester.pump();
+
+    expect(api.removes, 1);
+    expect(api.updates, 0);
+    expect(tapSettled, isFalse);
+    expect(container.read(cartProvider).value!.lines, isEmpty);
+  });
+
+  testWidgets('a tap already sent when its line is removed reports nothing', (
+    tester,
+  ) async {
+    final api = _CartApi()..cartProduct = 'shirt';
+    final container = _container(api);
+    container.listen(cartProvider, (_, _) {});
+    await container.read(cartProvider.future);
+    final notifier = container.read(cartProvider.notifier);
+
+    final reply = api.pendingUpdate = Completer<Cart>();
+    var tapSettled = false;
+    notifier
+        .setQuantity('line', 3)
+        .then((_) => tapSettled = true, onError: (_) => tapSettled = true);
+    await tester.pump(CartNotifier.quantityDebounce);
+    await notifier.remove('line');
+    final readsBefore = api.cartReads;
+    reply.completeError(
+      const ApiException(code: 'not_found', message: 'Gone.', statusCode: 404),
+    );
+    await tester.pump();
+
+    expect(tapSettled, isFalse);
+    expect(api.cartReads, readsBefore);
+  });
+
+  testWidgets('offline, a refused tap goes back to the last confirmed one', (
+    tester,
+  ) async {
+    final api = _CartApi()..cartProduct = 'shirt';
+    final container = _container(api);
+    container.listen(cartProvider, (_, _) {});
+    await container.read(cartProvider.future);
+    final notifier = container.read(cartProvider.notifier);
+
+    final firstReply = api.pendingUpdate = Completer<Cart>();
+    unawaited(notifier.setQuantity('line', 3));
+    await tester.pump(CartNotifier.quantityDebounce);
+    // The second tap is queued while the first is still on its way.
+    Object? refusal;
+    unawaited(
+      notifier
+          .setQuantity('line', 4)
+          .catchError((Object error) => refusal = error),
+    );
+    firstReply.complete(_cart(3));
+    await tester.pump();
+
+    api
+      ..pendingUpdate = null
+      ..failUpdate = true
+      ..failRead = true;
+    await tester.pump(CartNotifier.quantityDebounce);
+    await tester.pump();
+
+    expect(refusal, isA<ApiException>());
+    expect(container.read(cartProvider).value!.lines.single.quantity, 3);
+  });
+
+  testWidgets('a tap still waiting when the cart closes is never confirmed', (
+    tester,
+  ) async {
+    final api = _CartApi()..cartProduct = 'shirt';
+    final container = _container(api);
+    container.listen(cartProvider, (_, _) {});
+    await container.read(cartProvider.future);
+
+    var tapSettled = false;
+    container
+        .read(cartProvider.notifier)
+        .setQuantity('line', 3)
+        .whenComplete(() => tapSettled = true);
+    container.invalidate(cartProvider);
+    await tester.pump(CartNotifier.quantityDebounce);
+    await tester.pump();
+
+    expect(api.updates, 0);
+    expect(tapSettled, isFalse);
+  });
+
   testWidgets('one card\'s server reply leaves another card\'s unsent tap', (
     tester,
   ) async {
@@ -585,6 +686,9 @@ class _CartApi extends ApiClient {
   bool fail = false;
   bool failUpdate = false;
 
+  /// Reading the cart fails as if the phone went offline.
+  bool failRead = false;
+
   /// A cart holding both the shirt ('line') and the soap ('line-soap'), two of each.
   bool twoLines = false;
   final _twoLineQuantities = {'line': 2, 'line-soap': 2};
@@ -611,6 +715,9 @@ class _CartApi extends ApiClient {
   @override
   Future<Cart> cart() async {
     cartReads++;
+    if (failRead) {
+      throw const ApiException(code: 'network.error', message: 'Offline.');
+    }
     if (twoLines) {
       return _twoLineCart();
     }

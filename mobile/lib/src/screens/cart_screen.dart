@@ -42,23 +42,28 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     setState(() => _busy = true);
     try {
       await action();
-    } on ApiException catch (error) {
-      if (mounted) {
-        AppNotice.of(context).show(
-          error.friendly,
-          actionLabel: 'Refresh cart',
-          onAction: error.isNetwork || (error.statusCode ?? 0) >= 500
-              ? () {
-                  if (mounted) return ref.read(cartProvider.notifier).refresh();
-                }
-              : null,
-        );
-      }
-    } catch (_) {
-      _showFeedback('Could not update your cart. Please try again.');
+    } catch (error) {
+      _showCartError(error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  void _showCartError(Object error) {
+    if (!mounted) return;
+    if (error is! ApiException) {
+      _showFeedback('Could not update your cart. Please try again.');
+      return;
+    }
+    AppNotice.of(context).show(
+      error.friendly,
+      actionLabel: 'Refresh cart',
+      onAction: error.isRetryable
+          ? () {
+              if (mounted) return ref.read(cartProvider.notifier).refresh();
+            }
+          : null,
+    );
   }
 
   void _browseProducts() {
@@ -103,6 +108,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = ref.watch(cartProvider);
+    final notifier = ref.read(cartProvider.notifier);
+    final updating = notifier.isUpdating;
     final body = AsyncView(
       value: cart,
       onRetry: () => ref.invalidate(cartProvider),
@@ -164,10 +171,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               ),
                             _CartLineRow(
                               line: value.lines[i],
+                              updating: notifier.isUpdatingItem(
+                                value.lines[i].id,
+                              ),
                               onQuantity: _busy
                                   ? null
                                   : (quantity) => _updateQuantity(
-                                      ref,
                                       value.lines[i],
                                       quantity,
                                     ),
@@ -203,16 +212,21 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'Subtotal',
+                              updating ? 'Updating subtotal…' : 'Subtotal',
                               style: theme.textTheme.labelMedium?.copyWith(
                                 color: scheme.onSurfaceVariant,
                               ),
                             ),
+                            // The old subtotal stays visible but greyed until the
+                            // server prices the new quantity.
                             Text(
                               money(value.subtotal),
                               style: theme.textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: -0.5,
+                                color: updating
+                                    ? scheme.onSurfaceVariant
+                                    : null,
                               ),
                             ),
                             Text(
@@ -233,7 +247,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 22),
                           shape: const StadiumBorder(),
                         ),
-                        onPressed: _busy || value.selectedCount == 0
+                        onPressed: _busy || updating || value.selectedCount == 0
                             ? null
                             : () => context.push('/checkout'),
                         child: const Row(
@@ -261,7 +275,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         _header(),
         SizedBox(
           height: 2,
-          child: _busy
+          child: _busy || updating
               ? const LinearProgressIndicator(semanticsLabel: 'Updating cart')
               : null,
         ),
@@ -312,14 +326,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     );
   }
 
-  Future<void> _updateQuantity(
-    WidgetRef ref,
-    CartLine line,
-    int quantity,
-  ) async {
-    await _runCartAction(() async {
-      await ref.read(cartProvider.notifier).updateQuantity(line.id, quantity);
-    });
+  /// Shows the new quantity at once; the cart sends the last of quick taps and marks the
+  /// subtotal as updating until the server answers.
+  Future<void> _updateQuantity(CartLine line, int quantity) async {
+    try {
+      await ref.read(cartProvider.notifier).setQuantity(line.id, quantity);
+    } catch (error) {
+      _showCartError(error);
+    }
   }
 
   Future<void> _remove(WidgetRef ref, CartLine line) async {
@@ -373,11 +387,15 @@ class _CartLineRow extends StatelessWidget {
     required this.line,
     required this.onQuantity,
     required this.onRemove,
+    this.updating = false,
   });
 
   final CartLine line;
   final ValueChanged<int>? onQuantity;
   final VoidCallback? onRemove;
+
+  /// The quantity waits for the server, so the item's total is the old one.
+  final bool updating;
 
   @override
   Widget build(BuildContext context) {
@@ -472,6 +490,7 @@ class _CartLineRow extends StatelessWidget {
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
                             letterSpacing: -0.3,
+                            color: updating ? scheme.onSurfaceVariant : null,
                           ),
                         ),
                         if (line.quantity > 1)

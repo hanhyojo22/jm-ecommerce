@@ -78,7 +78,9 @@ void main() {
     expect(tester.widget<IconButton>(remove).onPressed, isNotNull);
   });
 
-  test('quantity response after provider disposal completes safely', () async {
+  testWidgets('quantity response after provider disposal lands safely', (
+    tester,
+  ) async {
     final api = _CartApi()..pending = Completer<Cart>();
     final container = ProviderContainer(
       overrides: [
@@ -89,12 +91,13 @@ void main() {
     );
     container.listen(cartProvider, (_, _) {});
     await container.read(cartProvider.future);
-    final operation = container
-        .read(cartProvider.notifier)
-        .updateQuantity('line', 2);
+    unawaited(container.read(cartProvider.notifier).setQuantity('line', 2));
+    await tester.pump(CartNotifier.quantityDebounce);
+    expect(api.updates, 1);
     container.dispose();
-    api.pending!.complete(await api.cart());
-    await expectLater(operation, completes);
+    api.pending!.complete(Cart.empty);
+    await tester.pump();
+    expect(tester.takeException(), isNull);
   });
 
   test(
@@ -121,33 +124,36 @@ void main() {
     },
   );
 
-  testWidgets('pending quantity blocks duplicate writes and checkout', (
-    tester,
-  ) async {
-    final api = _CartApi()..pending = Completer<Cart>();
-    await _pump(tester, api);
-    await tester.tap(find.byTooltip('Increase quantity'));
-    await tester.pump();
-    expect(
-      tester
-          .widget<IconButton>(
-            find.widgetWithIcon(IconButton, Icons.add_rounded),
-          )
-          .onPressed,
-      isNull,
-    );
-    expect(
-      tester
-          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Checkout'))
-          .onPressed,
-      isNull,
-    );
-    expect(find.byType(LinearProgressIndicator), findsOneWidget);
-    api.pending!.complete(await api.cart());
-    await tester.pumpAndSettle();
-    expect(api.updates, 1);
-    expect(find.text('2'), findsOneWidget);
-  });
+  testWidgets(
+    'quick taps show at once and hold checkout until the server prices them',
+    (tester) async {
+      final api = _CartApi()..pending = Completer<Cart>();
+      await _pump(tester, api);
+      final checkout = find.widgetWithText(FilledButton, 'Checkout');
+
+      await tester.tap(find.byTooltip('Increase quantity'));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.byTooltip('Increase quantity'));
+      await tester.pump();
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('Updating subtotal…'), findsOneWidget);
+      expect(tester.widget<FilledButton>(checkout).onPressed, isNull);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+
+      await tester.pump(CartNotifier.quantityDebounce);
+      expect(api.updates, 1);
+      // Still waiting for the server's price.
+      expect(tester.widget<FilledButton>(checkout).onPressed, isNull);
+
+      api.pending!.complete(Cart.empty);
+      await tester.pumpAndSettle();
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('Subtotal'), findsOneWidget);
+      // The item's total and the subtotal, both priced by the server.
+      expect(find.text('₱750.00'), findsNWidgets(2));
+      expect(tester.widget<FilledButton>(checkout).onPressed, isNotNull);
+    },
+  );
 
   testWidgets('failed refresh preserves cart and shows recovery feedback', (
     tester,
@@ -170,7 +176,7 @@ void main() {
     final api = _CartApi()..pending = Completer<Cart>();
     await _pump(tester, api);
     await tester.tap(find.byTooltip('Increase quantity'));
-    await tester.pump();
+    await tester.pump(CartNotifier.quantityDebounce);
     api.pending!.completeError(
       const ApiException(code: 'stock', message: 'Only one item remains.'),
     );
@@ -215,6 +221,7 @@ void main() {
       isNull,
     );
     await tester.tap(find.byTooltip('Increase quantity'));
+    await tester.pump(CartNotifier.quantityDebounce);
     await tester.pumpAndSettle();
     expect(api.quantity, 2);
     expect(find.text('2'), findsOneWidget);
@@ -370,8 +377,10 @@ class _CartApi extends ApiClient {
   @override
   Future<Cart> updateCartItem(String id, int quantity) async {
     updates++;
+    // Holds the reply until the test answers; a completeError refuses the change.
+    await pending?.future;
     this.quantity = quantity;
-    return pending?.future ?? cart();
+    return cart();
   }
 
   @override

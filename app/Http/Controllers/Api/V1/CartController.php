@@ -121,6 +121,8 @@ class CartController extends Controller
     private function payload(Request $request): JsonResponse
     {
         $cart = $request->user()->cart()->with([
+            // ULIDs sort by when the item was added, so a quantity change never moves an item.
+            'items' => fn ($query) => $query->orderBy('id'),
             'store:id,tenant_id,name,status',
             'items.cart.store:id,tenant_id,name,slug,status',
             'items.product:id,tenant_id,store_id,name,slug,price,stock_quantity,status,requires_prescription',

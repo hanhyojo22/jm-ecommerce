@@ -21,6 +21,9 @@ class ApiException implements Exception {
   /// The phone never got an answer: no connection, a timeout, or a cancelled request.
   bool get isNetwork => code == 'network.error' && statusCode == null;
 
+  /// Trying again may work: the request never arrived, or the server failed on its side.
+  bool get isRetryable => isNetwork || (statusCode ?? 0) >= 500;
+
   String get friendly {
     for (final values in fields.values) {
       if (values.isNotEmpty && values.first.trim().isNotEmpty) {
