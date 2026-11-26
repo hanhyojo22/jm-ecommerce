@@ -186,10 +186,9 @@ test('seller can search dashboard help and use keyboard shortcuts', async ({ bro
         await expect(page.getByText('No help topics match that search.')).toBeHidden();
 
         await page.getByRole('heading', { name: 'Overview', exact: true }).click();
+        // S jumps to the header's product search on every Seller Center page.
         await page.keyboard.press('s');
-        await expect(page).toHaveURL(/\/seller\/products$/);
-        await page.keyboard.press('s');
-        await expect(page.locator('#product-search')).toBeFocused();
+        await expect(page.locator('#marketplace-search')).toBeFocused();
 
         await page.goto('/seller');
         await page.getByRole('heading', { name: 'Overview', exact: true }).click();
@@ -515,7 +514,7 @@ test('seller adds a size option to a saved product without changing its saved va
         await page.locator('#option-name-0').selectOption('Size');
         await page.getByLabel('Size value 1').fill('S');
         await page.getByLabel('Size value 2').fill('M');
-        await page.getByRole('button', { name: 'Done' }).click();
+        await page.getByRole('button', { name: 'Done', exact: true }).click();
         await page.getByLabel('Available for S').fill('2');
         await page.getByRole('button', { name: 'Save product' }).click();
         await expect(page).toHaveURL(/\/seller\/products$/);
@@ -526,7 +525,7 @@ test('seller adds a size option to a saved product without changing its saved va
         await expect(page.getByLabel('Size value 1')).toHaveJSProperty('readOnly', true);
         await expect(page.getByRole('button', { name: 'Add another option' })).toBeVisible();
         await page.getByLabel('Size value 3').fill('L');
-        await page.getByRole('button', { name: 'Done' }).click();
+        await page.getByRole('button', { name: 'Done', exact: true }).click();
         await expect(page.getByRole('region', { name: 'Unsaved changes' })).toBeVisible();
         await page.getByRole('button', { name: 'Save changes', exact: true }).click();
         await expect(page).toHaveURL(/\/seller\/products$/);

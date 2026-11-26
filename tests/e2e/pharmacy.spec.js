@@ -140,7 +140,10 @@ test('head office adds a pharmacist to a branch from the Staff page', async ({ b
         await employee.getByRole('button', { name: /^Edit / }).click();
         const editor = page.getByRole('dialog', { name: 'Edit member', exact: true });
         await editor.getByRole('textbox', { name: 'PRC license no.', exact: true }).fill('invalid');
+        // Wait for the rejected save to reload the page, or the next steps act on the old, submitting form.
+        const rejectedSave = page.waitForEvent('load');
         await editor.getByRole('button', { name: 'Save changes' }).click();
+        await rejectedSave;
         await expect(editor).toBeVisible();
         await expect(editor.getByRole('textbox', { name: 'PRC license no.', exact: true })).toHaveValue('invalid');
         await editor.getByRole('textbox', { name: 'PRC license no.', exact: true }).fill('0765432');
