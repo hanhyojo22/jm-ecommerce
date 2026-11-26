@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import 'package:phosphor_icons/phosphor_icons.dart';
 
 import '../core/formatters.dart';
@@ -906,10 +907,26 @@ class _BranchSelectorSheet extends ConsumerWidget {
       ),
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: Text(
-            'Choose a branch',
-            style: Theme.of(context).textTheme.titleMedium,
+          padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Choose a branch',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              if (GoRouter.maybeOf(context) != null)
+                TextButton.icon(
+                  onPressed: () {
+                    final router = GoRouter.of(context);
+                    Navigator.pop(context);
+                    router.push('/branches');
+                  },
+                  icon: const Icon(PhosphorIconsRegular.mapTrifold, size: 17),
+                  label: const Text('View map'),
+                ),
+            ],
           ),
         ),
         // Distances need location; the sheet stays open so they appear once allowed.

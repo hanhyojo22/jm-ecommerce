@@ -15,7 +15,6 @@ import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/status_notice.dart';
 import '../widgets/shell.dart';
-import '../widgets/store_locator.dart';
 
 /// Signs out and leaves the app running as a guest on Shop. Local state is
 /// cleared even if a step fails, such as Clerk's sign-out after the account
@@ -143,7 +142,7 @@ class AccountScreen extends ConsumerWidget {
                 onReviewsTap: () => _openOrdersTab(ref, 'to_review'),
                 onMessagesTap: () =>
                     ref.read(shellTabProvider.notifier).select(2),
-                onBranchesTap: () => showBranchSelectorSheet(context),
+                onBranchesTap: () => context.push('/branches'),
                 onHelpTap: () => _showHelpSheet(context),
               ),
               const SizedBox(height: 16),
