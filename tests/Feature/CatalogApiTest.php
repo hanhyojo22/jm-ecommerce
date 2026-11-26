@@ -161,7 +161,7 @@ class CatalogApiTest extends TestCase
     public function test_store_locations_list_only_public_stores_with_a_pin_and_hide_private_addresses(): void
     {
         $pinned = $this->product()->store;
-        $pinned->update(['latitude' => 14.5547, 'longitude' => 121.0244, 'delivery_radius_km' => 8, 'province' => 'Metro Manila', 'pickup_address' => 'Secret warehouse']);
+        $pinned->update(['latitude' => 14.5547, 'longitude' => 121.0244, 'delivery_radius_km' => 8, 'province' => 'Metro Manila', 'phone' => '+639171234567', 'address_line' => '12 Ayala Avenue', 'barangay' => 'San Lorenzo', 'pickup_address' => 'Secret warehouse']);
         $pinned->tenant->update(['delivery_fee' => 49]);
         $this->product();
         $this->product([], 'active', 'suspended')->store->update(['latitude' => 14.6, 'longitude' => 121.0]);
@@ -174,6 +174,10 @@ class CatalogApiTest extends TestCase
             ->assertJsonPath('data.0.delivery_radius_km', 8)
             ->assertJsonPath('data.0.province', 'Metro Manila')
             ->assertJsonPath('data.0.delivery_fee', '49.00')
+            // The counter's phone and street address are for customers; barangay sits with the private courier details.
+            ->assertJsonPath('data.0.phone', '+639171234567')
+            ->assertJsonPath('data.0.address_line', '12 Ayala Avenue')
+            ->assertJsonMissingPath('data.0.barangay')
             ->assertJsonMissingPath('data.0.pickup_address');
     }
 

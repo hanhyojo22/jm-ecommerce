@@ -160,13 +160,6 @@ class BranchDistance {
   final StoreBranch branch;
   final double? distanceKm;
 
-  int? get estimatedDriveMinutes =>
-      distanceKm == null ? null : (distanceKm! / 22 * 60).round().clamp(2, 180);
-
-  int? get estimatedWalkMinutes => distanceKm == null
-      ? null
-      : (distanceKm! / 4.8 * 60).round().clamp(3, 300);
-
   bool get isWithinDeliveryRadius {
     final radius = branch.maxDeliveryRadiusKm;
     return distanceKm != null && radius != null && distanceKm! <= radius;

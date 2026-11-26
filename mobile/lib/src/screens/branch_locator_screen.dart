@@ -231,6 +231,18 @@ class _BranchLocatorScreenState extends ConsumerState<BranchLocatorScreen> {
     setState(() => _currentZoom = zoom);
   }
 
+  /// Centres on the nearest branch once both the map and the branch list are
+  /// ready, whichever arrives last.
+  void _focusNearestBranchOnce() {
+    final locator = ref.read(nearestStoreProvider).value;
+    final focus = locator?.nearest ?? locator?.branches.firstOrNull;
+    if (_hasInitializedCamera || !_mapReady || focus == null) {
+      return;
+    }
+    _hasInitializedCamera = true;
+    _focusBranch(focus);
+  }
+
   void _focusBranch(BranchDistance item, {bool expandZoom = false}) {
     setState(() => _selectedBranchId = item.branch.id);
     if (!_mapReady) {
@@ -412,16 +424,9 @@ class _BranchLocatorScreenState extends ConsumerState<BranchLocatorScreen> {
     );
 
     if (!_hasInitializedCamera && locator != null) {
-      _hasInitializedCamera = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !_mapReady) {
-          return;
-        }
-        final focus =
-            locator.nearest ??
-            (locator.branches.isNotEmpty ? locator.branches.first : null);
-        if (focus != null) {
-          _focusBranch(focus);
+        if (mounted) {
+          _focusNearestBranchOnce();
         }
       });
     }
@@ -476,10 +481,7 @@ class _BranchLocatorScreenState extends ConsumerState<BranchLocatorScreen> {
                   ),
                   onMapReady: () {
                     _mapReady = true;
-                    if (selected != null && !_hasInitializedCamera) {
-                      _hasInitializedCamera = true;
-                      _focusBranch(selected);
-                    }
+                    _focusNearestBranchOnce();
                   },
                   onPositionChanged: (camera, hasGesture) {
                     final zoomChanged =
@@ -528,7 +530,7 @@ class _BranchLocatorScreenState extends ConsumerState<BranchLocatorScreen> {
                           ),
                           width: 120,
                           height: 28,
-                          child: Center(child: _RouteEtaChip(item: selected)),
+                          child: Center(child: _DistanceChip(item: selected)),
                         ),
                       ],
                     ),
@@ -1172,7 +1174,6 @@ class _BranchLocationCard extends StatelessWidget {
     final scheme = theme.colorScheme;
     final dark = theme.brightness == Brightness.dark;
     final branch = item.branch;
-    final driveMin = item.estimatedDriveMinutes;
 
     return Card(
       color: selected
@@ -1246,35 +1247,11 @@ class _BranchLocationCard extends StatelessWidget {
                   ),
                   if (item.distanceKm != null) ...[
                     const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '${item.distanceKm!.toStringAsFixed(1)} km',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        if (driveMin != null)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                PhosphorIconsRegular.car,
-                                size: 12,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                '$driveMin min',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                      ],
+                    Text(
+                      '${item.distanceKm!.toStringAsFixed(1)} km',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ],
                 ],
@@ -1931,18 +1908,16 @@ class _UserLocationDot extends StatelessWidget {
   }
 }
 
-class _RouteEtaChip extends StatelessWidget {
-  const _RouteEtaChip({required this.item});
+/// Straight-line distance only: there is no routing data, so no travel time is shown.
+class _DistanceChip extends StatelessWidget {
+  const _DistanceChip({required this.item});
 
   final BranchDistance item;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final driveMin = item.estimatedDriveMinutes;
-    final text = driveMin == null
-        ? '${item.distanceKm!.toStringAsFixed(1)} km'
-        : '${item.distanceKm!.toStringAsFixed(1)} km · $driveMin min';
+    final text = '${item.distanceKm!.toStringAsFixed(1)} km';
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -2117,8 +2092,6 @@ class _BranchDetailSheetState extends State<_BranchDetailSheet> {
     final sky = skySlab(scheme);
     final item = widget.item;
     final branch = item.branch;
-    final driveMin = item.estimatedDriveMinutes;
-    final walkMin = item.estimatedWalkMinutes;
     final hoursRange = branch.formattedHoursRange;
 
     return Padding(
@@ -2246,33 +2219,9 @@ class _BranchDetailSheetState extends State<_BranchDetailSheet> {
                   ),
                   if (item.distanceKm != null) ...[
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _MetricTile(
-                            value: '${item.distanceKm!.toStringAsFixed(1)} km',
-                            label: 'Distance',
-                          ),
-                        ),
-                        if (driveMin != null) ...[
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _MetricTile(
-                              value: '$driveMin min',
-                              label: 'By car',
-                            ),
-                          ),
-                        ],
-                        if (walkMin != null) ...[
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _MetricTile(
-                              value: '$walkMin min',
-                              label: 'Walking',
-                            ),
-                          ),
-                        ],
-                      ],
+                    _MetricTile(
+                      value: '${item.distanceKm!.toStringAsFixed(1)} km',
+                      label: 'Straight-line distance',
                     ),
                   ],
                   const SizedBox(height: 12),
@@ -2596,7 +2545,6 @@ class _DirectionsChooserSheet extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final branch = item.branch;
-    final driveMin = item.estimatedDriveMinutes;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -2622,9 +2570,7 @@ class _DirectionsChooserSheet extends StatelessWidget {
           if (item.distanceKm != null) ...[
             const SizedBox(height: 6),
             Text(
-              driveMin == null
-                  ? '${item.distanceKm!.toStringAsFixed(1)} km away'
-                  : '${item.distanceKm!.toStringAsFixed(1)} km away · Est. $driveMin min drive',
+              '${item.distanceKm!.toStringAsFixed(1)} km away',
               style: theme.textTheme.labelLarge?.copyWith(
                 color: scheme.primary,
               ),

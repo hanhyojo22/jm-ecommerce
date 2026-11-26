@@ -104,16 +104,6 @@ void main() {
       expect(parsed.formattedHoursRange, '7:00 AM – 10:00 PM');
     });
 
-    test('computes estimated drive and walk times', () {
-      const item = BranchDistance(_capitol, 2.2);
-      expect(item.estimatedDriveMinutes, 6);
-      expect(item.estimatedWalkMinutes, 28);
-      expect(
-        const BranchDistance(_capitol, null).estimatedDriveMinutes,
-        isNull,
-      );
-    });
-
     test(
       'clusters nearby pins when zoomed out and separates when zoomed in',
       () {
@@ -315,6 +305,17 @@ void main() {
     });
 
     testWidgets(
+      'centres on the nearest branch when the branches were already loaded',
+      (tester) async {
+        await _pumpLocator(tester, branchesAlreadyLoaded: true);
+
+        final camera = MapCamera.of(tester.element(find.byType(TileLayer)));
+        // The user stands at 123.8905; the nearest branch, Cebu Capitol, is at 123.8912.
+        expect(camera.center.longitude, closeTo(_capitol.longitude, 0.00001));
+      },
+    );
+
+    testWidgets(
       'renders cleanly on compact width, 1.3x text scale, and dark mode',
       (tester) async {
         await _pumpLocator(
@@ -340,24 +341,35 @@ Future<void> _pumpLocator(
   double height = 844,
   double textScale = 1.0,
   Brightness brightness = Brightness.light,
+  bool branchesAlreadyLoaded = false,
 }) async {
   tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
 
+  final container = ProviderContainer(
+    overrides: [
+      isSignedInProvider.overrideWithValue(false),
+      apiClientProvider.overrideWithValue(_FakeApi()),
+      storeBranchesProvider.overrideWith(
+        (ref) async => [_capitol, _fuente24, _mactanClosed],
+      ),
+      locationServiceProvider.overrideWithValue(
+        _FakeLocationService(failure: locationIssue),
+      ),
+    ],
+  );
+  addTearDown(container.dispose);
+  if (branchesAlreadyLoaded) {
+    // As when the Shop tab has already found the nearest branch.
+    container.listen(nearestStoreProvider, (_, _) {});
+    await container.read(nearestStoreProvider.future);
+  }
+
   await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-        isSignedInProvider.overrideWithValue(false),
-        apiClientProvider.overrideWithValue(_FakeApi()),
-        storeBranchesProvider.overrideWith(
-          (ref) async => [_capitol, _fuente24, _mactanClosed],
-        ),
-        locationServiceProvider.overrideWithValue(
-          _FakeLocationService(failure: locationIssue),
-        ),
-      ],
+    UncontrolledProviderScope(
+      container: container,
       child: MaterialApp(
         theme: buildAppTheme(brightness: brightness),
         builder: (context, child) => MediaQuery(
