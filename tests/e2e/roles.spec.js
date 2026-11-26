@@ -70,7 +70,8 @@ test('seller catalog shows real products and opens working details at desktop an
         expect(Math.abs(desktopAlignment.headerLeft - desktopAlignment.catalogLeft)).toBeLessThanOrEqual(1);
         // Centred in the content column, not pinned to the sidebar.
         expect(desktopAlignment.leftSlack).toBe(desktopAlignment.rightSlack);
-        expect(desktopAlignment.catalogWidth).toBe(1386);
+        // 1682px viewport less the 248px Seller Center sidebar and the page gutters.
+        expect(desktopAlignment.catalogWidth).toBe(1370);
         await expect(page.getByRole('table').getByText('QA Canvas Tote')).toBeVisible();
         await expect(page.getByRole('table').getByText('₱19.99', { exact: true })).toBeVisible();
         await expect(page.getByText('Other Seller QA Product')).toHaveCount(0);
@@ -121,6 +122,9 @@ test('seller workspace sections centre with their catalog gutters', async ({ bro
                 await rejectOptionalCookies(page);
                 const containerSelector = '.seller-workspace-page';
                 await expect(page.locator(containerSelector)).toBeVisible();
+                // CI has measured 0px here while the screenshot shows the 32px gutter, so wait for the
+                // page's styles to settle before reading the layout.
+                await expect.poll(() => page.locator(containerSelector).evaluate(element => parseFloat(getComputedStyle(element).paddingLeft)), { message: section }).toBe(expectedPadding);
 
                 const layout = await page.evaluate((selector) => {
                     const element = document.querySelector(selector);
@@ -144,7 +148,7 @@ test('seller workspace sections centre with their catalog gutters', async ({ bro
                 expect(layout.paddingInline, section).toBe(expectedPadding);
                 if (width === 1682) {
                     // Orders stretch across the whole content column; the rest take the 1400px measure.
-                    expect(layout.width, section).toBe({ '/seller/orders': 1386 }[section] ?? 1336);
+                    expect(layout.width, section).toBe({ '/seller/orders': 1370 }[section] ?? 1336);
                 }
                 if (layout.headerLeft !== null) {
                     expect(layout.headerLeft, section).toBe(layout.contentLeft);

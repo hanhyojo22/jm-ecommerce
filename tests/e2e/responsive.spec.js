@@ -720,9 +720,10 @@ test('workspace pages hold their own measure and gutter', async ({ browser }) =>
     const customer = await openAsRole(browser, 'customer', { viewport: wide });
 
     try {
-        // One sidebar column for both workspaces, then each page takes the measure its content reads at.
+        // Seller Center's sidebar is wider (role badges); each page then takes the measure its content reads at.
         const purchases = await measure(customer.page, '/orders');
-        expect(purchases.sidebar).toBe(sidebar);
+        expect(sidebar).toBe('248px');
+        expect(purchases.sidebar).toBe('232px');
         // The orders list reads as one ledger line, so its measure is 1080 (app.css account measures).
         expect(purchases.width).toBe(1080);
         expect(purchases.leftSlack).toBe(purchases.rightSlack);
