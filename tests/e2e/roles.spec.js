@@ -434,13 +434,16 @@ test('seller order workspace keeps a discount review error visible after redirec
         await expect(page.locator('.sc-order-ref')).toHaveText('Order QA-REVIEW-001');
         const orderId = new URL(page.url()).searchParams.get('order');
         const token = await page.locator('meta[name="csrf-token"]').getAttribute('content');
-        const response = await page.request.post(new URL(`/seller/orders/${orderId}/discount-document/review`, page.url()).href, {
-            form: { _token: token },
-            headers: { Referer: page.url() },
-            maxRedirects: 0,
-        });
-        expect(response.status()).toBe(302);
-        await page.reload();
+        // Submit from the page so the browser follows the redirect at once. A background POST plus a
+        // reload let the header's 15s message poll land in between and use up the one-time error.
+        const redirected = page.waitForEvent('load');
+        await page.evaluate(({ action, token }) => {
+            const form = Object.assign(document.createElement('form'), { method: 'POST', action });
+            form.append(Object.assign(document.createElement('input'), { type: 'hidden', name: '_token', value: token }));
+            document.body.append(form);
+            form.submit();
+        }, { action: new URL(`/seller/orders/${orderId}/discount-document/review`, page.url()).href, token });
+        await redirected;
         const detail = page.getByRole('region', { name: 'Selected order details' });
         await expect(detail.getByText('Only an active discounted order with a submitted ID can be reviewed.', { exact: true })).toBeVisible();
         await page.screenshot({ path: testInfo.outputPath('discount-review-error.png'), fullPage: true });

@@ -61,14 +61,16 @@ class CheckoutTest extends TestCase
             ->assertViewHas('recommendedProducts', fn ($products): bool => $products->first()?->id === $related->id
                 && ! $products->contains('id', $purchased->id));
 
+        // Only delivered orders rank products, so both products tie here and their order is not
+        // fixed (Postgres returns either); what matters is that the purchase is no longer hidden.
         $this->actingAs($otherBuyer)->getJson(route('api.v1.products.recommended'))
             ->assertOk()
-            ->assertJsonPath('data.0.id', $purchased->id);
+            ->assertJsonFragment(['id' => $purchased->id]);
 
         $order->payment()->update(['status' => 'refunded']);
         $this->actingAs($buyer)->getJson(route('api.v1.products.recommended'))
             ->assertOk()
-            ->assertJsonPath('data.0.id', $purchased->id);
+            ->assertJsonFragment(['id' => $purchased->id]);
 
         $order->payment()->update(['status' => 'pending']);
         $order->sellerOrders()->update(['status' => 'cancelled']);
