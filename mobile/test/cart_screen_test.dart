@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:jmmart/src/core/api_client.dart';
 import 'package:jmmart/src/core/api_exception.dart';
 import 'package:jmmart/src/models/models.dart';
@@ -57,25 +58,48 @@ void main() {
     expect(api.lastSelection, isNull);
   });
 
-  testWidgets('failed removal leaves the item and allows retry', (
+  testWidgets('a removed item leaves at once, with Undo and no loading bar', (
+    tester,
+  ) async {
+    final api = _CartApi()..secondItem = true;
+    await _pump(tester, api);
+    await tester.tap(
+      find.widgetWithIcon(IconButton, Icons.delete_outline_rounded).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(_productName), findsNothing);
+    expect(find.text('Removed $_productName'), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(api.removals, 0);
+    // The notice sits above the subtotal bar, so the total and Checkout stay in sight.
+    expect(
+      tester.getBottomLeft(find.text('Undo')).dy,
+      lessThan(tester.getTopLeft(find.text('Subtotal')).dy),
+    );
+
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+    await tester.pump(CartNotifier.removalUndoWindow);
+    expect(find.text(_productName), findsOneWidget);
+    expect(api.removals, 0);
+  });
+
+  testWidgets('failed removal brings the item back and says why', (
     tester,
   ) async {
     final api = _CartApi()..removePending = Completer<Cart>();
     await _pump(tester, api);
-    final remove = find.widgetWithIcon(
-      IconButton,
-      Icons.delete_outline_rounded,
+    await tester.tap(
+      find.widgetWithIcon(IconButton, Icons.delete_outline_rounded),
     );
-    await tester.tap(remove);
-    await tester.pump();
-    expect(tester.widget<IconButton>(remove).onPressed, isNull);
+    await tester.pumpAndSettle();
+    await tester.pump(CartNotifier.removalUndoWindow);
     api.removePending!.completeError(
       const ApiException(code: 'network', message: 'Please retry removal.'),
     );
     await tester.pumpAndSettle();
     expect(find.text(_productName), findsOneWidget);
     expect(find.text('Please retry removal.'), findsOneWidget);
-    expect(tester.widget<IconButton>(remove).onPressed, isNotNull);
   });
 
   testWidgets('quantity response after provider disposal lands safely', (
@@ -100,60 +124,97 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  test(
-    'selection uses the response without a redundant cart fetch',
-    () async {
-      final api = _CartApi();
-      final container = ProviderContainer(
-        overrides: [
-          isSignedInProvider.overrideWithValue(true),
-          apiClientProvider.overrideWithValue(api),
-          activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
-        ],
-      );
-      addTearDown(container.dispose);
-      container.listen(cartProvider, (_, _) {});
-      await container.read(cartProvider.future);
-      api.failRead = true;
-      await container.read(cartProvider.notifier).selectOnly(const []);
-      expect(container.read(cartProvider).requireValue.cart.selectedCount, 0);
-      expect(
-        container.read(cartProvider).requireValue.cart.lines.single.selected,
-        isFalse,
-      );
-    },
-  );
+  test('selection uses the response without a redundant cart fetch', () async {
+    final api = _CartApi();
+    final container = ProviderContainer(
+      overrides: [
+        isSignedInProvider.overrideWithValue(true),
+        apiClientProvider.overrideWithValue(api),
+        activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.listen(cartProvider, (_, _) {});
+    await container.read(cartProvider.future);
+    api.failRead = true;
+    await container.read(cartProvider.notifier).selectOnly(const []);
+    expect(container.read(cartProvider).requireValue.cart.selectedCount, 0);
+    expect(
+      container.read(cartProvider).requireValue.cart.lines.single.selected,
+      isFalse,
+    );
+  });
 
-  testWidgets(
-    'quick taps show at once and hold checkout until the server prices them',
-    (tester) async {
-      final api = _CartApi()..pending = Completer<Cart>();
-      await _pump(tester, api);
-      final checkout = find.widgetWithText(FilledButton, 'Checkout');
+  testWidgets('quick taps change only the number, with no loading bar', (
+    tester,
+  ) async {
+    final api = _CartApi()..pending = Completer<Cart>();
+    await _pump(tester, api);
+    final checkout = find.widgetWithText(FilledButton, 'Checkout');
 
-      await tester.tap(find.byTooltip('Increase quantity'));
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.tap(find.byTooltip('Increase quantity'));
-      await tester.pump();
-      expect(find.text('3'), findsOneWidget);
-      expect(find.text('Updating subtotal…'), findsOneWidget);
-      expect(tester.widget<FilledButton>(checkout).onPressed, isNull);
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    await tester.tap(find.byTooltip('Increase quantity'));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.byTooltip('Increase quantity'));
+    await tester.pump();
+    expect(find.text('3'), findsOneWidget);
+    expect(find.text('Subtotal'), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(tester.widget<FilledButton>(checkout).onPressed, isNotNull);
 
-      await tester.pump(CartNotifier.quantityDebounce);
-      expect(api.updates, 1);
-      // Still waiting for the server's price.
-      expect(tester.widget<FilledButton>(checkout).onPressed, isNull);
+    await tester.pump(CartNotifier.quantityDebounce);
+    expect(api.updates, 1);
+    api.pending!.complete(Cart.empty);
+    await tester.pumpAndSettle();
+    expect(find.text('3'), findsOneWidget);
+    // The item's total and the subtotal, both priced by the server.
+    expect(find.text('₱750.00'), findsNWidgets(2));
+  });
 
-      api.pending!.complete(Cart.empty);
-      await tester.pumpAndSettle();
-      expect(find.text('3'), findsOneWidget);
-      expect(find.text('Subtotal'), findsOneWidget);
-      // The item's total and the subtotal, both priced by the server.
-      expect(find.text('₱750.00'), findsNWidgets(2));
-      expect(tester.widget<FilledButton>(checkout).onPressed, isNotNull);
-    },
-  );
+  testWidgets('checkout sends a waiting quantity first and opens once priced', (
+    tester,
+  ) async {
+    final api = _CartApi()..pending = Completer<Cart>();
+    await _pump(tester, api);
+
+    await tester.tap(find.byTooltip('Increase quantity'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Checkout'));
+    await tester.pump();
+    // Sent at once instead of after the pause, and checkout waits for the price.
+    expect(api.updates, 1);
+    expect(
+      find.descendant(
+        of: find.widgetWithText(FilledButton, 'Checkout'),
+        matching: find.byType(CircularProgressIndicator),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Checkout route'), findsNothing);
+
+    api.pending!.complete(Cart.empty);
+    await tester.pumpAndSettle();
+    expect(find.text('Checkout route'), findsOneWidget);
+  });
+
+  testWidgets('a refused quantity keeps the customer in the cart', (
+    tester,
+  ) async {
+    final api = _CartApi()..pending = Completer<Cart>();
+    await _pump(tester, api);
+
+    await tester.tap(find.byTooltip('Increase quantity'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Checkout'));
+    await tester.pump();
+    api.pending!.completeError(
+      const ApiException(code: 'stock', message: 'Only one item remains.'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Checkout route'), findsNothing);
+    expect(find.text('Only one item remains.'), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
+  });
 
   testWidgets('failed refresh preserves cart and shows recovery feedback', (
     tester,
@@ -200,6 +261,9 @@ void main() {
     await tester.tap(
       find.widgetWithIcon(IconButton, Icons.delete_outline_rounded),
     );
+    await tester.pumpAndSettle();
+    expect(find.text('Your cart is empty'), findsOneWidget);
+    await tester.pump(CartNotifier.removalUndoWindow);
     await tester.pumpAndSettle();
     expect(api.removals, 1);
     expect(find.text('Your cart is empty'), findsOneWidget);
@@ -290,6 +354,13 @@ Future<void> _pump(
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
+  final home = IndexedStack(
+    index: inactive ? 1 : 0,
+    children: [
+      CartScreen(active: !inactive, onBrowseProducts: onBrowseProducts),
+      const SizedBox(),
+    ],
+  );
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -297,7 +368,7 @@ Future<void> _pump(
         apiClientProvider.overrideWithValue(api),
         activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
       ],
-      child: MaterialApp(
+      child: MaterialApp.router(
         theme: buildAppTheme(
           brightness: dark ? Brightness.dark : Brightness.light,
         ),
@@ -306,11 +377,13 @@ Future<void> _pump(
               .copyWith(textScaler: TextScaler.linear(scale)),
           child: child!,
         ),
-        home: IndexedStack(
-          index: inactive ? 1 : 0,
-          children: [
-            CartScreen(active: !inactive, onBrowseProducts: onBrowseProducts),
-            const SizedBox(),
+        routerConfig: GoRouter(
+          routes: [
+            GoRoute(path: '/', builder: (_, _) => home),
+            GoRoute(
+              path: '/checkout',
+              builder: (_, _) => const Scaffold(body: Text('Checkout route')),
+            ),
           ],
         ),
       ),
@@ -323,6 +396,9 @@ class _CartApi extends ApiClient {
   _CartApi()
     : super(baseUrl: 'http://localhost', tokenProvider: () async => null);
   bool available = true;
+
+  /// Adds a second item, so removing the first leaves the subtotal bar on screen.
+  bool secondItem = false;
   bool startSelected = true;
   List<String>? lastSelection;
   int quantity = 1;
@@ -367,6 +443,21 @@ class _CartApi extends ApiClient {
               hasVariants: true,
               variantLabel: 'Navy blue / Large',
             ),
+            if (secondItem)
+              const CartLine(
+                id: 'line-2',
+                productId: 'soap',
+                quantity: 1,
+                selected: true,
+                available: true,
+                unitPrice: '40.00',
+                lineTotal: '40.00',
+                productName: 'Bath soap',
+                productSlug: 'soap',
+                storeName: 'Cebu Capitol',
+                storeSlug: 'store',
+                hasVariants: false,
+              ),
           ],
           selectedCount: available && (startSelected || lastSelection != null)
               ? 1

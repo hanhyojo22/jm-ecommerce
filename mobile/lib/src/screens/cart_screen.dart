@@ -35,6 +35,25 @@ class CartScreen extends ConsumerStatefulWidget {
 
 class _CartScreenState extends ConsumerState<CartScreen> {
   bool _busy = false;
+  bool _openingCheckout = false;
+  final _summaryKey = GlobalKey();
+
+  /// Opens checkout; a quantity still waiting for the server is sent first, so checkout
+  /// never prices an old cart. A refused change stays here, and its tap says why.
+  Future<void> _checkout() async {
+    if (_openingCheckout) return;
+    if (ref.read(cartProvider).value?.isUpdating ?? false) {
+      setState(() => _openingCheckout = true);
+      final confirmed = await ref
+          .read(cartProvider.notifier)
+          .sendWaitingChanges();
+      if (!mounted) return;
+      setState(() => _openingCheckout = false);
+      if (!confirmed) return;
+    }
+    context.push('/checkout');
+  }
+
   String? _selectAttempt;
 
   Future<void> _runCartAction(Future<void> Function() action) async {
@@ -161,30 +180,38 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _BranchLine(name: value.lines.first.storeName),
-                          for (var i = 0; i < value.lines.length; i++) ...[
-                            if (i > 0)
-                              Divider(
-                                height: 1,
-                                indent: 16,
-                                endIndent: 16,
-                                color: scheme.outlineVariant,
-                              ),
-                            _CartLineRow(
-                              line: value.lines[i],
-                              updating: shown.updatingItemIds.contains(
-                                value.lines[i].id,
-                              ),
-                              onQuantity: _busy
-                                  ? null
-                                  : (quantity) => _updateQuantity(
-                                      value.lines[i],
-                                      quantity,
-                                    ),
+                          for (var i = 0; i < value.lines.length; i++)
+                            _CollapsingRow(
+                              key: ValueKey(value.lines[i].id),
                               onRemove: _busy
                                   ? null
-                                  : () => _remove(ref, value.lines[i]),
+                                  : () => _remove(value.lines[i]),
+                              builder: (remove) => Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  if (i > 0)
+                                    Divider(
+                                      height: 1,
+                                      indent: 16,
+                                      endIndent: 16,
+                                      color: scheme.outlineVariant,
+                                    ),
+                                  _CartLineRow(
+                                    line: value.lines[i],
+                                    updating: shown.updatingItemIds.contains(
+                                      value.lines[i].id,
+                                    ),
+                                    onQuantity: _busy
+                                        ? null
+                                        : (quantity) => _updateQuantity(
+                                            value.lines[i],
+                                            quantity,
+                                          ),
+                                    onRemove: remove,
+                                  ),
+                                ],
+                              ),
                             ),
-                          ],
                         ],
                       ),
                     ),
@@ -195,6 +222,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             MediaQuery.withClampedTextScaling(
               maxScaleFactor: 1.3,
               child: SafeArea(
+                key: _summaryKey,
                 top: false,
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -212,21 +240,24 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              updating ? 'Updating subtotal…' : 'Subtotal',
+                              'Subtotal',
                               style: theme.textTheme.labelMedium?.copyWith(
                                 color: scheme.onSurfaceVariant,
                               ),
                             ),
-                            // The old subtotal stays visible but greyed until the
-                            // server prices the new quantity.
-                            Text(
-                              money(value.subtotal),
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.5,
-                                color: updating
-                                    ? scheme.onSurfaceVariant
+                            // The old subtotal fades back while the server prices the
+                            // new quantity, then the new one fades in.
+                            _PendingFade(
+                              pending: updating,
+                              child: Text(
+                                money(value.subtotal),
+                                semanticsLabel: updating
+                                    ? 'Subtotal updating'
                                     : null,
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.5,
+                                ),
                               ),
                             ),
                             Text(
@@ -247,15 +278,25 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 22),
                           shape: const StadiumBorder(),
                         ),
-                        onPressed: _busy || updating || value.selectedCount == 0
+                        onPressed: _busy || value.selectedCount == 0
                             ? null
-                            : () => context.push('/checkout'),
-                        child: const Row(
+                            : _checkout,
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Checkout'),
-                            SizedBox(width: 8),
-                            Icon(Icons.arrow_forward_rounded, size: 18),
+                            const Text('Checkout'),
+                            const SizedBox(width: 8),
+                            if (_openingCheckout)
+                              SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: scheme.onPrimary,
+                                  semanticsLabel: 'Saving your cart',
+                                ),
+                              )
+                            else
+                              const Icon(Icons.arrow_forward_rounded, size: 18),
                           ],
                         ),
                       ),
@@ -275,7 +316,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         _header(),
         SizedBox(
           height: 2,
-          child: _busy || updating
+          // Removals and refreshes only; a quantity change shows in the subtotal instead.
+          child: _busy
               ? const LinearProgressIndicator(semanticsLabel: 'Updating cart')
               : null,
         ),
@@ -336,10 +378,25 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     }
   }
 
-  Future<void> _remove(WidgetRef ref, CartLine line) async {
-    await _runCartAction(() async {
-      await ref.read(cartProvider.notifier).remove(line.id);
-    });
+  /// Takes the item out at once and offers Undo; the server hears of it only once the
+  /// Undo window has passed.
+  Future<void> _remove(CartLine line) async {
+    final cart = ref.read(cartProvider.notifier);
+    // Above the subtotal bar, so the total and Checkout stay in sight during the Undo window.
+    AppNotice.of(
+      context,
+      bottomInset: _summaryKey.currentContext?.size?.height ?? 0,
+    ).show(
+      'Removed ${line.productName}',
+      kind: NoticeKind.info,
+      actionLabel: 'Undo',
+      onAction: () => cart.undoRemove(line.id),
+    );
+    try {
+      await cart.remove(line.id);
+    } catch (error) {
+      _showCartError(error);
+    }
   }
 
   void _showFeedback(String message, {NoticeKind kind = NoticeKind.error}) {
@@ -347,6 +404,76 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       AppNotice.of(context).show(message, kind: kind);
     }
   }
+}
+
+/// Fades a price back while the server works out the new one.
+class _PendingFade extends StatelessWidget {
+  const _PendingFade({required this.pending, required this.child});
+
+  final bool pending;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => AnimatedOpacity(
+    opacity: pending ? 0.4 : 1,
+    duration: MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 200),
+    child: child,
+  );
+}
+
+/// Folds its row away before the item is taken out, so the list closes up smoothly.
+class _CollapsingRow extends StatefulWidget {
+  const _CollapsingRow({
+    super.key,
+    required this.onRemove,
+    required this.builder,
+  });
+
+  final VoidCallback? onRemove;
+
+  /// Builds the row with the remove action to give its bin button.
+  final Widget Function(VoidCallback? remove) builder;
+
+  @override
+  State<_CollapsingRow> createState() => _CollapsingRowState();
+}
+
+class _CollapsingRowState extends State<_CollapsingRow>
+    with SingleTickerProviderStateMixin {
+  late final _shown = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 220),
+    value: 1,
+  );
+
+  Future<void> _remove() async {
+    // A second tap on the bin while the row folds away removes nothing more.
+    if (_shown.status != AnimationStatus.completed) {
+      return;
+    }
+    if (!MediaQuery.disableAnimationsOf(context)) {
+      await _shown.reverse();
+    }
+    widget.onRemove?.call();
+  }
+
+  @override
+  void dispose() {
+    _shown.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SizeTransition(
+    sizeFactor: CurvedAnimation(parent: _shown, curve: Curves.easeInOut),
+    alignment: Alignment.topCenter,
+    child: FadeTransition(
+      opacity: _shown,
+      child: widget.builder(widget.onRemove == null ? null : _remove),
+    ),
+  );
 }
 
 /// The one branch every item in the cart comes from.
@@ -485,12 +612,14 @@ class _CartLineRow extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          money(line.lineTotal),
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.3,
-                            color: updating ? scheme.onSurfaceVariant : null,
+                        _PendingFade(
+                          pending: updating,
+                          child: Text(
+                            money(line.lineTotal),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                            ),
                           ),
                         ),
                         if (line.quantity > 1)
