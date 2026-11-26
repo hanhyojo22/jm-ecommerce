@@ -156,7 +156,8 @@ class Product extends Model
             return false;
         }
 
-        return $this->variants()->whereNotIn('color', $this->images()->whereNotNull('color')->distinct()->pluck('color'))->exists();
+        // reorder(): Postgres refuses SELECT DISTINCT ordered by a column it does not select (images() orders by position).
+        return $this->variants()->whereNotIn('color', $this->images()->reorder()->whereNotNull('color')->distinct()->pluck('color'))->exists();
     }
 
     public function thumbnail(): HasOne
