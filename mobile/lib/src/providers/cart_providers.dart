@@ -42,6 +42,10 @@ class CartNotifier extends AsyncNotifier<CartState> {
   /// How long the cart waits after the last tap before telling the server.
   static const quantityDebounce = Duration(milliseconds: 350);
 
+  /// How long a removed item can still be put back before the server is told; a little
+  /// longer than the Undo notice stays up, so Undo never arrives after the removal.
+  static const removalUndoWindow = Duration(milliseconds: 3500);
+
   /// The last cart the server sent; what is shown is worked out from it.
   Cart? _serverCart;
 
@@ -56,6 +60,13 @@ class CartNotifier extends AsyncNotifier<CartState> {
   int _requestCount = 0;
   int _appliedRequest = 0;
 
+  /// Quantity changes the server refused so far, so [sendWaitingChanges] can tell.
+  int _refusals = 0;
+
+  /// [sendWaitingChanges] calls waiting for the cart to stop updating; false when the cart
+  /// closed first.
+  final _settledWaiters = <Completer<bool>>[];
+
   @override
   Future<CartState> build() async {
     // Unsent taps are dropped without an outcome: they were neither added nor refused.
@@ -65,6 +76,7 @@ class CartNotifier extends AsyncNotifier<CartState> {
       }
       _pending.clear();
       _firstAdds.clear();
+      _completeSettledWaiters(false);
       // Adds already sent stay counted until the server answers them.
     });
     _serverCart = null;
@@ -99,9 +111,42 @@ class CartNotifier extends AsyncNotifier<CartState> {
 
   /// Shows the cart again after any change; the one place the state is set.
   void _publish() {
-    if (ref.mounted && _serverCart != null) {
-      state = AsyncData(_shown());
+    if (!ref.mounted || _serverCart == null) {
+      return;
     }
+    final shown = _shown();
+    state = AsyncData(shown);
+    if (!shown.isUpdating) {
+      _completeSettledWaiters(true);
+    }
+  }
+
+  void _completeSettledWaiters(bool settled) {
+    for (final waiter in _settledWaiters) {
+      waiter.complete(settled);
+    }
+    _settledWaiters.clear();
+  }
+
+  /// Sends every quantity still waiting for a pause in taps, then waits until the server
+  /// has answered everything on its way. True when it accepted it all; false when it
+  /// refused a quantity, which the tap that asked for it reports.
+  Future<bool> sendWaitingChanges() async {
+    final refusals = _refusals;
+    for (final MapEntry(key: itemId, value: pending) in [..._pending.entries]) {
+      if (pending.timer != null) {
+        pending.timer!.cancel();
+        unawaited(_sendQuantity(itemId));
+      }
+    }
+    if (state.value?.isUpdating ?? false) {
+      final settled = Completer<bool>();
+      _settledWaiters.add(settled);
+      if (!await settled.future) {
+        return false;
+      }
+    }
+    return _refusals == refusals;
   }
 
   /// Every server cart lands here: replies older than one already shown are dropped.
@@ -177,6 +222,18 @@ class CartNotifier extends AsyncNotifier<CartState> {
     }
     if (line != null) {
       return setQuantity(line.id, wanted);
+    }
+    // Added again while its removal waits: the removal is called off and it starts at one.
+    final removing = _serverCart?.lines
+        .where(
+          (line) =>
+              line.productId == product.id &&
+              line.variantId == null &&
+              _pending[line.id]?.quantity == 0,
+        )
+        .firstOrNull;
+    if (removing != null) {
+      return setQuantity(removing.id, 1);
     }
     if (firstAdd != null) {
       firstAdd.queuedTaps++;
@@ -278,7 +335,9 @@ class CartNotifier extends AsyncNotifier<CartState> {
         pending.timer == null;
 
     try {
-      final cart = await api.updateCartItem(itemId, pending.quantity);
+      final cart = pending.quantity == 0
+          ? await api.removeCartItem(itemId)
+          : await api.updateCartItem(itemId, pending.quantity);
       final latest = isLatest();
       if (latest) {
         _pending.remove(itemId);
@@ -293,6 +352,7 @@ class CartNotifier extends AsyncNotifier<CartState> {
         return;
       }
       _pending.remove(itemId);
+      _refusals++;
       final refetch = ++_requestCount;
       try {
         _applyServerCart(await api.cart(), refetch);
@@ -312,15 +372,33 @@ class CartNotifier extends AsyncNotifier<CartState> {
     _pending.clear();
   }
 
-  Future<void> remove(String itemId) async {
-    // Taps on this item that were not confirmed yet lose to its removal.
-    _pending.remove(itemId)?.timer?.cancel();
-    final request = ++_requestCount;
+  /// Takes [itemId] out of the cart on screen at once and tells the server only after
+  /// [removalUndoWindow], so [undoRemove] can put it back without a request. Unconfirmed
+  /// taps on the item lose to its removal. The future completes once the server removed
+  /// it, fails if it refused, and never completes after an undo. A cart closed within the
+  /// window keeps the item.
+  Future<void> remove(String itemId) {
+    final pending = _pending.putIfAbsent(itemId, _PendingItem.new)
+      ..quantity = 0;
+    final waiter = pending.waiter = Completer<void>();
+    pending.timer?.cancel();
+    pending.timer = Timer(removalUndoWindow, () => _sendQuantity(itemId));
     _publish();
-    _applyServerCart(
-      await ref.read(apiClientProvider).removeCartItem(itemId),
-      request,
-    );
+
+    return waiter.future;
+  }
+
+  /// Puts [itemId] back where it was while its removal is still waiting; false once the
+  /// removal has been sent.
+  bool undoRemove(String itemId) {
+    final pending = _pending[itemId];
+    if (pending == null || pending.quantity != 0 || pending.timer == null) {
+      return false;
+    }
+    pending.timer!.cancel();
+    _pending.remove(itemId);
+    _publish();
+    return true;
   }
 
   /// The selection response already carries the new count and subtotal, so the

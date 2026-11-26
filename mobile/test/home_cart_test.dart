@@ -480,14 +480,60 @@ void main() {
     final notifier = container.read(cartProvider.notifier);
     var tapSettled = false;
     notifier.setQuantity('line', 3).whenComplete(() => tapSettled = true);
-    await notifier.remove('line');
+    unawaited(notifier.remove('line'));
+    // Gone from the screen at once, but the server hears only after the Undo window.
+    expect(container.read(cartProvider).value!.cart.lines, isEmpty);
     await tester.pump(CartNotifier.quantityDebounce);
+    expect(api.removes, 0);
+    await tester.pump(CartNotifier.removalUndoWindow);
     await tester.pump();
 
     expect(api.removes, 1);
     expect(api.updates, 0);
     expect(tapSettled, isFalse);
     expect(container.read(cartProvider).value!.cart.lines, isEmpty);
+  });
+
+  testWidgets('undo puts a removed item back without telling the server', (
+    tester,
+  ) async {
+    final api = _CartApi()..cartProduct = 'shirt';
+    final container = _container(api);
+    container.listen(cartProvider, (_, _) {});
+    await container.read(cartProvider.future);
+    final notifier = container.read(cartProvider.notifier);
+
+    unawaited(notifier.remove('line'));
+    expect(container.read(cartCountProvider), 0);
+    expect(notifier.undoRemove('line'), isTrue);
+    await tester.pump(CartNotifier.removalUndoWindow);
+    await tester.pump();
+
+    expect(api.removes, 0);
+    expect(container.read(cartProvider).value!.cart.lines.single.quantity, 2);
+    // Too late once the removal has gone out.
+    unawaited(notifier.remove('line'));
+    await tester.pump(CartNotifier.removalUndoWindow);
+    expect(notifier.undoRemove('line'), isFalse);
+  });
+
+  testWidgets('adding a product again calls off its waiting removal', (
+    tester,
+  ) async {
+    final api = _CartApi()..cartProduct = 'shirt';
+    final container = _container(api);
+    container.listen(cartProvider, (_, _) {});
+    await container.read(cartProvider.future);
+    final notifier = container.read(cartProvider.notifier);
+
+    unawaited(notifier.remove('line'));
+    unawaited(notifier.addOne(_shirt())!);
+    await tester.pump(CartNotifier.removalUndoWindow);
+    await tester.pump();
+
+    expect(api.adds, 0);
+    expect(api.removes, 0);
+    expect(api.updatedTo, 1);
   });
 
   testWidgets('a tap already sent when its line is removed reports nothing', (
@@ -505,7 +551,7 @@ void main() {
         .setQuantity('line', 3)
         .then((_) => tapSettled = true, onError: (_) => tapSettled = true);
     await tester.pump(CartNotifier.quantityDebounce);
-    await notifier.remove('line');
+    unawaited(notifier.remove('line'));
     final readsBefore = api.cartReads;
     reply.completeError(
       const ApiException(code: 'not_found', message: 'Gone.', statusCode: 404),
@@ -514,6 +560,8 @@ void main() {
 
     expect(tapSettled, isFalse);
     expect(api.cartReads, readsBefore);
+    await tester.pump(CartNotifier.removalUndoWindow);
+    expect(api.removes, 1);
   });
 
   testWidgets('offline, a refused tap goes back to the last confirmed one', (

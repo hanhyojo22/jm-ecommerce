@@ -12,12 +12,13 @@
         $hasFilters = collect($filters)->filter()->isNotEmpty();
         $hasAdvancedFilters = filled($filters['category_id'] ?? null) || filled($filters['stock'] ?? null) || ($filters['sort'] ?? 'newest') !== 'newest';
         $tabs = ['' => 'All', 'active' => 'Published', 'draft' => 'Draft', 'unlisted' => 'Unlisted', 'inactive' => 'Suspended'];
+        $eligibleProductIds = $canManageProducts ? $products->getCollection()->where('status', 'active')->pluck('id')->values()->all() : [];
     @endphp
     <div class="page-shell"><div class="page-container seller-products-page seller-workspace-page seller-measure-wide sc-stack">
         @if ($errors->has('status'))<div role="alert" class="sc-notice" data-tone="danger">{{ $errors->first('status') }}</div>@endif
         @if (session('status'))<div role="status" class="sc-notice" data-tone="success">{{ session('status') }}</div>@endif
 
-        <section class="sc-card seller-products-catalog" aria-labelledby="product-catalog-heading">
+        <section class="sc-card seller-products-catalog" aria-labelledby="product-catalog-heading" x-data="{ selected: [], eligible: {{ Js::from($eligibleProductIds) }} }">
             <div class="sc-card-head is-flush"><h2 id="product-catalog-heading" class="sc-card-title">Product catalog</h2><p class="sc-meta">{{ number_format($totalProducts) }} {{ Str::plural('listing', $totalProducts) }}</p></div>
             <nav class="sc-tabs" aria-label="Product status">
                 @foreach ($tabs as $value => $label)
@@ -34,18 +35,27 @@
                     <button type="submit" class="absolute inset-y-0 right-0 grid w-10 place-items-center text-muted hover:text-brand" aria-label="Search products"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button>
                 </form>
                 @if ($hasAdvancedFilters)<p class="sc-meta">A saved product view is active. <a href="{{ route('seller.products.index') }}" class="font-semibold text-brand underline underline-offset-4">Show all products</a></p>@endif
-                @if ($canManageProducts)<button type="submit" form="bulk-product-deactivate" title="Unlist the selected listings" class="sc-btn sc-btn-danger ml-auto">Unlist selected</button>@endif
+                @if ($canManageProducts)
+                    <span class="sc-meta" role="status" aria-live="polite" x-text="selected.length + ' selected'">0 selected</span>
+                    @if ($eligibleProductIds)
+                        <label class="flex min-h-11 items-center gap-2 text-sm text-ink xl:hidden">
+                            <input type="checkbox" aria-label="Select all published listings on this page" :checked="eligible.length > 0 && selected.length === eligible.length" x-effect="$el.indeterminate = selected.length > 0 && selected.length < eligible.length" @change="selected = $event.target.checked ? [...eligible] : []" class="size-4 rounded-md border-line text-brand focus:ring-brand">
+                            Select all on this page
+                        </label>
+                    @endif
+                    <button type="submit" form="bulk-product-deactivate" title="Unlist the selected listings" class="sc-btn sc-btn-danger ml-auto" disabled :disabled="selected.length === 0">Unlist selected</button>
+                @endif
             </div>
             @if ($canManageProducts)<form id="bulk-product-deactivate" method="POST" action="{{ route('seller.products.bulk-deactivate') }}" data-confirm-message="Unlist the selected listings? Buyers will not see them until you relist them.">@csrf</form><x-input-error :messages="$errors->get('product_ids')" class="mx-5 mb-3" />@endif
 
             @if ($products->isNotEmpty())
                 <div class="sc-table-wrap hidden xl:block">
                     <table class="sc-table">
-                        <thead><tr>@if ($canManageProducts)<th scope="col" class="is-tight"><span class="sr-only">Select</span></th>@endif<th scope="col">Product</th><th scope="col" class="is-num">Price</th><th scope="col">{{ $branch ? 'Stock at '.$branch->name : 'Inventory' }}</th><th scope="col">Status</th><th scope="col" class="is-tight"><span class="sr-only">Actions</span></th></tr></thead>
+                        <thead><tr>@if ($canManageProducts)<th scope="col" class="is-tight">@if ($eligibleProductIds)<input type="checkbox" aria-label="Select all published listings on this page" :checked="eligible.length > 0 && selected.length === eligible.length" x-effect="$el.indeterminate = selected.length > 0 && selected.length < eligible.length" @change="selected = $event.target.checked ? [...eligible] : []" class="size-4 rounded-md border-line text-brand focus:ring-brand">@else<span class="sr-only">Select</span>@endif</th>@endif<th scope="col">Product</th><th scope="col" class="is-num">Price</th><th scope="col">{{ $branch ? 'Stock at '.$branch->name : 'Inventory' }}</th><th scope="col">Status</th><th scope="col" class="is-tight"><span class="sr-only">Actions</span></th></tr></thead>
                         <tbody>
                             @foreach ($products as $product)
                                 <tr class="seller-products-row">
-                                    @if ($canManageProducts)<td class="is-tight">@if ($product->status === 'active')<input type="checkbox" form="bulk-product-deactivate" name="product_ids[]" value="{{ $product->id }}" aria-label="Select listing {{ $product->name }}" class="size-4 rounded-md border-line text-brand focus:ring-brand">@endif</td>@endif
+                                    @if ($canManageProducts)<td class="is-tight">@if ($product->status === 'active')<input type="checkbox" form="bulk-product-deactivate" name="product_ids[]" value="{{ $product->id }}" x-model="selected" aria-label="Select listing {{ $product->name }}" class="size-4 rounded-md border-line text-brand focus:ring-brand">@endif</td>@endif
                                     <th scope="row"><div class="sc-row">
                                         <span class="sc-thumb">@if ($product->images->first())<img src="{{ Storage::disk('product_images')->url($product->images->first()->path) }}" alt="" loading="lazy" width="40" height="40">@else<svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 4h16v16H4z"/><circle cx="9" cy="9" r="1.5"/><path d="m4 17 5-5 3 3 3-4 5 6"/></svg>@endif</span>
                                         <span class="min-w-0"><a href="{{ route('seller.products.show', $product) }}" class="block max-w-80 truncate font-semibold text-ink hover:text-brand" title="{{ $product->name }}">{{ $product->name }}</a><span class="block sc-meta">{{ $product->category?->name ?? 'Uncategorized' }}@if ($product->variants_count) · {{ $product->variants_count }} {{ Str::plural('variant', $product->variants_count) }}@endif</span></span>
@@ -63,7 +73,7 @@
                     @foreach ($products as $product)
                         <article class="sc-list-item">
                             <div class="sc-row items-start">
-                                @if ($canManageProducts && $product->status === 'active')<input type="checkbox" form="bulk-product-deactivate" name="product_ids[]" value="{{ $product->id }}" aria-label="Select listing {{ $product->name }}" class="mt-3 size-4 shrink-0 rounded-md border-line text-brand focus:ring-brand">@endif
+                                @if ($canManageProducts && $product->status === 'active')<input type="checkbox" form="bulk-product-deactivate" name="product_ids[]" value="{{ $product->id }}" x-model="selected" aria-label="Select listing {{ $product->name }}" class="mt-3 size-4 shrink-0 rounded-md border-line text-brand focus:ring-brand">@endif
                                 <span class="sc-thumb is-lg">@if ($product->images->first())<img src="{{ Storage::disk('product_images')->url($product->images->first()->path) }}" alt="" loading="lazy" width="56" height="56">@else<svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 4h16v16H4z"/><circle cx="9" cy="9" r="1.5"/><path d="m4 17 5-5 3 3 3-4 5 6"/></svg>@endif</span>
                                 <div class="sc-grow"><a href="{{ route('seller.products.show', $product) }}" class="block truncate sc-strong" title="{{ $product->name }}">{{ $product->name }}</a><p class="truncate sc-meta">{{ $product->category?->name ?? 'Uncategorized' }}@if ($product->variants_count) · {{ $product->variants_count }} {{ Str::plural('variant', $product->variants_count) }}@endif</p><p class="mt-1 text-sm"><span class="font-semibold tabular-nums text-ink">₱{{ number_format($product->price, 2) }}</span> <span class="sc-meta">· {{ $onHand($product) < 1 ? 'Sold out' : number_format($onHand($product)).' in stock' }}</span></p></div>
                             </div>

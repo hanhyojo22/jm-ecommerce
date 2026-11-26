@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart' show Position;
+import 'package:latlong2/latlong.dart';
 
 import '../core/location_service.dart';
 import '../models/models.dart' show Cart;
@@ -18,6 +19,7 @@ class StoreLocatorState {
     required this.branches,
     this.issue,
     this.selectedBranchId,
+    this.userPosition,
   });
 
   /// Sorted closest first when the location is known, otherwise in
@@ -31,6 +33,9 @@ class StoreLocatorState {
   /// branch". Kept on the server cart, but a launch that finds the location starts at the
   /// nearest again; only without a location does the cart's branch carry over.
   final String? selectedBranchId;
+
+  /// Device coordinates when location was resolved; null when unavailable.
+  final LatLng? userPosition;
 
   /// Null when location failed or there are no branches.
   BranchDistance? get nearest => issue == null ? branches.firstOrNull : null;
@@ -47,6 +52,7 @@ class StoreLocatorState {
     branches: branches,
     issue: issue,
     selectedBranchId: branchId,
+    userPosition: userPosition,
   );
 }
 
@@ -70,6 +76,7 @@ class NearestStoreNotifier extends AsyncNotifier<StoreLocatorState> {
       final position = await ref
           .watch(locationServiceProvider)
           .currentPosition();
+      final userLatLng = LatLng(position.latitude, position.longitude);
       final sorted = LocationService.sortByDistance(
         branches,
         position.latitude,
@@ -88,13 +95,18 @@ class NearestStoreNotifier extends AsyncNotifier<StoreLocatorState> {
           (cart?.lines.isNotEmpty ?? false) &&
           (savedKm ?? 0) > _farKm) {
         _measured = sorted;
+        _measuredPosition = userLatLng;
         _launchSuggestion = sorted.first;
-        return StoreLocatorState(branches: sorted, selectedBranchId: saved);
+        return StoreLocatorState(
+          branches: sorted,
+          selectedBranchId: saved,
+          userPosition: userLatLng,
+        );
       }
       if (nearest != null && nearest.isNotEmpty && nearest != savedBranchId) {
         _saveOnCart(nearest);
       }
-      return StoreLocatorState(branches: sorted);
+      return StoreLocatorState(branches: sorted, userPosition: userLatLng);
     } on LocationFailure catch (failure) {
       return StoreLocatorState(
         branches: [for (final b in branches) BranchDistance(b, null)],
@@ -128,6 +140,7 @@ class NearestStoreNotifier extends AsyncNotifier<StoreLocatorState> {
 
   /// Distances from the last [recheckAfterAway] that found a better branch.
   List<BranchDistance>? _measured;
+  LatLng? _measuredPosition;
 
   /// The branch the customer chose to stay away from; not suggested again.
   String? _declinedBranchId;
@@ -151,6 +164,7 @@ class NearestStoreNotifier extends AsyncNotifier<StoreLocatorState> {
     } on LocationFailure {
       return null;
     }
+    final userLatLng = LatLng(position.latitude, position.longitude);
     final measured = LocationService.sortByDistance(
       [for (final b in current.branches) b.branch],
       position.latitude,
@@ -167,6 +181,7 @@ class NearestStoreNotifier extends AsyncNotifier<StoreLocatorState> {
       return null;
     }
     _measured = measured;
+    _measuredPosition = userLatLng;
     if (cartIsEmpty) {
       acceptMove();
       return null;
@@ -177,11 +192,18 @@ class NearestStoreNotifier extends AsyncNotifier<StoreLocatorState> {
   /// Moves to the branch [recheckAfterAway] found; the cart follows.
   void acceptMove() {
     final measured = _measured;
+    final measuredPos = _measuredPosition;
     if (measured == null) {
       return;
     }
     _measured = null;
-    state = AsyncData(StoreLocatorState(branches: measured));
+    _measuredPosition = null;
+    state = AsyncData(
+      StoreLocatorState(
+        branches: measured,
+        userPosition: measuredPos ?? state.value?.userPosition,
+      ),
+    );
     final nearest = measured.first.branch.branchId;
     if (nearest.isNotEmpty) {
       _saveOnCart(nearest);
@@ -191,6 +213,7 @@ class NearestStoreNotifier extends AsyncNotifier<StoreLocatorState> {
   /// Stays at the current branch and stops suggesting [suggestion].
   void declineMove(BranchDistance suggestion) {
     _measured = null;
+    _measuredPosition = null;
     _declinedBranchId = suggestion.branch.id;
   }
 
