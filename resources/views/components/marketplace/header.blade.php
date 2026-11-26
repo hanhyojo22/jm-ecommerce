@@ -72,6 +72,9 @@
         }"
         x-init="$watch('drawerOpen', (open) => document.body.classList.toggle('overflow-hidden', open))"
         @keydown.escape.window="if (drawerOpen) closeDrawer(); if (accountOpen) closeAccount(); if (categoriesOpen) closeCategories()"
+        @if ($isSellerWorkspace)
+            @resize.window="if (drawerOpen && window.innerWidth >= 1024) closeDrawer()"
+        @endif
         class="sticky top-0 z-40 border-b border-line bg-white {{ $isSellerWorkspace ? 'sc-topbar' : '' }}"
     >
         @if ($isSellerWorkspace)
@@ -88,15 +91,15 @@
             <div class="sc-topbar-inner">
                 {{-- Left: Sidebar Toggle + Command Search (minimal, zero redundancy with sidebar or page H1) --}}
                 <div class="sc-topbar-left">
-                    <button type="button" @click="toggleDrawer($event)" :aria-expanded="drawerOpen.toString()" aria-controls="marketplace-drawer" class="sc-topbar-icon-btn lg:hidden" aria-label="Open navigation menu">
+                    <button type="button" @click="toggleDrawer($event)" :aria-expanded="drawerOpen.toString()" aria-controls="marketplace-drawer" class="sc-topbar-icon-btn sc-topbar-nav-mobile" aria-label="Open navigation menu">
                         <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" /></svg>
                     </button>
 
-                    <button type="button" @click="$dispatch('seller-sidebar-toggle')" class="sc-topbar-icon-btn hidden lg:grid" aria-label="Toggle Seller Center sidebar" title="Toggle sidebar">
+                    <button type="button" @click="$dispatch('seller-sidebar-toggle')" class="sc-topbar-icon-btn sc-topbar-sidebar-toggle" aria-label="Toggle Seller Center sidebar" title="Toggle sidebar">
                         <svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5" /><path d="M9 4v16" /></svg>
                     </button>
 
-                    <a href="{{ route('seller.dashboard') }}" class="sc-topbar-mobile-brand lg:hidden" aria-label="Everyday Pharmacy Seller Center overview">
+                    <a href="{{ route('seller.dashboard') }}" class="sc-topbar-mobile-brand" aria-label="Everyday Pharmacy Seller Center overview">
                         <span class="block truncate text-sm font-semibold leading-tight text-ink">{{ $sellerPageTitle }}</span>
                         <span class="block truncate text-[11px] text-muted" data-seller-role>{{ $sellerMember?->placeLabel() ?? 'Seller Center' }}</span>
                     </a>

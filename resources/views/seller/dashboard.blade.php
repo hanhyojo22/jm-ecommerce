@@ -4,6 +4,7 @@
     $nextSetupItem = $incompleteSetupItems->first(fn (array $item): bool => filled($item['href']));
     $completedSetupCount = $setupItems->count() - $incompleteSetupItems->count();
     $chartPeak = max(1, (float) $salesHistory->max('amount'));
+    $daysWithSales = $salesHistory->filter(fn (array $day): bool => bccomp((string) $day['amount'], '0.00', 2) > 0)->count();
     $lastThirtyDaysSales = $salesHistory->reduce(fn (string $total, array $day): string => bcadd($total, (string) $day['amount'], 2), '0.00');
     $storeTone = match ($store->status) { 'active' => 'success', 'suspended' => 'danger', default => 'neutral' };
     $attentionItems = array_filter([
@@ -186,6 +187,17 @@
             </section>
         @endif
 
+        @if ($attentionItems)
+            <section class="sc-card" aria-labelledby="action-required-heading">
+                <div class="sc-card-head"><h2 id="action-required-heading" class="sc-card-title">Needs your attention</h2></div>
+                <div class="sc-tasks">
+                    @foreach ($attentionItems as $task)
+                        <a href="{{ $task['href'] }}" class="sc-task"><span class="sc-task-count {{ $task['tone'] }}">{{ $task['count'] }}</span><span class="min-w-0">{{ $task['text'] }}</span><span class="sc-task-cta">{{ $task['cta'] }} <span aria-hidden="true">&rarr;</span></span></a>
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
         @if ($canManageOrders)
         <section aria-label="Store summary">
             <dl class="sc-metrics" data-columns="4">
@@ -199,21 +211,6 @@
         @endif
         <div class="sc-grid-main">
             <div class="sc-stack">
-                @if ($canManageOrders)
-                <section class="sc-card sc-card-pad" aria-labelledby="sales-overview-heading">
-                    <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 id="sales-overview-heading" class="sc-card-title">Sales overview</h2><span class="sc-meta">Last 30 days</span></div>
-                    <p class="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-ink">₱{{ number_format($lastThirtyDaysSales, 2) }}</p>
-                    <div class="seller-sales-chart" role="img" aria-label="Sales trend for the last 30 days. Daily store sales in pesos; total {{ number_format($lastThirtyDaysSales, 2) }} pesos.">
-                        @foreach ($salesHistory as $day)
-                            <div class="seller-sales-day" title="{{ \Carbon\Carbon::parse($day['date'])->format('M j') }}: ₱{{ number_format($day['amount'], 2) }}">
-                                <span class="seller-sales-bar" style="height: {{ (float) $day['amount'] > 0 ? max(2, (float) $day['amount'] / $chartPeak * 100) : 0 }}%"><span class="sr-only">{{ $day['date'] }}: {{ number_format($day['amount'], 2) }} pesos</span></span>
-                            </div>
-                        @endforeach
-                    </div>
-                    <div class="mt-2 flex justify-between text-xs text-muted"><span>{{ \Carbon\Carbon::parse($salesHistory->first()['date'])->format('M j') }}</span><span>{{ \Carbon\Carbon::parse($salesHistory[15]['date'])->format('M j') }}</span><span>{{ \Carbon\Carbon::parse($salesHistory->last()['date'])->format('M j') }}</span></div>
-                    @if (bccomp($lastThirtyDaysSales, '0.00', 2) === 0)<p class="mt-3 sc-meta">No sales recorded in the last 30 days.</p>@endif
-                </section>
-                @endif
 
                 <section class="sc-card" data-dashboard-section="orders" aria-labelledby="recent-orders-heading">
                     <div class="sc-card-head"><h2 id="recent-orders-heading" class="sc-card-title">{{ $isHeadOffice ? 'Recent orders' : 'Orders at this branch' }}</h2><a href="{{ route('seller.orders.index') }}" data-seller-shortcut="orders" aria-keyshortcuts="O" class="sc-link">View all orders</a></div>
@@ -242,19 +239,42 @@
                         <div class="sc-empty"><h3>No orders yet</h3><p>Orders from your store will appear here as soon as a buyer checks out.</p></div>
                     @endif
                 </section>
+
+                @if ($canManageOrders)
+                <section class="sc-card sc-card-pad" aria-labelledby="sales-overview-heading">
+                    <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 id="sales-overview-heading" class="sc-card-title">Sales overview</h2><span class="sc-meta">Last 30 days</span></div>
+                    <p class="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-ink">₱{{ number_format($lastThirtyDaysSales, 2) }}</p>
+                    <div @class(['sc-sales-plot', 'is-sparse' => $daysWithSales < 2])>
+                        <div class="sc-sales-axis" aria-hidden="true"><span>₱{{ number_format($chartPeak, 2) }}</span><span>₱0</span></div>
+                        <div class="seller-sales-chart" role="img" aria-label="Sales trend for the last 30 days. Daily store sales in pesos; total {{ number_format($lastThirtyDaysSales, 2) }} pesos. Daily values are available in the table below.">
+                            @foreach ($salesHistory as $day)
+                                <div class="seller-sales-day" title="{{ \Carbon\Carbon::parse($day['date'])->format('M j') }}: ₱{{ number_format($day['amount'], 2) }}">
+                                    <span class="seller-sales-bar" style="height: {{ (float) $day['amount'] > 0 ? max(2, (float) $day['amount'] / $chartPeak * 100) : 0 }}%"><span class="sr-only">{{ $day['date'] }}: {{ number_format($day['amount'], 2) }} pesos</span></span>
+                                </div>
+                            @endforeach
+                        </div>
+                        <div class="sc-sales-dates flex justify-between text-xs text-muted"><span>{{ \Carbon\Carbon::parse($salesHistory->first()['date'])->format('M j') }}</span><span>{{ \Carbon\Carbon::parse($salesHistory[15]['date'])->format('M j') }}</span><span>{{ \Carbon\Carbon::parse($salesHistory->last()['date'])->format('M j') }}</span></div>
+                    </div>
+                    @if (bccomp($lastThirtyDaysSales, '0.00', 2) === 0)<p class="mt-3 sc-meta">No sales recorded in the last 30 days.</p>@endif
+                    <details class="sc-sales-data mt-3">
+                        <summary>View daily sales</summary>
+                        <div class="sc-table-wrap">
+                            <table class="sc-table">
+                                <caption>Daily store sales in Philippine pesos</caption>
+                                <thead><tr><th scope="col">Date</th><th scope="col" class="is-num">Sales</th></tr></thead>
+                                <tbody>
+                                    @foreach ($salesHistory as $day)
+                                        <tr><th scope="row">{{ \Carbon\Carbon::parse($day['date'])->format('M j, Y') }}</th><td class="is-num">₱{{ number_format($day['amount'], 2) }}</td></tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                </section>
+                @endif
             </div>
 
             <div class="sc-stack">
-        @if ($attentionItems)
-            <section class="sc-card" aria-labelledby="action-required-heading">
-                <div class="sc-card-head"><h2 id="action-required-heading" class="sc-card-title">Needs your attention</h2></div>
-                <div class="sc-tasks">
-                    @foreach ($attentionItems as $task)
-                        <a href="{{ $task['href'] }}" class="sc-task"><span class="sc-task-count {{ $task['tone'] }}">{{ $task['count'] }}</span><span class="min-w-0">{{ $task['text'] }}</span><span class="sc-task-cta">{{ $task['cta'] }} <span aria-hidden="true">&rarr;</span></span></a>
-                    @endforeach
-                </div>
-            </section>
-        @endif
 
                 @if ($branches->isNotEmpty())
                     <section class="sc-card" aria-labelledby="branches-heading" data-dashboard-branches>
