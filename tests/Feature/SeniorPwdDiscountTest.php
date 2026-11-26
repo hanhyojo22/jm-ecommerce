@@ -63,7 +63,7 @@ class SeniorPwdDiscountTest extends TestCase
         $this->assertSame('214.00', (string) $order->payment->amount);
         $this->assertSame(['6.00', '214.00'], [(string) $sellerOrder->discount_amount, (string) $sellerOrder->total]);
         $this->assertSame(['0.00', '6.00'], $sellerOrder->items->sortBy('product_name')->pluck('discount_amount')->map(fn ($amount): string => (string) $amount)->values()->all());
-        $this->assertNotSame('SC-2026-00123', DB::table('orders')->whereKey($orderId)->value('discount_card_number'));
+        $this->assertNotSame('SC-2026-00123', DB::table('orders')->where('id', $orderId)->value('discount_card_number'));
         $this->assertSame('SC-2026-00123', $order->discount_card_number);
 
         $this->get(route('orders.show', $order))->assertSee('Senior citizen discount')->assertSee('−₱6.00', false)->assertDontSee('SC-2026-00123');

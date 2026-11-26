@@ -8,6 +8,7 @@ use App\Auth\ClerkUserResolver;
 use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -214,9 +215,10 @@ class ClerkUserResolverTest extends TestCase
             new ClerkIdentity('user_race', 'race@example.com', true, 'Race Buyer'),
         ));
 
+        // The other request commits its row after this one's last lookup and before its insert.
         $inserted = false;
-        User::creating(function (User $user) use (&$inserted): void {
-            if ($inserted || $user->clerk_user_id !== 'user_race') {
+        DB::listen(function (QueryExecuted $query) use (&$inserted): void {
+            if ($inserted || ! str_contains($query->sql, 'LOWER(email)')) {
                 return;
             }
 

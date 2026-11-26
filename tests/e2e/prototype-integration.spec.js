@@ -21,7 +21,7 @@ test('variant gallery, prices, and sold-out states work on phone, tablet, and de
         try {
             await page.goto('/');
             await dismissCookies(page);
-            await expect(page.getByRole('heading', { name: /Your pharmacy\.\s*Closer to home\./ })).toBeVisible();
+            await expect(page.getByRole('heading', { name: /A little care\.\s*A lot of happiness\./ })).toBeVisible();
             expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
             await page.goto(speakerPath);
             await expect(page.locator('[data-selected-price]:visible')).toHaveText('₱12.35');

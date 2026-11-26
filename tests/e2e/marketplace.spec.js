@@ -739,9 +739,7 @@ test('branch details map fills the coordinates when tapped and follows typed one
         const longitude = page.getByLabel('Longitude', { exact: true });
         const map = page.getByRole('region', { name: 'Branch location map' });
 
-        // Leaflet starts only once the section is open, so it is never drawn at zero size.
-        await expect(page.locator('[data-branch-pin-map]')).not.toHaveClass(/leaflet-container/);
-        await page.locator('summary', { hasText: 'Map location' }).click();
+        // The map section is always open, so Leaflet starts with the page.
         await expect(map).toHaveClass(/leaflet-container/);
 
         await page.route('https://photon.komoot.io/api**', (route) => route.fulfill({
@@ -767,6 +765,7 @@ test('branch details map fills the coordinates when tapped and follows typed one
             body: JSON.stringify({ features: [{ properties: { city: 'Mandaue' } }] }),
         }));
 
+        await page.locator('summary', { hasText: 'Enter exact latitude & longitude manually' }).click();
         await latitude.fill('10.3157');
         await longitude.fill('123.8854');
         await longitude.blur();
@@ -778,7 +777,7 @@ test('branch details map fills the coordinates when tapped and follows typed one
         await expect(latitude).not.toHaveValue('10.3157');
         await expect(longitude).toHaveValue(/^\d+\.\d{7}$/);
         await expect(city).toHaveValue('Mandaue');
-        await expect(page.getByText('Unsaved changes', { exact: true })).toBeVisible();
+        await expect(page.getByText('You have unsaved changes', { exact: true })).toBeVisible();
     } finally {
         await seller.context.close();
     }

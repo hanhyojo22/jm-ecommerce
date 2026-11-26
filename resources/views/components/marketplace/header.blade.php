@@ -201,7 +201,7 @@
             </div>
         @else
         <div class="marketplace-container flex flex-wrap items-center gap-x-2.5 gap-y-3 py-3 sm:gap-x-5 sm:py-3.5">
-            <div class="order-1 flex min-w-0 items-center gap-1.5 min-[641px]:order-none sm:gap-2.5">
+            <div class="order-1 flex min-w-0 items-center gap-1.5 {{ $isSellerWorkspace ? 'min-[641px]:order-none' : 'lg:order-none' }} sm:gap-2.5">
                 <button type="button" @click="toggleDrawer($event)" :aria-expanded="drawerOpen.toString()" aria-controls="marketplace-drawer" class="{{ $isSellerWorkspace || $isCustomerWorkspace ? 'lg:hidden' : 'min-[641px]:hidden' }} grid size-11 shrink-0 place-items-center rounded-md text-muted transition hover:bg-canvas hover:text-brand focus-visible:ring-2 focus-visible:ring-brand" aria-label="Open navigation menu">
                     <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" /></svg>
                 </button>
@@ -246,7 +246,7 @@
                 x-data="{{ $isSellerWorkspace ? '{ query: '.Js::from(request('search', $search)).', loading: false }' : 'marketplaceSuggestions('.Js::from($search).', '.Js::from(route('catalog.suggestions')).', '.Js::from(route('catalog.index')).', '.Js::from(route('catalog.recently-viewed.clear')).')' }}"
                 @submit="loading = true"
                 @unless ($isSellerWorkspace) @click.outside="open = false" @endunless
-                class="relative order-3 min-w-0 basis-full min-[641px]:order-none min-[641px]:basis-0 min-[641px]:flex-1"
+                class="relative order-3 min-w-0 basis-full {{ $isSellerWorkspace ? 'min-[641px]:order-none min-[641px]:basis-0 min-[641px]:flex-1' : 'lg:order-none lg:basis-0 lg:flex-1' }}"
             >
                 <div data-header-search-shell class="flex h-11 items-center rounded-md border border-[#cbd4e0] bg-canvas transition focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/10">
                     @if (! $isSellerWorkspace && ! $isCustomerWorkspace && $showCategoryMenu)
@@ -305,7 +305,7 @@
                 <div class="hidden min-[641px]:block min-[641px]:flex-1" aria-hidden="true"></div>
             @endif
 
-            <div class="order-2 ml-auto flex shrink-0 items-center justify-end gap-1 sm:gap-2 min-[641px]:order-none min-[641px]:ml-0">
+            <div class="order-2 ml-auto flex shrink-0 items-center justify-end gap-1 sm:gap-2 {{ $isSellerWorkspace ? 'min-[641px]:order-none min-[641px]:ml-0' : 'lg:order-none lg:ml-0' }}">
                 @if (($isSellerWorkspace || $isCustomerWorkspace) && $webStoreEnabled)
                     <a href="{{ route('home') }}" class="hidden min-h-10 items-center gap-1.5 rounded-md px-3 text-xs font-semibold text-brand transition hover:bg-[#eef3ff] hover:text-brand-hover focus-visible:ring-2 focus-visible:ring-brand xl:inline-flex">
                         <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z"/></svg>

@@ -68,7 +68,7 @@ class BranchAccessTest extends TestCase
         [$tenant, $makati] = $this->pharmacy();
         $order = $this->sellerOrder($makati, 'MAKATI-3001');
         Prescription::create(['order_id' => $order->order_id, 'user_id' => $order->order->user_id, 'status' => 'pending']);
-        $order->forceFill(['discount_amount' => '20.00'])->save();
+        $order->forceFill(['discount_amount' => '20.00', 'total' => '80.00'])->save();
         $order->order->forceFill(['discount_card_type' => 'senior', 'discount_card_name' => 'Cardholder', 'discount_document_path' => 'private-id.jpg', 'discount_document_mime' => 'image/jpeg'])->save();
         $headOfficeStaff = $this->member($tenant, 'staff');
 

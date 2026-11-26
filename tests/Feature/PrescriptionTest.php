@@ -163,7 +163,7 @@ class PrescriptionTest extends TestCase
 
         $this->assertSame('pending', $sellerOrder->refresh()->status);
         $this->assertPushed('Send a clearer prescription photo', 'The photo is blurry.');
-        $this->assertStringContainsString('The photo is blurry.', $order->user->notifications()->where('data->type', 'order')->sole()->data['body']);
+        $this->assertStringContainsString('The photo is blurry.', $order->user->notifications->sole(fn ($notification) => $notification->data['type'] === 'order')->data['body']);
         $chat = ConversationMessage::query()->where('sender_id', $pharmacist->id)->sole();
         $this->assertStringContainsString('The photo is blurry.', $chat->body);
         $this->assertTrue($chat->conversation->buyer_id === $order->user_id && $chat->conversation->store_id === $sellerOrder->store_id);

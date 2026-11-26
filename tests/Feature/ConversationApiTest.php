@@ -541,7 +541,7 @@ class ConversationApiTest extends TestCase
         foreach ([['Rice cooker', 'products/rice-cooker.jpg', 'White', 1, 5], ['Spare lid', null, null, 2, 4]] as [$name, $imagePath, $variant, $quantity, $rating]) {
             $item = $sellerOrder->items()->create([
                 'product_id' => $product->id, 'product_name' => $name, 'sku' => 'SKU-'.str()->random(6),
-                'variant_label' => $variant, 'unit_price' => '66.33', 'quantity' => $quantity,
+                'variant_label' => $variant, 'unit_price' => number_format(99.5 / $quantity, 2, '.', ''), 'quantity' => $quantity,
                 'line_total' => '99.50', 'image_path' => $imagePath,
             ]);
             ProductReview::create([

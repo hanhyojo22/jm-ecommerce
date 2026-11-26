@@ -105,19 +105,20 @@ class ClerkUserResolver
         }
 
         try {
-            $user = User::query()->create([
+            $user = DB::transaction(fn (): User => User::query()->create([
                 'clerk_user_id' => $identity->id,
                 'name' => $identity->name ?? Str::before($identity->email, '@'),
                 'email' => $identity->email,
                 'password' => Str::random(64),
                 'account_type' => 'buyer',
                 'is_active' => true,
-            ]);
+            ]));
         } catch (UniqueConstraintViolationException $exception) {
             /*
              * Two first requests for the same Clerk identity can both reach this insert.
              * The unique clerk_user_id index lets one win; the other reads the winner's
-             * row instead of failing the sign-in with a 500.
+             * row instead of failing the sign-in with a 500. The insert runs in its own
+             * transaction so, inside an outer one, Postgres rolls back only to its savepoint.
              */
             $existing = User::query()->where('clerk_user_id', $identity->id)->first();
 

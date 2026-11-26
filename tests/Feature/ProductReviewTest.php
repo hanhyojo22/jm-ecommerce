@@ -250,7 +250,9 @@ class ProductReviewTest extends TestCase
             ->assertViewHas('awaitingReplyCount', 0)
             ->assertSee('No reviews yet')
             ->assertSee('No product conversations yet')
-            ->assertDontSee('4.9');
+            ->assertViewHas('averageRating', null)
+            ->assertSee('No ratings yet')
+            ->assertDontSee('out of 5 stars');
     }
 
     public function test_review_report_control_is_hidden_while_moderation_endpoint_remains_available(): void

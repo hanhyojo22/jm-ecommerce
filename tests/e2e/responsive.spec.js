@@ -189,11 +189,11 @@ test('seller adds color and size options in the product form at each viewport', 
         await page.locator('#price').fill('199.00');
         await page.getByRole('button', { name: 'Add options like size or color' }).click();
         await page.getByLabel('Color value 1').fill('Navy');
-        await page.getByRole('button', { name: 'Done' }).click();
+        await page.getByRole('button', { name: 'Done', exact: true }).click();
         await page.getByRole('button', { name: 'Add another option' }).click();
         await page.getByLabel('Size value 1').fill('Medium');
         await page.getByLabel('Size value 2').fill('Large');
-        await page.getByRole('button', { name: 'Done' }).click();
+        await page.getByRole('button', { name: 'Done', exact: true }).click();
         await expect(page.locator('input[name="variants[1][sku]"]')).toHaveValue(`VARIANT-QA-${testInfo.project.name}-NAVY-LARGE`.toUpperCase());
         await page.getByRole('button', { name: 'Remove Navy / Large' }).click();
         await page.getByLabel('Available for Navy / Medium').fill('3');
@@ -337,17 +337,21 @@ test('store settings edits and secondary options work at each viewport', async (
         const contact = await page.locator('section[aria-labelledby="contact-details-heading"]').boundingBox();
         const settingsNav = page.getByRole('navigation', { name: 'Store settings', exact: true });
         await expect(settingsNav.getByRole('link', { name: 'Store details', exact: true })).toHaveAttribute('aria-current', 'page');
-        await expect(page.getByLabel('Pickup address', { exact: true })).toBeHidden();
-        await page.locator('summary', { hasText: 'Pickup & shipping' }).click();
-        await expect(page.getByLabel('Pickup address', { exact: true })).toBeVisible();
-        await page.locator('summary', { hasText: 'Pickup & shipping' }).click();
+        await expect(page.getByLabel('Courier pickup address', { exact: true })).toBeHidden();
+        const shipping = page.locator('summary#shipping-details-heading');
+        await shipping.click();
+        await expect(page.getByLabel('Courier pickup address', { exact: true })).toBeVisible();
+        await shipping.click();
+        const manualCoordinates = page.locator('summary', { hasText: 'Enter exact latitude & longitude manually' });
         await expect(page.getByLabel('Latitude', { exact: true })).toBeHidden();
-        await page.locator('summary', { hasText: 'Map location' }).click();
+        await manualCoordinates.click();
         await expect(page.getByLabel('Latitude', { exact: true })).toBeVisible();
-        await page.locator('summary', { hasText: 'Map location' }).click();
+        await manualCoordinates.click();
         if (testInfo.project.name === 'desktop-chromium') {
+            // The settings menu sits above the form, with the customer preview rail beside the form.
             const navigation = await settingsNav.boundingBox();
-            expect(navigation.x + navigation.width).toBeLessThan(identity.x);
+            const form = await page.locator('section[aria-labelledby="store-profile-heading"]').boundingBox();
+            expect(navigation.y + navigation.height).toBeLessThanOrEqual(form.y);
             expect(contact.x).toBe(identity.x);
             const accessibility = await new AxeBuilder({ page })
                 .include('form[action*="/seller/store-settings?branch="]')
@@ -358,10 +362,10 @@ test('store settings edits and secondary options work at each viewport', async (
             expect(await page.getByLabel('Store description').evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16);
             await expect(page.locator('[data-cookie-floating]')).toHaveCount(0);
         }
-        await expect(page.getByText('All changes saved')).toBeVisible();
-        await expect(page.getByRole('button', { name: 'Save store settings' })).toBeDisabled();
+        // The save bar appears only once something changed.
+        await expect(page.getByRole('region', { name: 'Unsaved store settings' })).toBeHidden();
         await page.getByLabel('Store description').fill('A local shop.');
-        await expect(page.getByText('Unsaved changes', { exact: true })).toBeVisible();
+        await expect(page.getByText('You have unsaved changes', { exact: true })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Save store settings' })).toBeEnabled();
         await expect(page.locator('#description-count')).toHaveText('13 / 2,000 characters');
         await page.getByLabel('Store description').fill('A local shop. 🛍');
@@ -402,10 +406,10 @@ test('store settings save, logo removal, and validation work in the browser', as
         await page.goto('/seller/store-settings');
         await page.getByRole('button', { name: 'Reject Optional' }).click();
         await expect(page.locator('[data-cookie-banner]')).toHaveCount(0);
-        await expect(page.getByRole('button', { name: 'Save store settings' })).toBeDisabled();
+        await expect(page.getByRole('region', { name: 'Unsaved store settings' })).toBeHidden();
         await page.getByLabel('Store description').fill('A local shop with useful goods.');
         await page.getByLabel('Phone').fill('+639171234568');
-        await page.getByLabel('City').fill('Quezon City');
+        // The city stays Manila: later tests read this shared branch's name.
         await page.getByLabel('Street address').fill('25 QA Street');
         await page.getByLabel('Change logo').setInputFiles({ name: 'new-logo.png', mimeType: 'image/png', buffer: tinyPng });
 
@@ -432,12 +436,12 @@ test('store settings save, logo removal, and validation work in the browser', as
         expect(updates).toBe(1);
         await expect(page.getByLabel('Store description')).toHaveValue('A local shop with useful goods.');
         await expect(page.getByLabel('Phone')).toHaveValue('+639171234568');
-        await expect(page.getByLabel('City')).toHaveValue('Quezon City');
+        await expect(page.getByLabel('City')).toHaveValue('Manila');
         await expect(page.getByLabel('Street address')).toHaveValue('25 QA Street');
         await page.reload();
         await expect(page.getByLabel('Store description')).toHaveValue('A local shop with useful goods.');
         await expect(page.getByLabel('Phone')).toHaveValue('+639171234568');
-        await expect(page.getByRole('button', { name: 'Save store settings' })).toBeDisabled();
+        await expect(page.getByRole('region', { name: 'Unsaved store settings' })).toBeHidden();
 
         await page.getByLabel('Remove current logo on save').check();
         await expect(page.getByText('Logo will be removed')).toBeVisible();
@@ -448,7 +452,7 @@ test('store settings save, logo removal, and validation work in the browser', as
         await page.getByRole('button', { name: 'Save store settings' }).click();
         await expect(page.getByText('Branch details saved.')).toBeVisible();
         await expect(page.getByLabel('Remove current logo on save')).toHaveCount(0);
-        await expect(page.getByRole('button', { name: 'Save store settings' })).toBeDisabled();
+        await expect(page.getByRole('region', { name: 'Unsaved store settings' })).toBeHidden();
 
         await page.getByLabel('Store description').fill('This failed save should stay unsaved.');
         await page.getByLabel('Change logo').setInputFiles({ name: 'invalid.txt', mimeType: 'text/plain', buffer: Buffer.from('not an image') });
@@ -716,9 +720,10 @@ test('workspace pages hold their own measure and gutter', async ({ browser }) =>
     const customer = await openAsRole(browser, 'customer', { viewport: wide });
 
     try {
-        // One sidebar column for both workspaces, then each page takes the measure its content reads at.
+        // Seller Center's sidebar is wider (role badges); each page then takes the measure its content reads at.
         const purchases = await measure(customer.page, '/orders');
-        expect(purchases.sidebar).toBe(sidebar);
+        expect(sidebar).toBe('248px');
+        expect(purchases.sidebar).toBe('232px');
         // The orders list reads as one ledger line, so its measure is 1080 (app.css account measures).
         expect(purchases.width).toBe(1080);
         expect(purchases.leftSlack).toBe(purchases.rightSlack);
