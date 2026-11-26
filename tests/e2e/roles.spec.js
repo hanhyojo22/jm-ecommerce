@@ -434,8 +434,10 @@ test('seller order workspace keeps a discount review error visible after redirec
         await expect(page.locator('.sc-order-ref')).toHaveText('Order QA-REVIEW-001');
         const orderId = new URL(page.url()).searchParams.get('order');
         const token = await page.locator('meta[name="csrf-token"]').getAttribute('content');
-        // Submit from the page so the browser follows the redirect at once. A background POST plus a
-        // reload let the header's 15s message poll land in between and use up the one-time error.
+        // Opening an order preloads its neighbours. A preload that reaches the server between the
+        // review's redirect and the next page uses up the one-time error (seen in a CI trace), so
+        // let the page settle first, then submit from the page so the redirect is followed at once.
+        await page.waitForLoadState('networkidle');
         const redirected = page.waitForEvent('load');
         await page.evaluate(({ action, token }) => {
             const form = Object.assign(document.createElement('form'), { method: 'POST', action });
