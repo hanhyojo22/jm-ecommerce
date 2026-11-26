@@ -409,7 +409,7 @@ test('store settings save, logo removal, and validation work in the browser', as
         await expect(page.getByRole('region', { name: 'Unsaved store settings' })).toBeHidden();
         await page.getByLabel('Store description').fill('A local shop with useful goods.');
         await page.getByLabel('Phone').fill('+639171234568');
-        await page.getByLabel('City').fill('Quezon City');
+        // The city stays Manila: later tests read this shared branch's name.
         await page.getByLabel('Street address').fill('25 QA Street');
         await page.getByLabel('Change logo').setInputFiles({ name: 'new-logo.png', mimeType: 'image/png', buffer: tinyPng });
 
@@ -436,7 +436,7 @@ test('store settings save, logo removal, and validation work in the browser', as
         expect(updates).toBe(1);
         await expect(page.getByLabel('Store description')).toHaveValue('A local shop with useful goods.');
         await expect(page.getByLabel('Phone')).toHaveValue('+639171234568');
-        await expect(page.getByLabel('City')).toHaveValue('Quezon City');
+        await expect(page.getByLabel('City')).toHaveValue('Manila');
         await expect(page.getByLabel('Street address')).toHaveValue('25 QA Street');
         await page.reload();
         await expect(page.getByLabel('Store description')).toHaveValue('A local shop with useful goods.');
