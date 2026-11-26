@@ -581,7 +581,7 @@
                                     </div>
                                     <div class="min-w-0 sm:col-span-2">
                                         <label for="address_line" class="block text-sm font-semibold text-ink">Street address <span class="font-normal text-muted">(required)</span></label>
-                                        <input id="address_line" name="address_line" x-model="addressLine" autocomplete="street-address" maxlength="255" required @error('address_line') aria-describedby="address-line-error" aria-invalid="true" @enderror value="{{ old('address_line', $store->address_line) }}" class="field-control mt-2 text-base lg:text-sm @error('address_line') border-rose-500 @enderror">
+                                        <input id="address_line" name="address_line" x-model="addressLine" autocomplete="street-address" maxlength="255" required @error('address_line') aria-describedby="address-line-error" aria-invalid="true" @enderror value="{{ old('address_line', $store->address_line) }}" class="field-control mt-2 max-w-3xl text-base lg:text-sm @error('address_line') border-rose-500 @enderror">
                                         <x-input-error id="address-line-error" :messages="$errors->get('address_line')" class="mt-2" />
                                     </div>
                                 </div>
