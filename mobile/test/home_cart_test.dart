@@ -340,8 +340,134 @@ void main() {
     await tester.pump();
 
     expect(api.updates, 1);
-    expect(outcomes, ['ok', 'ok', 'error']);
+    // Earlier taps were overtaken, so they report nothing.
+    expect(outcomes, ['error']);
   });
+
+  testWidgets(
+    'taps during a first add count at once and go out as one change',
+    (tester) async {
+      final api = _CartApi()..pending = Completer<Cart>();
+      final container = _container(api);
+      container.listen(cartProvider, (_, _) {});
+      await container.read(cartProvider.future);
+      final notifier = container.read(cartProvider.notifier);
+      final shirt = _shirt();
+
+      var firstAdded = false;
+      unawaited(notifier.addOne(shirt)!.then((_) => firstAdded = true));
+      unawaited(notifier.addOne(shirt)!);
+      unawaited(notifier.addOne(shirt)!);
+      expect(container.read(cartProvider).value!.addingProductIds, {'shirt'});
+      expect(container.read(cartProvider).value!.isUpdating, isTrue);
+      // Two of another product already in the cart, plus three shirts on their way.
+      expect(container.read(cartCountProvider), 5);
+
+      // Let the add request go out before answering it.
+      for (var turn = 0; turn < 5; turn++) {
+        await Future<void>.value();
+      }
+      expect(api.adds, 1);
+      api.pending!.complete(_cart(1));
+      await tester.pump();
+      expect(firstAdded, isTrue);
+      expect(container.read(cartProvider).value!.addingProductIds, isEmpty);
+      expect(container.read(cartCountProvider), 3);
+
+      await tester.pump(CartNotifier.quantityDebounce);
+      await tester.pump();
+      expect(api.updates, 1);
+      expect(api.updatedTo, 3);
+      expect(container.read(cartProvider).value!.isUpdating, isFalse);
+    },
+  );
+
+  testWidgets('a tap while the cart is still loading is sent, not lost', (
+    tester,
+  ) async {
+    final api = _CartApi()..pendingRead = Completer<Cart>();
+    final container = _container(api);
+    container.listen(cartProvider, (_, _) {});
+
+    var added = false;
+    final tap = container.read(cartProvider.notifier).addOne(_shirt());
+    expect(tap, isNotNull);
+    unawaited(tap!.then((_) => added = true));
+    for (var turn = 0; turn < 5; turn++) {
+      await Future<void>.value();
+    }
+    expect(api.adds, 1);
+
+    await tester.pump();
+    expect(added, isTrue);
+    api.pendingRead!.complete(_cart(3));
+    await tester.pump();
+    expect(container.read(cartProvider).value!.cart.lines.single.quantity, 3);
+  });
+
+  testWidgets('taps queued behind a first add die with a closed cart', (
+    tester,
+  ) async {
+    final api = _CartApi()..pending = Completer<Cart>();
+    final container = _container(api);
+    container.listen(cartProvider, (_, _) {});
+    await container.read(cartProvider.future);
+    final notifier = container.read(cartProvider.notifier);
+    final shirt = _shirt();
+
+    var settled = 0;
+    for (var tap = 0; tap < 3; tap++) {
+      unawaited(
+        notifier
+            .addOne(shirt)!
+            .then((_) => settled++, onError: (_) => settled++),
+      );
+    }
+    container.invalidate(cartProvider);
+    api.pending!.complete(_cart(1));
+    await tester.pump(CartNotifier.quantityDebounce);
+    await tester.pump();
+
+    expect(api.updates, 0);
+    // The first add itself reached the server; the taps queued behind it did not.
+    expect(settled, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a tap past the branch stock changes nothing', (tester) async {
+    final api = _CartApi()..cartProduct = 'shirt';
+    final container = _container(api);
+    container.listen(cartProvider, (_, _) {});
+    await container.read(cartProvider.future);
+
+    expect(
+      container.read(cartProvider.notifier).addOne(_shirt(stock: 2)),
+      isNull,
+    );
+    await tester.pump(CartNotifier.quantityDebounce);
+    expect(api.updates, 0);
+  });
+
+  testWidgets(
+    'changing branch shows the re-checked cart and drops unsent taps',
+    (tester) async {
+      final api = _CartApi()..cartProduct = 'shirt';
+      final container = _container(api);
+      container.listen(cartProvider, (_, _) {});
+      await container.read(cartProvider.future);
+      final notifier = container.read(cartProvider.notifier);
+
+      unawaited(notifier.setQuantity('line', 3));
+      final readsBefore = api.cartReads;
+      await notifier.changeBranch('B-OTHER');
+      await tester.pump(CartNotifier.quantityDebounce);
+
+      expect(api.branchChanges, ['B-OTHER']);
+      expect(api.cartReads, readsBefore);
+      expect(api.updates, 0);
+      expect(container.read(cartProvider).value!.cart.lines.single.quantity, 2);
+    },
+  );
 
   testWidgets('removing a line drops its unsent tap instead of sending it', (
     tester,
@@ -361,7 +487,7 @@ void main() {
     expect(api.removes, 1);
     expect(api.updates, 0);
     expect(tapSettled, isFalse);
-    expect(container.read(cartProvider).value!.lines, isEmpty);
+    expect(container.read(cartProvider).value!.cart.lines, isEmpty);
   });
 
   testWidgets('a tap already sent when its line is removed reports nothing', (
@@ -420,7 +546,7 @@ void main() {
     await tester.pump();
 
     expect(refusal, isA<ApiException>());
-    expect(container.read(cartProvider).value!.lines.single.quantity, 3);
+    expect(container.read(cartProvider).value!.cart.lines.single.quantity, 3);
   });
 
   testWidgets('a tap still waiting when the cart closes is never confirmed', (
@@ -664,6 +790,16 @@ Future<void> _pumpCard(
   await tester.pumpAndSettle();
 }
 
+/// The product the cards and the fake cart use; `line` is its cart item.
+Product _shirt({int? stock}) => Product.fromJson({
+  'id': 'shirt',
+  'name': 'Test shirt',
+  'slug': 'shirt',
+  'price': '250.00',
+  'in_stock': true,
+  'stock_quantity': ?stock,
+});
+
 Cart _cart(int quantity, {String productId = 'shirt'}) => Cart.fromJson({
   'items': [
     {
@@ -688,6 +824,9 @@ class _CartApi extends ApiClient {
 
   /// Reading the cart fails as if the phone went offline.
   bool failRead = false;
+
+  /// Holds the cart read until the test answers it.
+  Completer<Cart>? pendingRead;
 
   /// A cart holding both the shirt ('line') and the soap ('line-soap'), two of each.
   bool twoLines = false;
@@ -715,6 +854,9 @@ class _CartApi extends ApiClient {
   @override
   Future<Cart> cart() async {
     cartReads++;
+    if (pendingRead != null) {
+      return pendingRead!.future;
+    }
     if (failRead) {
       throw const ApiException(code: 'network.error', message: 'Offline.');
     }
@@ -746,6 +888,14 @@ class _CartApi extends ApiClient {
   Future<Cart> removeCartItem(String itemId) async {
     removes++;
     return Cart.empty;
+  }
+
+  final branchChanges = <String>[];
+
+  @override
+  Future<Cart> setCartBranch(String branchId) async {
+    branchChanges.add(branchId);
+    return _cart(startQuantity, productId: cartProduct);
   }
 
   @override

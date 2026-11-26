@@ -652,27 +652,6 @@ class Cart {
     subtotal: subtotal,
   );
 
-  /// This cart with [lineId] replaced by [line] in the same place, or taken out when
-  /// [line] is null. The totals stay as the server sent them.
-  Cart withLine(String lineId, CartLine? line) {
-    final index = lines.indexWhere((current) => current.id == lineId);
-    final others = [
-      for (final current in lines)
-        if (current.id != lineId) current,
-    ];
-    if (line != null) {
-      others.insert(index < 0 ? others.length : index, line);
-    }
-
-    return Cart(
-      id: id,
-      branchId: branchId,
-      lines: others,
-      selectedCount: selectedCount,
-      subtotal: subtotal,
-    );
-  }
-
   /// What checkout will charge for the items: every available line. [subtotal] counts only
   /// selected lines, and a line can sit unselected until the cart page selects it.
   String get availableTotal {

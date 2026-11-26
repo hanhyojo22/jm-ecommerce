@@ -108,12 +108,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = ref.watch(cartProvider);
-    final notifier = ref.read(cartProvider.notifier);
-    final updating = notifier.isUpdating;
+    final updating = cart.value?.isUpdating ?? false;
     final body = AsyncView(
       value: cart,
       onRetry: () => ref.invalidate(cartProvider),
-      builder: (value) {
+      builder: (shown) {
+        final value = shown.cart;
         // Covers every cart icon (home, product, store) pushing /cart for a guest.
         if (!ref.watch(isSignedInProvider)) {
           return const SignInPrompt(
@@ -171,7 +171,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               ),
                             _CartLineRow(
                               line: value.lines[i],
-                              updating: notifier.isUpdatingItem(
+                              updating: shown.updatingItemIds.contains(
                                 value.lines[i].id,
                               ),
                               onQuantity: _busy

@@ -852,13 +852,8 @@ class _ProductCartButton extends ConsumerStatefulWidget {
 class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
     with SingleTickerProviderStateMixin {
   final _buttonKey = GlobalKey();
-  bool _adding = false;
   bool _primed = false;
   int? _lastQuantity;
-
-  /// Taps made while the first add is still on its way; each still counts.
-  int _queuedTaps = 0;
-  int _quantityRequest = 0;
 
   late final _pop = AnimationController(
     vsync: this,
@@ -902,13 +897,15 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
     );
   }
 
-  /// This product's plain line in [cart], as a record that compares by value.
-  ({String id, int quantity})? _lineIn(Cart? cart) {
-    final match = cart?.lines
+  /// How many of this product the cart holds, and whether its first add is on its way,
+  /// as a record that compares by value.
+  ({int? quantity, bool adding}) _inCart(CartState? shown) => (
+    quantity: shown?.cart.lines
         .where((l) => l.productId == widget.product.id && l.variantId == null)
-        .firstOrNull;
-    return match == null ? null : (id: match.id, quantity: match.quantity);
-  }
+        .firstOrNull
+        ?.quantity,
+    adding: shown?.addingProductIds.contains(widget.product.id) ?? false,
+  );
 
   /// True, with a message, when the phone has no network: the item must not fly to a cart
   /// it cannot reach.
@@ -921,13 +918,9 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
     return true;
   }
 
+  /// Every tap adds one more; the cart decides how and when to tell the server.
   Future<void> _add() async {
     if (_blockIfOffline()) {
-      return;
-    }
-    if (_adding) {
-      _queuedTaps++;
-      _fly();
       return;
     }
     if (!await requireSignIn(context, ref) || !mounted) {
@@ -943,67 +936,25 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
     if (!mounted) {
       return;
     }
+    final added = ref.read(cartProvider.notifier).addOne(widget.product);
+    if (added == null) {
+      AppNotice.of(context).show(
+        'Only ${widget.product.stockQuantity} left at this branch.',
+        kind: NoticeKind.info,
+      );
+      return;
+    }
     final landed = _fly();
-    setState(() => _adding = true);
-    try {
-      await ref.read(cartProvider.notifier).add(productId: widget.product.id);
-      if (!mounted) {
-        return;
-      }
-      final line = _lineIn(ref.read(cartProvider).value);
-      if (_queuedTaps > 0 && line != null) {
-        _addMore(line.id, line.quantity, _queuedTaps);
-      }
-      // Confirm only once the server agreed and the thumbnail has landed.
-      unawaited(
-        landed.then((_) {
+    unawaited(
+      added.then(
+        (_) async {
+          // Confirm only once the server agreed and the thumbnail has landed.
+          await landed;
           if (mounted) {
             showAddedToCartToast(context);
           }
-        }),
-      );
-    } on ApiException catch (error) {
-      if (mounted) {
-        AppNotice.of(context).show(error.friendly);
-      }
-    } finally {
-      _queuedTaps = 0;
-      if (mounted) {
-        setState(() => _adding = false);
-      }
-    }
-  }
-
-  /// Adds [count] more, up to the branch's stock; false when none fit. The cart shows the
-  /// number at once, sends the last of quick taps, and puts the real quantity back if the
-  /// server refuses.
-  bool _addMore(String lineId, int quantity, [int count = 1]) {
-    if (_blockIfOffline()) {
-      return false;
-    }
-    final stock = widget.product.stockQuantity;
-    final wanted = stock > 0 && quantity + count > stock
-        ? stock
-        : quantity + count;
-    if (wanted <= quantity) {
-      AppNotice.of(context)
-          .show('Only $stock left at this branch.', kind: NoticeKind.info);
-      return false;
-    }
-    final request = ++_quantityRequest;
-    // Queued taps during the first add already share its flight and confirmation.
-    final landed = _adding ? null : _fly();
-    ref
-        .read(cartProvider.notifier)
-        .setQuantity(lineId, wanted)
-        .then((_) async {
-          if (landed == null) return;
-          await landed;
-          if (mounted && request == _quantityRequest) {
-            showAddedToCartToast(context);
-          }
-        })
-        .catchError((Object error) {
+        },
+        onError: (Object error) {
           if (mounted) {
             AppNotice.of(context).show(
               error is ApiException
@@ -1011,8 +962,9 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
                   : 'Could not update your cart. Please try again.',
             );
           }
-        });
-    return true;
+        },
+      ),
+    );
   }
 
   @override
@@ -1022,14 +974,14 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
         product.hasVariants || product.requiresVariantSelection;
     // Watch only this product's line, so a change to another product (or a refetch of the
     // same cart) does not redraw every card on screen.
-    final line = chooseOptions
-        ? null
-        : ref.watch(cartProvider.select((cart) => _lineIn(cart.value)));
+    final inCart = chooseOptions
+        ? (quantity: null, adding: false)
+        : ref.watch(cartProvider.select((cart) => _inCart(cart.value)));
     if (!_primed) {
       _primed = true;
-      _lastQuantity = line?.quantity;
-    } else if (_lastQuantity != line?.quantity) {
-      _lastQuantity = line?.quantity;
+      _lastQuantity = inCart.quantity;
+    } else if (_lastQuantity != inCart.quantity) {
+      _lastQuantity = inCart.quantity;
       _triggerPop();
     }
     final theme = Theme.of(context);
@@ -1055,17 +1007,15 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
 
     // One button for every tap: each adds one more; the Cart tab's badge shows the total.
     final control = Semantics(
-      value: line == null ? null : '${line.quantity} in cart',
+      value: inCart.quantity == null ? null : '${inCart.quantity} in cart',
       child: IconButton(
         tooltip: 'Add to cart',
         color: scheme.primary,
         constraints: const BoxConstraints.tightFor(width: 40, height: 40),
         padding: EdgeInsets.zero,
-        onPressed: line == null || _adding
-            ? _add
-            : () => _addMore(line.id, line.quantity),
+        onPressed: _add,
         // The Cart tab's tote, so the icon says where the item goes.
-        icon: _adding && line == null
+        icon: inCart.adding
             ? SizedBox.square(
                 dimension: 18,
                 child: CircularProgressIndicator(

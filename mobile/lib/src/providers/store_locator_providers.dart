@@ -211,13 +211,10 @@ class NearestStoreNotifier extends AsyncNotifier<StoreLocatorState> {
     }
   }
 
-  /// Saved on the cart, which also re-checks its lines against the new branch.
+  /// Saved on the cart, which also re-checks its items against the new branch. A failure
+  /// quietly leaves the cart as it was.
   void _saveOnCart(String branchId) {
-    ref.read(apiClientProvider).setCartBranch(branchId).then((_) {
-      if (ref.mounted) {
-        ref.invalidate(cartProvider);
-      }
-    }, onError: (_) {});
+    ref.read(cartProvider.notifier).changeBranch(branchId).ignore();
   }
 }
 

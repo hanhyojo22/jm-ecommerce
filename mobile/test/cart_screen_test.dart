@@ -101,7 +101,7 @@ void main() {
   });
 
   test(
-    'clear selection uses response without a redundant cart fetch',
+    'selection uses the response without a redundant cart fetch',
     () async {
       final api = _CartApi();
       final container = ProviderContainer(
@@ -115,10 +115,10 @@ void main() {
       container.listen(cartProvider, (_, _) {});
       await container.read(cartProvider.future);
       api.failRead = true;
-      await container.read(cartProvider.notifier).clearSelection();
-      expect(container.read(cartProvider).requireValue.selectedCount, 0);
+      await container.read(cartProvider.notifier).selectOnly(const []);
+      expect(container.read(cartProvider).requireValue.cart.selectedCount, 0);
       expect(
-        container.read(cartProvider).requireValue.lines.single.selected,
+        container.read(cartProvider).requireValue.cart.lines.single.selected,
         isFalse,
       );
     },
