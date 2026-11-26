@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="splash_background">#FAFBFD</color>
+    <color name="splash_background">#CCE5FA</color>
+    <color name="splash_horizon">#F9D8BF</color>
     <!-- Matches _brand in lib/src/theme.dart. -->
     <color name="notification_accent">#071C94</color>
 </resources>

@@ -3,7 +3,20 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-const splashBackground = Color(0xFFFAFBFD);
+const splashBackground = Color(0xFFCCE5FA);
+const _splashHorizon = Color(0xFFF9D8BF);
+const _splashGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [
+    splashBackground,
+    Color(0xFFE9F4FC),
+    Color(0xFFFDF7E9),
+    Color(0xFFFFE7B8),
+    _splashHorizon,
+  ],
+  stops: [0, .28, .53, .78, 1],
+);
 const _emblemAsset = AssetImage('assets/branding/everyday-emblem.webp');
 const _logoAsset = AssetImage('assets/branding/everyday-company-logo.png');
 
@@ -64,124 +77,129 @@ class _StartupSplashState extends State<StartupSplash>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
         statusBarColor: Colors.transparent,
-        systemNavigationBarColor: splashBackground,
+        systemNavigationBarColor: _splashHorizon,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
         backgroundColor: splashBackground,
-        body: Semantics(
-          label: 'Everyday Pharmacy. Starting app.',
-          child: ExcludeSemantics(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final width = math.min(
-                  math.min(constraints.maxWidth * .74, 340.0),
-                  constraints.maxHeight * .68,
-                );
-                return Center(
-                  child: FractionalTranslation(
-                    translation: const Offset(0, -.12),
-                    child: SizedBox(
-                      width: width,
-                      child: AnimatedBuilder(
-                        animation: _controller,
-                        builder: (context, child) {
-                          final time = _controller.value;
-                          // A slow rise: about 1.9 s.
-                          final cloud = const Interval(
-                            .057,
-                            .95,
-                            curve: Curves.easeOutCubic,
-                          ).transform(time);
-                          // The sun climbs an arc from behind the cloud on the right to its spot top-left.
-                          final sun = const Interval(
-                            .08,
-                            .8,
-                            curve: Curves.easeInOutSine,
-                          ).transform(time);
-                          final sunArcRise = math.sin(sun * math.pi / 2);
-                          final wordmark = const Interval(
-                            .131,
-                            .67,
-                            curve: Curves.easeOutCubic,
-                          ).transform(time);
-                          final emblemWidth = width * .76;
-                          final emblemHeight = emblemWidth / 1.12;
-                          return Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                width: emblemWidth,
-                                height: emblemHeight,
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    Positioned(
-                                      top: 0,
-                                      left: -emblemWidth * .03,
-                                      child: Opacity(
-                                        opacity: math.min(1, sun * 3),
-                                        child: Transform.translate(
-                                          offset: reducedMotion
-                                              ? Offset.zero
-                                              : Offset(
-                                                  emblemWidth * .55 * (1 - sun),
-                                                  emblemHeight *
-                                                      .5 *
-                                                      (1 - sunArcRise),
-                                                ),
-                                          child: Transform.rotate(
-                                            angle: reducedMotion
-                                                ? 0
-                                                : 1.2 * (1 - sun),
-                                            child: _EmblemSprite(
-                                              size: emblemWidth * .88,
-                                              alignment: Alignment.centerLeft,
+        body: DecoratedBox(
+          decoration: const BoxDecoration(gradient: _splashGradient),
+          child: Semantics(
+            label: 'Everyday Pharmacy. Starting app.',
+            child: ExcludeSemantics(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final width = math.min(
+                    math.min(constraints.maxWidth * .74, 340.0),
+                    constraints.maxHeight * .68,
+                  );
+                  return Center(
+                    child: FractionalTranslation(
+                      translation: const Offset(0, -.12),
+                      child: SizedBox(
+                        width: width,
+                        child: AnimatedBuilder(
+                          animation: _controller,
+                          builder: (context, child) {
+                            final time = _controller.value;
+                            // A slow rise: about 1.9 s.
+                            final cloud = const Interval(
+                              .057,
+                              .95,
+                              curve: Curves.easeOutCubic,
+                            ).transform(time);
+                            // The sun climbs an arc from behind the cloud on the right to its spot top-left.
+                            final sun = const Interval(
+                              .08,
+                              .8,
+                              curve: Curves.easeInOutSine,
+                            ).transform(time);
+                            final sunArcRise = math.sin(sun * math.pi / 2);
+                            final wordmark = const Interval(
+                              .131,
+                              .67,
+                              curve: Curves.easeOutCubic,
+                            ).transform(time);
+                            final emblemWidth = width * .76;
+                            final emblemHeight = emblemWidth / 1.12;
+                            return Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: emblemWidth,
+                                  height: emblemHeight,
+                                  child: Stack(
+                                    clipBehavior: Clip.none,
+                                    children: [
+                                      Positioned(
+                                        top: 0,
+                                        left: -emblemWidth * .03,
+                                        child: Opacity(
+                                          opacity: math.min(1, sun * 3),
+                                          child: Transform.translate(
+                                            offset: reducedMotion
+                                                ? Offset.zero
+                                                : Offset(
+                                                    emblemWidth *
+                                                        .55 *
+                                                        (1 - sun),
+                                                    emblemHeight *
+                                                        .5 *
+                                                        (1 - sunArcRise),
+                                                  ),
+                                            child: Transform.rotate(
+                                              angle: reducedMotion
+                                                  ? 0
+                                                  : 1.2 * (1 - sun),
+                                              child: _EmblemSprite(
+                                                size: emblemWidth * .88,
+                                                alignment: Alignment.centerLeft,
+                                              ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                    Positioned(
-                                      top: emblemHeight * .16,
-                                      left: emblemWidth * .08,
-                                      child: Opacity(
-                                        opacity: cloud,
-                                        child: Transform.translate(
-                                          offset: reducedMotion
-                                              ? Offset.zero
-                                              : Offset(
-                                                  0,
-                                                  emblemHeight *
-                                                      .95 *
-                                                      (1 - cloud),
-                                                ),
-                                          child: _EmblemSprite(
-                                            size: emblemWidth * 1.08,
-                                            alignment: Alignment.centerRight,
+                                      Positioned(
+                                        top: emblemHeight * .16,
+                                        left: emblemWidth * .08,
+                                        child: Opacity(
+                                          opacity: cloud,
+                                          child: Transform.translate(
+                                            offset: reducedMotion
+                                                ? Offset.zero
+                                                : Offset(
+                                                    0,
+                                                    emblemHeight *
+                                                        .95 *
+                                                        (1 - cloud),
+                                                  ),
+                                            child: _EmblemSprite(
+                                              size: emblemWidth * 1.08,
+                                              alignment: Alignment.centerRight,
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 26),
-                              Opacity(
-                                opacity: wordmark,
-                                child: FractionalTranslation(
-                                  translation: const Offset(.1, 0),
-                                  child: _LogoWordmark(width: width * .8),
+                                const SizedBox(height: 26),
+                                Opacity(
+                                  opacity: wordmark,
+                                  child: FractionalTranslation(
+                                    translation: const Offset(.1, 0),
+                                    child: _LogoWordmark(width: width * .8),
+                                  ),
                                 ),
-                              ),
-                            ],
-                          );
-                        },
+                              ],
+                            );
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ),
