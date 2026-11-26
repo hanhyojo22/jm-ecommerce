@@ -181,7 +181,7 @@ class OrderDetailsTest extends TestCase
         $sellerOrder = $this->storeOrder($order, 'Review Store', 'Reviewed Item', 'delivered');
         $reviewed = $sellerOrder->items()->firstOrFail();
         $reviewed->review()->create(['product_id' => $reviewed->product_id, 'user_id' => $buyer->id, 'rating' => 5, 'status' => 'published']);
-        $remaining = $sellerOrder->items()->create(['product_id' => $reviewed->product_id, 'product_name' => 'Remaining Item', 'sku' => 'REMAINING', 'unit_price' => '0.00', 'quantity' => 1, 'line_total' => '0.00']);
+        $remaining = $sellerOrder->items()->create(['product_id' => $reviewed->product_id, 'product_name' => 'Remaining Item', 'sku' => 'REMAINING', 'unit_price' => '299.00', 'quantity' => 1, 'line_total' => '299.00']);
 
         $this->actingAs($buyer)->withHeader('X-Order-Modal', '1')->get(route('orders.show', $order))
             ->assertSee('Review your items')

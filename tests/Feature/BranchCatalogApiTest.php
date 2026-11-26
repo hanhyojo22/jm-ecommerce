@@ -260,7 +260,7 @@ class BranchCatalogApiTest extends TestCase
             'sku' => $product->sku,
             'unit_price' => '10.00',
             'quantity' => $quantity,
-            'line_total' => '10.00',
+            'line_total' => number_format(10 * $quantity, 2, '.', ''),
         ])->forceFill(['created_at' => $at])->save();
     }
 
