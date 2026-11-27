@@ -6,6 +6,7 @@ import 'package:jmmart/src/core/api_client.dart';
 import 'package:jmmart/src/models/medication.dart';
 import 'package:jmmart/src/models/models.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
+import 'package:jmmart/src/screens/medicine_people_screen.dart';
 import 'package:jmmart/src/screens/medicine_setup_screen.dart';
 import 'package:jmmart/src/screens/medicines_screen.dart';
 
@@ -110,6 +111,46 @@ void main() {
     );
   });
 
+  testWidgets(
+    'an invitation shows who asked, next to a compact Accept button',
+    (tester) async {
+      final api = _MedicineApi(
+        consented: false,
+        invitations: const [
+          CaregiverLink(
+            id: 'link-1',
+            status: 'pending',
+            invitedEmail: 'anak@example.com',
+            patientName: 'Franil Escalicas',
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        _app(
+          api,
+          Theme(
+            data: ThemeData(
+              filledButtonTheme: FilledButtonThemeData(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                ),
+              ),
+            ),
+            child: const MedicinePeopleScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final name = tester.getSize(find.text('Franil Escalicas'));
+      expect(name.width, greaterThan(100));
+      expect(tester.getSize(find.text('Accept')).width, lessThan(200));
+      await tester.tap(find.text('Accept'));
+      await tester.pumpAndSettle();
+      expect(api.accepted, ['link-1']);
+    },
+  );
+
   testWidgets('a running-low plan offers a reorder', (tester) async {
     final api = _MedicineApi(
       consented: true,
@@ -152,12 +193,18 @@ MedicationPlan _plan({
 );
 
 class _MedicineApi extends ApiClient {
-  _MedicineApi({required this.consented, this.plans = const [], this.warning})
-    : super(baseUrl: 'http://localhost', tokenProvider: () async => null);
+  _MedicineApi({
+    required this.consented,
+    this.plans = const [],
+    this.warning,
+    this.invitations = const [],
+  }) : super(baseUrl: 'http://localhost', tokenProvider: () async => null);
 
   bool consented;
   final List<MedicationPlan> plans;
   final String? warning;
+  final List<CaregiverLink> invitations;
+  final accepted = <String>[];
   final consentCalls = <bool>[];
   final logged = <Map<String, dynamic>>[];
   Map<String, dynamic>? started;
@@ -190,7 +237,10 @@ class _MedicineApi extends ApiClient {
 
   @override
   Future<Caregivers> caregivers() async =>
-      const Caregivers(caregivers: [], invitations: []);
+      Caregivers(caregivers: const [], invitations: invitations);
+
+  @override
+  Future<void> acceptCaregiver(String id) async => accepted.add(id);
 
   @override
   Future<MedicationPlan> startMedicationPlan(Map<String, dynamic> body) async {

@@ -191,6 +191,24 @@ class MedicationPlanApiTest extends TestCase
         $this->getJson(route('api.v1.medication-plans.index'))->assertJsonPath('data.0.answered_slots', []);
     }
 
+    public function test_a_second_answer_for_the_same_dose_is_ignored(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-12-10 07:00', 'Asia/Manila'));
+        [$buyer, $item] = $this->deliveredItem();
+        $this->consent($buyer);
+        $planId = $this->postJson(route('api.v1.medication-plans.store'), $this->planBody($item, ['dose_times' => ['08:00'], 'starts_on' => '2026-12-10']))->json('data.id');
+        $answer = fn (): array => ['logs' => [[
+            'client_uuid' => (string) Str::uuid(), 'status' => 'taken', 'logged_at' => now()->toIso8601String(), 'scheduled_for' => '2026-12-10T08:00:00+08:00',
+        ]]];
+
+        $this->travelTo(CarbonImmutable::parse('2026-12-10 08:01', 'Asia/Manila'));
+        $this->postJson(route('api.v1.medication-plans.doses.store', $planId), $answer())->assertOk()->assertJsonPath('plan.units_left', 29);
+        $this->travelTo(CarbonImmutable::parse('2026-12-10 08:31', 'Asia/Manila'));
+        $this->postJson(route('api.v1.medication-plans.doses.store', $planId), $answer())->assertOk()->assertJsonPath('plan.units_left', 29);
+
+        $this->assertDatabaseCount('medication_dose_logs', 1);
+    }
+
     public function test_pausing_keeps_the_supply(): void
     {
         $this->travelTo(CarbonImmutable::parse('2026-12-10 07:00', 'Asia/Manila'));

@@ -67,6 +67,7 @@ class PushNotifications {
   static final _local = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
   static bool _launchHandled = false;
+  static VoidCallback? _onMessage;
   static Future<void>? _localInitialization;
   static StreamSubscription<String>? _refreshSubscription;
   static final _renderVersions = <String, int>{};
@@ -82,6 +83,8 @@ class PushNotifications {
     ApiClient apiClient, {
     VoidCallback? onMessage,
   }) async {
+    // The listener below is registered once per process; each sign-in brings a new callback.
+    _onMessage = onMessage;
     try {
       final settings = await FirebaseMessaging.instance.requestPermission();
       debugPrint('[Push] permission status: ${settings.authorizationStatus}');
@@ -89,10 +92,7 @@ class PushNotifications {
       if (!_initialized) {
         await initializeLocal();
 
-        FirebaseMessaging.onMessage.listen((message) {
-          onMessage?.call();
-          unawaited(showMessage(message, foreground: true));
-        });
+        FirebaseMessaging.onMessage.listen(handleForeground);
         FirebaseMessaging.onMessageOpenedApp.listen(
           (message) => _open(routeFor(message.data)),
         );
@@ -153,6 +153,7 @@ class PushNotifications {
         '/conversations/${id('conversation_id')}',
       'order' when id('order_id') != null => '/orders/${id('order_id')}',
       'cart' => '/cart',
+      'medication' => '/medicines/people',
       'return_case' when id('order_id') != null => '/orders/${id('order_id')}',
       'announcement' when id('store_slug') != null =>
         '/store/${Uri.encodeComponent(id('store_slug')!)}',
@@ -168,6 +169,27 @@ class PushNotifications {
   /// Keep the app's brand in the header; contextual photos use the large icon.
   @visibleForTesting
   static String iconFor(String? smallIcon) => _icon;
+
+  @visibleForTesting
+  static set onMessageCallback(VoidCallback? callback) => _onMessage = callback;
+
+  /// Shows a push that arrived while the app is open, then lets the signed-in
+  /// session refresh what it shows. The notification comes first: a failing
+  /// refresh (say, from a session that has since signed out) must not hide it.
+  @visibleForTesting
+  static void handleForeground(
+    RemoteMessage message, {
+    Future<void> Function(RemoteMessage message)? display,
+  }) {
+    unawaited(
+      (display ?? (message) => showMessage(message, foreground: true))(message),
+    );
+    try {
+      _onMessage?.call();
+    } catch (error) {
+      debugPrint('[Push] refresh after a message failed: $error');
+    }
+  }
 
   /// Opens the notification that launched the app, once per process. Push
   /// registration and medicine reminders both call it, so a tap on a medicine
