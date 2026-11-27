@@ -39,6 +39,10 @@ class MedicationDoseController extends Controller
                 ? CarbonImmutable::parse($log['scheduled_for'])->setTimezone(config('app.timezone'))
                 : $this->nearestOpenSlot($plan, $loggedAt, $answered);
             if ($slot !== null) {
+                // A dose already marked (say from the reminder, then again from its follow-up) counts once.
+                if (in_array($slot->getTimestamp(), $answered, true)) {
+                    continue;
+                }
                 $answered[] = $slot->getTimestamp();
             }
             $rows[] = [
