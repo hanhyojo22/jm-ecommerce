@@ -9,6 +9,7 @@ import 'package:phosphor_icons/phosphor_icons.dart';
 import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../providers/chat_providers.dart';
+import '../providers/medication_providers.dart';
 import '../providers/push_providers.dart';
 import '../models/store_branch.dart';
 import '../providers/store_locator_providers.dart';
@@ -199,6 +200,7 @@ class _AppShellState extends ConsumerState<AppShell>
     // Cached by Riverpod: runs once per signed-in session, not on every tab switch.
     if (signedIn && _startupPromptsComplete) {
       ref.watch(pushRegistrationProvider);
+      ref.watch(medicationAlarmSyncProvider);
       // Once per session and user: refreshing the account must not ask again.
       final account = ref.watch(meProvider).value;
       if (account != null &&

@@ -37,6 +37,7 @@ class User extends Authenticatable
             'cod_limit_lifted_at' => 'datetime',
             'birth_date' => 'date',
             'name_confirmed_at' => 'datetime',
+            'medication_reminders_consent_at' => 'datetime',
         ];
     }
 
@@ -104,6 +105,32 @@ class User extends Authenticatable
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function careProfiles(): HasMany
+    {
+        return $this->hasMany(CareProfile::class);
+    }
+
+    public function medicationPlans(): HasMany
+    {
+        return $this->hasMany(MedicationPlan::class);
+    }
+
+    /**
+     * Caregivers this user (as the patient) has invited.
+     */
+    public function caregiverLinks(): HasMany
+    {
+        return $this->hasMany(CaregiverLink::class, 'patient_user_id');
+    }
+
+    /**
+     * Medication data is sensitive personal information: nothing is stored before the buyer opts in.
+     */
+    public function hasMedicationConsent(): bool
+    {
+        return $this->medication_reminders_consent_at !== null;
     }
 
     public function deliveryAddresses(): HasMany

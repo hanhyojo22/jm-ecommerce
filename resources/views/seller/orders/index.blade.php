@@ -90,7 +90,7 @@
             <div class="sc-orders-columns">
                 <aside class="sc-orders-queue" aria-label="Order queue">
                     <div class="sc-queue-head"><h2>Order queue</h2><span>{{ number_format($orders->total()) }}</span>
-                <button type="button" @class(['seller-outline-button !min-h-9 shrink-0', '!border-[#c7d6fb] !bg-[#eef3ff] !text-[#1d4ed8]' => $panelFilterCount > 0]) @click="filtersOpen = ! filtersOpen" :aria-expanded="filtersOpen.toString()" aria-controls="order-filters"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span class="sr-only">Filters</span> @if ($panelFilterCount > 0)<span class="sc-tab-count !bg-white !text-[#1d4ed8]" aria-hidden="true">{{ $panelFilterCount }}</span><span class="sr-only">, {{ $panelFilterCount }} active {{ Str::plural('filter', $panelFilterCount) }}</span>@endif</button>
+                <button type="button" @class(['seller-outline-button !min-h-9 shrink-0', '!border-brand/40 !bg-brand/10 !text-brand' => $panelFilterCount > 0]) @click="filtersOpen = ! filtersOpen" :aria-expanded="filtersOpen.toString()" aria-controls="order-filters"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span class="sr-only">Filters</span> @if ($panelFilterCount > 0)<span class="sc-tab-count !bg-surface !text-brand" aria-hidden="true">{{ $panelFilterCount }}</span><span class="sr-only">, {{ $panelFilterCount }} active {{ Str::plural('filter', $panelFilterCount) }}</span>@endif</button>
                 <form id="order-filters" method="GET" action="{{ route('seller.orders.index') }}" class="sc-popover" x-cloak x-show="filtersOpen" @click.outside="filtersOpen = false" @keydown.escape.window="filtersOpen = false" aria-label="Order filters">
                     @foreach (['search'] as $field)@if (filled($filters[$field] ?? null))<input type="hidden" name="{{ $field }}" value="{{ $filters[$field] }}">@endif @endforeach
                     <div class="sc-field"><label for="review-filter">Documents</label><select id="review-filter" name="review" class="sc-input"><option value="">All documents</option><option value="prescription" @selected(($filters['review'] ?? null) === 'prescription')>Prescription</option><option value="discount" @selected(($filters['review'] ?? null) === 'discount')>SC/PWD</option></select></div>
@@ -109,7 +109,7 @@
             <form method="GET" action="{{ route('seller.orders.index') }}" role="search" class="sc-queue-search">
                 @foreach (['status', 'review', 'payment_status', 'from', 'to'] as $field)@if (filled($filters[$field] ?? null))<input type="hidden" name="{{ $field }}" value="{{ $filters[$field] }}">@endif @endforeach
                 <label for="search" class="sr-only">Search orders</label>
-                <svg class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+                <svg class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
                 <input id="search" name="search" type="search" value="{{ $filters['search'] ?? '' }}" placeholder="Search customer or order" data-seller-shortcut="search" class="sc-input pl-9">
             </form>
                     <nav class="sc-queue-filters" aria-label="Order status">
@@ -119,7 +119,7 @@
                     </nav>
             @php($confirmableIds = $orders->filter(fn ($sellerOrder) => $sellerOrder->status === 'pending' && ! $sellerOrder->has_open_cancellation && ! $sellerOrder->needs_prescription_review)->pluck('id')->take(20))
             @if ($canManageOrders && $activeStatus === 'pending' && $confirmableIds->isNotEmpty())
-                <form method="POST" action="{{ route('seller.orders.bulk-confirm') }}" class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[#eef1f5] bg-[#f8fafc] px-5 py-2.5 max-sm:px-4" data-confirm-title="Confirm {{ $confirmableIds->count() }} pending {{ Str::plural('order', $confirmableIds->count()) }}?" data-confirm="They move to confirmed and the buyers are notified." data-confirm-reference="{{ $orders->whereIn('id', $confirmableIds)->take(3)->map(fn ($sellerOrder) => \App\Models\Order::shortNumber($sellerOrder->order->number))->join(', ') }}{{ $confirmableIds->count() > 3 ? ' and '.($confirmableIds->count() - 3).' more' : '' }}" data-confirm-from="Pending" data-confirm-to="Confirmed" data-confirm-action="Confirm {{ Str::plural('order', $confirmableIds->count()) }}">
+                <form method="POST" action="{{ route('seller.orders.bulk-confirm') }}" class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line-soft bg-canvas px-5 py-2.5 max-sm:px-4" data-confirm-title="Confirm {{ $confirmableIds->count() }} pending {{ Str::plural('order', $confirmableIds->count()) }}?" data-confirm="They move to confirmed and the buyers are notified." data-confirm-reference="{{ $orders->whereIn('id', $confirmableIds)->take(3)->map(fn ($sellerOrder) => \App\Models\Order::shortNumber($sellerOrder->order->number))->join(', ') }}{{ $confirmableIds->count() > 3 ? ' and '.($confirmableIds->count() - 3).' more' : '' }}" data-confirm-from="Pending" data-confirm-to="Confirmed" data-confirm-action="Confirm {{ Str::plural('order', $confirmableIds->count()) }}">
                     @csrf
                     @foreach ($confirmableIds as $confirmableId)<input type="hidden" name="seller_order_ids[]" value="{{ $confirmableId }}">@endforeach
                     <p class="text-sm text-muted">{{ $confirmableIds->count() }} {{ Str::plural('order', $confirmableIds->count()) }} waiting for you to confirm.</p>
@@ -141,7 +141,7 @@
                             <span class="sr-only">View order</span>
                         </a>
                     @empty
-                        <div class="sc-empty"><h3>{{ $hasFilters ? 'No orders match these filters' : 'No orders yet' }}</h3><p>{{ $hasFilters ? 'Adjust your search or clear filters to try again.' : 'Orders from your store will appear here after checkout.' }}</p>@if ($hasFilters)<a href="{{ route('seller.orders.index') }}" class="seller-outline-button">Clear filters</a>@endif</div>
+                        <div class="sc-empty"><h3>{{ $hasFilters ? 'No orders match these filters' : 'No orders yet' }}</h3><p>{{ $hasFilters ? 'Adjust your search or clear filters to try again' : 'Orders from your store will appear here after checkout' }}</p>@if ($hasFilters)<a href="{{ route('seller.orders.index') }}" class="seller-outline-button">Clear filters</a>@endif</div>
                     @endforelse
                     </div>
                     @if ($orders->total() > 0)
@@ -153,8 +153,8 @@
                                 <label for="per-page" class="sr-only">Rows per page</label><select id="per-page" name="per_page" data-submit-on-change>@foreach (\App\Http\Controllers\Seller\SellerOrderController::PER_PAGE_OPTIONS as $option)<option value="{{ $option }}" @selected($orders->perPage() === $option)>{{ $option }}</option>@endforeach</select>
                                 <noscript><button type="submit">Show</button></noscript>
                             </form>
-                            @if ($orders->previousPageUrl())<a href="{{ $orders->previousPageUrl() }}" aria-label="Previous page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m15 18-6-6 6-6"/></svg></a>@endif
-                            @if ($orders->nextPageUrl())<a href="{{ $orders->nextPageUrl() }}" aria-label="Next page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m9 6 6 6-6 6"/></svg></a>@endif
+                            @if ($orders->previousPageUrl())<a href="{{ $orders->previousPageUrl() }}" aria-label="Previous page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m15 18-6-6 6-6"/></svg></a>@endif
+                            @if ($orders->nextPageUrl())<a href="{{ $orders->nextPageUrl() }}" aria-label="Next page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m9 6 6 6-6 6"/></svg></a>@endif
                         </div>
                     @endif
                 </aside>

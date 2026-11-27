@@ -41,7 +41,7 @@
             </div>
             <div class="sc-page-actions">
                 @if (config('marketplace.web_store.enabled'))
-                    <a href="{{ route('catalog.store', $store->slug) }}" target="_blank" rel="noopener noreferrer" class="seller-outline-button" aria-label="View {{ $store->name }} storefront in a new tab">View storefront <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg></a>
+                    <a href="{{ route('catalog.store', $store->slug) }}" target="_blank" rel="noopener noreferrer" class="seller-outline-button" aria-label="View {{ $store->name }} storefront in a new tab">View storefront <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg></a>
                 @endif
                 @if ($canManageProducts)<a href="{{ $nextSetupItem['href'] ?? route('seller.products.create') }}" class="seller-primary-button">{{ $nextSetupItem && $nextSetupItem['label'] !== 'First product' ? 'Finish store setup' : 'Add product' }}</a>@endif
             </div>
@@ -225,7 +225,7 @@
                                 <thead><tr><th scope="col">Order</th><th scope="col">Customer</th><th scope="col" class="is-num">Items</th><th scope="col" class="is-num">Total</th><th scope="col">Status</th><th scope="col">Date</th></tr></thead>
                                 <tbody>
                                     @foreach ($recentOrders as $sellerOrder)
-                                        <tr><th scope="row"><a href="{{ route('seller.orders.show', $sellerOrder) }}" class="font-semibold text-ink hover:text-brand"><x-marketplace.order-number :number="$sellerOrder->order->number" /></a></th><td>{{ $sellerOrder->order->recipient_name }}</td><td class="is-num">{{ $sellerOrder->items_count }}</td><td class="is-num font-semibold">₱{{ number_format($sellerOrder->total, 2) }}</td><td><x-marketplace.order-status :status="$sellerOrder->status" /></td><td class="is-muted whitespace-nowrap">{{ $sellerOrder->created_at->format('M j') }}</td></tr>
+                                        <tr><th scope="row"><a href="{{ route('seller.orders.show', $sellerOrder) }}" class="font-medium text-ink hover:text-brand"><x-marketplace.order-number :number="$sellerOrder->order->number" /></a></th><td>{{ $sellerOrder->order->recipient_name }}</td><td class="is-num">{{ $sellerOrder->items_count }}</td><td class="is-num font-medium">₱{{ number_format($sellerOrder->total, 2) }}</td><td><x-marketplace.order-status :status="$sellerOrder->status" /></td><td class="is-muted whitespace-nowrap">{{ $sellerOrder->created_at->format('M j') }}</td></tr>
                                     @endforeach
                                 </tbody>
                             </table>
@@ -236,7 +236,7 @@
                             @endforeach
                         </div>
                     @else
-                        <div class="sc-empty"><h3>No orders yet</h3><p>Orders from your store will appear here as soon as a buyer checks out.</p></div>
+                        <div class="sc-empty"><h3>No orders yet</h3><p>Orders from your store will appear here as soon as a buyer checks out</p></div>
                     @endif
                 </section>
 
@@ -255,9 +255,9 @@
                         </div>
                         <div class="sc-sales-dates flex justify-between text-xs text-muted"><span>{{ \Carbon\Carbon::parse($salesHistory->first()['date'])->format('M j') }}</span><span>{{ \Carbon\Carbon::parse($salesHistory[15]['date'])->format('M j') }}</span><span>{{ \Carbon\Carbon::parse($salesHistory->last()['date'])->format('M j') }}</span></div>
                     </div>
-                    @if (bccomp($lastThirtyDaysSales, '0.00', 2) === 0)<p class="mt-3 sc-meta">No sales recorded in the last 30 days.</p>@endif
+                    @if (bccomp($lastThirtyDaysSales, '0.00', 2) === 0)<p class="mt-3 sc-meta">No sales recorded in the last 30 days</p>@endif
                     <details class="sc-sales-data mt-3">
-                        <summary>View daily sales</summary>
+                        <summary>View daily sales<svg class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></summary>
                         <div class="sc-table-wrap">
                             <table class="sc-table">
                                 <caption>Daily store sales in Philippine pesos</caption>
@@ -286,10 +286,10 @@
                                     @foreach ($branches as $branchRow)
                                         @php($branchOpensAt = $branchRow->status === 'active' ? $branchRow->nextOpeningAt(now()) : null)
                                         <tr>
-                                            <th scope="row" class="font-semibold text-ink">{{ $branchRow->name }}</th>
+                                            <th scope="row" class="font-medium text-ink">{{ $branchRow->name }}</th>
                                             <td><span class="sc-badge" data-tone="{{ $branchRow->status === 'active' && ! $branchOpensAt ? 'success' : 'neutral' }}">{{ $branchRow->status !== 'active' ? ucfirst($branchRow->status) : ($branchOpensAt ? 'Closed · opens '.$branchOpensAt->format('D g:i A') : 'Open') }}</span></td>
-                                            <td @class(['is-num', 'font-semibold text-warning-text' => $branchRow->pending_orders_count > 0, 'is-muted' => $branchRow->pending_orders_count === 0])>{{ number_format($branchRow->pending_orders_count) }}</td>
-                                            <td @class(['is-num', 'font-semibold text-warning-text' => $branchRow->prescriptions_waiting_count > 0, 'is-muted' => $branchRow->prescriptions_waiting_count === 0])>{{ number_format($branchRow->prescriptions_waiting_count) }}</td>
+                                            <td @class(['is-num', 'font-medium text-warning-text' => $branchRow->pending_orders_count > 0, 'is-muted' => $branchRow->pending_orders_count === 0])>{{ number_format($branchRow->pending_orders_count) }}</td>
+                                            <td @class(['is-num', 'font-medium text-warning-text' => $branchRow->prescriptions_waiting_count > 0, 'is-muted' => $branchRow->prescriptions_waiting_count === 0])>{{ number_format($branchRow->prescriptions_waiting_count) }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -306,7 +306,7 @@
                     <ul class="mt-3">
                         @foreach ($setupItems as $item)
                             <li class="flex min-h-11 items-center gap-3 py-1 text-sm">
-                                <span @class(['sc-check', 'is-done' => $item['complete']]) aria-hidden="true">@if ($item['complete'])<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5 9-10"/></svg>@endif</span>
+                                <span @class(['sc-check', 'is-done' => $item['complete']]) aria-hidden="true">@if ($item['complete'])<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5 9-10"/></svg>@endif</span>
                                 <span @class(['min-w-0 flex-1', 'text-muted' => $item['complete'], 'font-medium text-ink' => ! $item['complete']])>{{ $item['label'] }}@unless ($item['complete'] || $item['href'])<span class="block text-xs font-normal text-muted no-underline">Ask a store owner or manager</span>@endunless</span>
                                 @if (! $item['complete'] && $item['href'])<a href="{{ $item['href'] }}" class="sc-link" aria-label="{{ $item['action'] }}: {{ $item['label'] }}">{{ $item['action'] }}</a>@endif
                             </li>
@@ -316,47 +316,47 @@
                 @endif
 
                 <details class="sc-card sc-dashboard-support" aria-labelledby="quick-actions-heading">
-                    <summary id="quick-actions-heading"><span class="sc-card-title" role="heading" aria-level="2">Quick actions</span><svg class="size-4 shrink-0 text-muted" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></summary>
+                    <summary id="quick-actions-heading"><span class="sc-card-title" role="heading" aria-level="2">Quick actions</span><svg class="size-4 shrink-0 text-muted" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></summary>
                     <div class="sc-actions-list">
-                        @if ($canManageProducts)<a href="{{ route('seller.products.create') }}" data-seller-shortcut="new-product" aria-keyshortcuts="N" class="sc-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add product<small>N</small></a>@endif
-                        <a href="{{ route('seller.orders.index', ['status' => 'pending']) }}" class="sc-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.5 12h10L21 8H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>Review new orders</a>
-                        <a href="{{ route('seller.reviews.index') }}" class="sc-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 15a4 4 0 0 1-4 4H8l-4 3V7a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4z"/></svg>Reply to customers</a>
+                        @if ($canManageProducts)<a href="{{ route('seller.products.create') }}" data-seller-shortcut="new-product" aria-keyshortcuts="N" class="sc-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add product<kbd class="sc-kbd ml-auto">N</kbd></a>@endif
+                        <a href="{{ route('seller.orders.index', ['status' => 'pending']) }}" class="sc-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.5 12h10L21 8H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>Review new orders</a>
+                        <a href="{{ route('seller.reviews.index') }}" class="sc-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 15a4 4 0 0 1-4 4H8l-4 3V7a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4z"/></svg>Reply to customers</a>
                         @if ($canManageProducts)
-                            <a href="{{ route('seller.store-settings.edit') }}" class="sc-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 20 4.5-1 9.9-9.9a2.1 2.1 0 0 0-3-3L5.5 16 4 20Z"/><path d="m13.5 6.5 3 3"/></svg>Update store info</a>
+                            <a href="{{ route('seller.store-settings.edit') }}" class="sc-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 20 4.5-1 9.9-9.9a2.1 2.1 0 0 0-3-3L5.5 16 4 20Z"/><path d="m13.5 6.5 3 3"/></svg>Update store info</a>
                         @endif
                     </div>
                 </details>
 
                 <details class="sc-card sc-dashboard-support" data-dashboard-section="products" aria-labelledby="products-heading">
-                    <summary id="products-heading"><span class="sc-card-title" role="heading" aria-level="2">Recent products</span><svg class="size-4 shrink-0 text-muted" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></summary>
+                    <summary id="products-heading"><span class="sc-card-title" role="heading" aria-level="2">Recent products</span><svg class="size-4 shrink-0 text-muted" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></summary>
                     @if ($recentProducts->isNotEmpty())
                         <div class="sc-list">
                             @foreach ($recentProducts as $product)
                                 @php($stockQuantity = $isHeadOffice ? $product->stock_quantity : (int) $product->branch_quantity)
                                 <div class="sc-list-item sc-row !py-3">
                                     <span class="sc-thumb">@if ($product->images->first())<img src="{{ Storage::disk('product_images')->url($product->images->first()->path) }}" alt="" loading="lazy">@endif</span>
-                                    <span class="sc-grow"><a href="{{ $canManageProducts ? route('seller.products.edit', $product) : route('seller.products.show', $product) }}" class="block truncate text-sm font-semibold text-ink hover:text-brand" title="{{ $product->name }}">{{ $product->name }}</a><span class="block sc-meta">{{ \App\Models\Product::STATUSES[$product->status] }} · {{ $stockQuantity < 1 ? 'Sold out' : number_format($stockQuantity).' in stock' }}</span></span>
-                                    <span class="sc-num text-sm font-semibold">₱{{ number_format($product->price, 2) }}</span>
+                                    <span class="sc-grow"><a href="{{ $canManageProducts ? route('seller.products.edit', $product) : route('seller.products.show', $product) }}" class="block truncate text-sm font-medium text-ink hover:text-brand" title="{{ $product->name }}">{{ $product->name }}</a><span class="block sc-meta">{{ \App\Models\Product::STATUSES[$product->status] }} · {{ $stockQuantity < 1 ? 'Sold out' : number_format($stockQuantity).' in stock' }}</span></span>
+                                    <span class="sc-num text-sm font-medium">₱{{ number_format($product->price, 2) }}</span>
                                 </div>
                             @endforeach
                         </div>
                     @else
-                        <div class="sc-empty"><h3>No products yet</h3><p>Add your first product to start selling on Everyday Pharmacy.</p>@if ($canManageProducts)<a href="{{ route('seller.products.create') }}" data-seller-shortcut="new-product" aria-keyshortcuts="N" class="seller-primary-button">Add product</a>@endif</div>
+                        <div class="sc-empty"><h3>No products yet</h3><p>Add your first product to start selling on Everyday Pharmacy</p>@if ($canManageProducts)<a href="{{ route('seller.products.create') }}" data-seller-shortcut="new-product" aria-keyshortcuts="N" class="seller-primary-button">Add product</a>@endif</div>
                     @endif
                 </details>
             </div>
         </div>
 
         <details class="sc-card group" data-dashboard-section="help" data-seller-guide>
-            <summary class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 [&::-webkit-details-marker]:hidden"><span><span class="sc-card-title" role="heading" aria-level="2">Seller guide</span> <span class="sc-meta">· Search seller help and shortcuts</span></span><svg class="size-4 shrink-0 text-muted transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></summary>
-            <div class="grid gap-6 border-t border-line px-5 py-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <summary class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-6 [&::-webkit-details-marker]:hidden"><span><span class="sc-card-title" role="heading" aria-level="2">Seller guide</span> <span class="sc-meta">· Search seller help and shortcuts</span></span><svg class="size-4 shrink-0 text-muted transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></summary>
+            <div class="grid gap-6 border-t border-line px-6 py-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                 <div>
-                    <label for="seller-guide-search" class="text-sm font-semibold text-ink">Search seller help</label>
+                    <label for="seller-guide-search" class="text-sm font-medium text-ink">Search seller help</label>
                     <input id="seller-guide-search" type="search" autocomplete="off" data-seller-help-search aria-keyshortcuts="?" placeholder="Try “orders” or “stock”" class="sc-input mt-2">
                     <p class="mt-3 sc-meta">Shortcuts: S products · N add product · O orders · ? help</p>
                 </div>
                 <div>
-                    <p class="text-sm font-semibold text-ink">Popular topics</p>
+                    <p class="text-sm font-medium text-ink">Popular topics</p>
                     <ul class="mt-1" data-seller-help-list>
                         <li data-seller-help-item class="seller-help-item"><a href="{{ route('seller.products.index') }}">Managing products</a></li>
                         <li data-seller-help-item class="seller-help-item"><a href="{{ route('seller.orders.index', ['status' => 'pending']) }}">Review new orders</a></li>
@@ -375,8 +375,8 @@
         </details>
 
         <details class="text-sm">
-            <summary class="inline-flex min-h-11 cursor-pointer items-center font-semibold text-muted hover:text-ink"><span role="heading" aria-level="2">Customize overview</span></summary>
-            <fieldset class="sc-card sc-card-pad mt-2 grid gap-2 sm:grid-cols-2"><legend class="sr-only">Overview sections to show</legend>@foreach (['setup' => 'Store setup', 'help' => 'Seller guide', 'orders' => 'Recent orders', 'products' => 'Recent products'] as $section => $label)<label class="inline-flex min-h-10 items-center gap-2"><input type="checkbox" data-dashboard-toggle="{{ $section }}" checked class="rounded-md border-line text-brand focus:ring-brand">{{ $label }}</label>@endforeach<button type="button" data-dashboard-reset class="min-h-10 justify-self-start font-semibold text-brand underline underline-offset-4">Restore defaults</button></fieldset>
+            <summary class="inline-flex min-h-11 cursor-pointer items-center font-medium text-muted hover:text-ink"><span role="heading" aria-level="2">Customize overview</span></summary>
+            <fieldset class="sc-card sc-card-pad mt-2 grid gap-2 sm:grid-cols-2"><legend class="sr-only">Overview sections to show</legend>@foreach (['setup' => 'Store setup', 'help' => 'Seller guide', 'orders' => 'Recent orders', 'products' => 'Recent products'] as $section => $label)<label class="inline-flex min-h-10 items-center gap-2"><input type="checkbox" data-dashboard-toggle="{{ $section }}" checked class="rounded-md border-line text-brand focus:ring-brand">{{ $label }}</label>@endforeach<button type="button" data-dashboard-reset class="min-h-10 justify-self-start font-medium text-brand underline underline-offset-4">Restore defaults</button></fieldset>
         </details>
     </div></div>
 </x-app-layout>

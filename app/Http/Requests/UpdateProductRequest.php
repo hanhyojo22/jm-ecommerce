@@ -9,7 +9,7 @@ use Illuminate\Validation\Validator;
 
 class UpdateProductRequest extends FormRequest
 {
-    use ValidatesProductVariants;
+    use ValidatesMedicineDirections, ValidatesProductVariants;
 
     /**
      * Determine if the user is authorized to make this request.
@@ -39,6 +39,7 @@ class UpdateProductRequest extends FormRequest
             'manufacturer' => ['nullable', 'string', 'max:160'],
             'requires_prescription' => ['sometimes', 'boolean'],
             'switch_with_care' => ['sometimes', 'boolean'],
+            ...self::medicineDirectionRules(),
             'condition' => ['nullable', Rule::in(['new', 'refurbished'])],
             'price' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
             'compare_at_price' => ['nullable', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99', 'gt:price'],
@@ -71,6 +72,7 @@ class UpdateProductRequest extends FormRequest
             $product = $this->route('product');
 
             $this->validateVariants($validator);
+            self::validateMedicineDirections($validator);
             if ($product instanceof Product) {
                 $productImageIds = $product->images()->pluck('id')->all();
                 if (array_diff($this->removedImageIds(), $productImageIds) !== []) {

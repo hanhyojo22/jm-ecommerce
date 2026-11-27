@@ -387,10 +387,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     try {
       await ref.read(apiClientProvider).resubmitPrescription(order.id, picked);
       ref.invalidate(orderProvider(widget.orderId));
-      _showFeedback(
-        'Prescription sent for review.',
-        kind: NoticeKind.success,
-      );
+      _showFeedback('Prescription sent for review.', kind: NoticeKind.success);
     } on ApiException catch (error) {
       _showFeedback(error.friendly);
     } finally {
@@ -1265,6 +1262,16 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     onPressed: _busy ? null : () => _orderAgain(order),
                     icon: const Icon(Icons.replay_rounded, size: 20),
                     label: const Text('Order again'),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      shape: const StadiumBorder(),
+                    ),
+                    onPressed: () => context.push('/medicines'),
+                    icon: const Icon(Icons.alarm_add_rounded, size: 20),
+                    label: const Text('Set medicine reminders'),
                   ),
                 ],
               ],

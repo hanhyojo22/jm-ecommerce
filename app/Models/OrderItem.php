@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -23,11 +24,12 @@ class OrderItem extends Model
         'line_total',
         'discount_amount',
         'image_path',
+        'medication_directions',
     ];
 
     protected function casts(): array
     {
-        return ['unit_price' => 'decimal:2', 'line_total' => 'decimal:2', 'discount_amount' => 'decimal:2'];
+        return ['unit_price' => 'decimal:2', 'line_total' => 'decimal:2', 'discount_amount' => 'decimal:2', 'medication_directions' => 'array'];
     }
 
     public function product(): BelongsTo
@@ -43,6 +45,22 @@ class OrderItem extends Model
     public function review(): HasOne
     {
         return $this->hasOne(ProductReview::class);
+    }
+
+    /**
+     * The directions a reminder for this purchase starts from: the pharmacist's override from the
+     * prescription review, otherwise the product's current label directions.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function medicationDirections(): ?array
+    {
+        return $this->medication_directions ?? $this->product?->medicationDirections();
+    }
+
+    public function medicationPlans(): BelongsToMany
+    {
+        return $this->belongsToMany(MedicationPlan::class, 'medication_plan_order_items')->withPivot('units');
     }
 
     public function inventoryAllocations(): HasMany

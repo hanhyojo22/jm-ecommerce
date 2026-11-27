@@ -1,4 +1,4 @@
-{{-- One font request for every layout: Inter for headings and UI alike. --}}
+{{-- Inter for headings and UI, IBM Plex Mono for dispensary codes, figures, and keycaps. --}}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">

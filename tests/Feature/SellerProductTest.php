@@ -58,6 +58,33 @@ class SellerProductTest extends TestCase
         $this->actingAs($owner)->get(route('seller.products.edit', $product))->assertSee('Careful when switching brands');
     }
 
+    public function test_seller_saves_medicine_directions(): void
+    {
+        [$owner, $tenant] = $this->seller();
+
+        $this->actingAs($owner)->post(route('seller.products.store'), [
+            'name' => 'Amlodipine 5 mg Tablet', 'sku' => 'AML-5', 'price' => '12.00', 'stock_quantity' => 0,
+            'medicine_kind' => 'maintenance', 'pack_units' => '30', 'dose_quantity' => '1', 'dose_unit' => 'tablet', 'doses_per_day' => '1',
+            'directions_note' => 'Same time every day',
+        ])->assertRedirect(route('seller.products.index'));
+
+        $product = $tenant->products()->where('sku', 'AML-5')->sole();
+        $this->assertSame(['maintenance', '30.00', '1.00', 'tablet', 1], [$product->medicine_kind, $product->pack_units, $product->dose_quantity, $product->dose_unit, $product->doses_per_day]);
+        $this->actingAs($owner)->get(route('seller.products.edit', $product))->assertSee('Directions for medicine reminders')->assertSee('Same time every day');
+    }
+
+    public function test_maintenance_directions_need_doses_per_day(): void
+    {
+        [$owner, $tenant] = $this->seller();
+
+        $this->actingAs($owner)->post(route('seller.products.store'), [
+            'name' => 'Amlodipine 5 mg Tablet', 'sku' => 'AML-5', 'price' => '12.00', 'stock_quantity' => 0,
+            'medicine_kind' => 'maintenance', 'dose_quantity' => '1', 'dose_unit' => 'tablet',
+        ])->assertSessionHasErrors('doses_per_day');
+
+        $this->assertSame(0, $tenant->products()->count());
+    }
+
     public function test_seller_can_create_color_and_size_options_with_multiple_photos(): void
     {
         Storage::fake('product_images');

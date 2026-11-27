@@ -37,6 +37,7 @@ use App\Http\Controllers\Seller\BranchStockController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboardController;
 use App\Http\Controllers\Seller\DiscountDocumentController;
 use App\Http\Controllers\Seller\IngredientAliasController;
+use App\Http\Controllers\Seller\OrderItemDirectionsController;
 use App\Http\Controllers\Seller\PrescriptionController as SellerPrescriptionController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductReviewController as SellerProductReviewController;
@@ -204,6 +205,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function 
     Route::get('/seller/orders/{sellerOrder}/prescription/images/{image}', [SellerPrescriptionController::class, 'show'])->name('seller.orders.prescription.images.show');
     Route::patch('/seller/orders/{sellerOrder}/prescription', [SellerPrescriptionController::class, 'update'])->middleware('throttle:10,1')->name('seller.orders.prescription.update');
     Route::post('/seller/orders/{sellerOrder}/prescription/check', [SellerPrescriptionController::class, 'check'])->middleware('throttle:10,1')->name('seller.orders.prescription.check');
+    Route::patch('/seller/orders/{sellerOrder}/items/{orderItem}/directions', OrderItemDirectionsController::class)->middleware('throttle:10,1')->name('seller.orders.items.directions');
     Route::get('/seller/reviews', [SellerProductReviewController::class, 'index'])->name('seller.reviews.index');
     Route::post('/seller/reviews/{review}/response', [SellerProductReviewController::class, 'respond'])->middleware('throttle:10,1')->name('seller.reviews.respond');
 

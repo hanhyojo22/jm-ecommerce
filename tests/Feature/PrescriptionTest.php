@@ -366,6 +366,39 @@ class PrescriptionTest extends TestCase
         $this->get(route('seller.orders.index', ['review' => 'prescription']))->assertDontSee($order->number);
     }
 
+    public function test_pharmacist_overrides_item_directions(): void
+    {
+        $sellerOrder = $this->checkOut()->sellerOrders()->sole();
+        $item = $sellerOrder->items()->sole();
+        $pharmacist = $this->member('staff', $this->branch, pharmacist: true);
+        $directions = ['medicine_kind' => 'course', 'dose_quantity' => '1', 'dose_unit' => 'capsule', 'doses_per_day' => '3', 'course_days' => '7', 'directions_note' => 'Finish all capsules'];
+
+        $this->actingAs($pharmacist)->get(route('seller.orders.show', $sellerOrder))->assertSee('Reminder directions');
+        $this->actingAs($pharmacist)->patch(route('seller.orders.items.directions', [$sellerOrder, $item]), $directions)->assertSessionHas('status');
+
+        $this->assertSame('course', $item->fresh()->medication_directions['medicine_kind']);
+        $this->assertSame(7, $item->fresh()->medicationDirections()['course_days']);
+
+        $manager = $this->member('manager', $this->branch);
+        $this->actingAs($manager)->patch(route('seller.orders.items.directions', [$sellerOrder, $item]), [...$directions, 'course_days' => '5'])->assertForbidden();
+        $this->assertSame(7, $item->fresh()->medication_directions['course_days']);
+    }
+
+    public function test_other_tenant_cannot_override_directions(): void
+    {
+        $sellerOrder = $this->checkOut()->sellerOrders()->sole();
+        $item = $sellerOrder->items()->sole();
+        $otherTenant = Tenant::create(['name' => 'Other Botika', 'slug' => 'other-botika', 'status' => 'active']);
+        $outsider = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $otherTenant->id, 'user_id' => $outsider->id, 'role' => 'owner', 'is_pharmacist' => true, 'license_number' => '0999999', 'license_expires_on' => today()->addYear()]);
+
+        $this->actingAs($outsider)->patch(route('seller.orders.items.directions', [$sellerOrder, $item]), [
+            'medicine_kind' => 'maintenance', 'dose_quantity' => '1', 'dose_unit' => 'tablet', 'doses_per_day' => '1',
+        ])->assertNotFound();
+
+        $this->assertNull($item->fresh()->medication_directions);
+    }
+
     private function assertPushed(string $title, ?string $body = null): void
     {
         $this->push->shouldHaveReceived('sendToUser')

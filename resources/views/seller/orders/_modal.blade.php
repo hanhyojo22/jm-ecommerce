@@ -50,8 +50,8 @@
         <div class="sc-order-title-row">
             <h2 id="order-modal-title" class="sc-order-ref">Order {{ $order->number }}</h2>
             <button type="button" class="sc-copy-button" x-data="{ copied: false, copy() { if (! navigator.clipboard) { return; } navigator.clipboard.writeText(@js($order->number)).then(() => { this.copied = true; setTimeout(() => this.copied = false, 2000); }); } }" @click="copy()" aria-label="Copy order number">
-                <svg x-show="! copied" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="11" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2"/></svg>
-                <svg x-show="copied" x-cloak viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+                <svg x-show="! copied" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="11" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2"/></svg>
+                <svg x-show="copied" x-cloak viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
                 <span class="sr-only" aria-live="polite" x-text="copied ? 'Order number copied' : ''"></span>
             </button>
         </div>
@@ -113,7 +113,7 @@
             <li @class(['sc-order-step', 'is-'.$stepState]) @if ($index === $progressIndex) aria-current="step" @endif>
                 <span class="sc-order-step-node" aria-hidden="true">
                     @if ($stepState === 'done')
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
                     @endif
                 </span>
                 <span class="sc-order-step-label">{{ $stepLabel }}@if ($stepState === 'done')<span class="sr-only">, done</span>@elseif ($stepState === 'current')<span class="sr-only"> (current step)</span>@endif</span>
@@ -123,7 +123,7 @@
 @endif
 <div class="sc-modal-body sc-premium-body">
     @if ($waitingForPrescription || $awaitingOnlinePayment || $isCancelled || $canRecordCash)
-        <div class="sc-premium-notice" data-tone="{{ $isCancelled ? 'danger' : 'warning' }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><h3>{{ $statusTitle }}</h3></div>
+        <div class="sc-premium-notice" data-tone="{{ $isCancelled ? 'danger' : 'warning' }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><h3>{{ $statusTitle }}</h3></div>
     @endif
     @foreach ($sellerOrder->issues as $issue)
         <div class="sc-notice mb-6" data-tone="warning"><div><strong>{{ str($issue->type)->replace('_', ' ')->title() }} · {{ ucfirst($issue->status) }}</strong><p>{{ $issue->details }}</p>@if ($issue->status === 'open')<p>Wait for Everyday Pharmacy support before preparing this order.</p>@endif</div></div>
@@ -178,8 +178,8 @@
                         <div class="sc-customer-line">
                             <a href="tel:{{ $order->phone }}" class="sc-customer-phone">{{ $order->phone }}</a>
                             <button type="button" class="sc-copy-button is-small" x-data="{ copied: false, copy() { if (! navigator.clipboard) { return; } navigator.clipboard.writeText(@js($order->phone)).then(() => { this.copied = true; setTimeout(() => this.copied = false, 2000); }); } }" @click="copy()" aria-label="Copy phone number">
-                                <svg x-show="! copied" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="11" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2"/></svg>
-                                <svg x-show="copied" x-cloak viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+                                <svg x-show="! copied" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="11" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2"/></svg>
+                                <svg x-show="copied" x-cloak viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
                                 <span class="sr-only" aria-live="polite" x-text="copied ? 'Phone number copied' : ''"></span>
                             </button>
                         </div>

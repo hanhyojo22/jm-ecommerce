@@ -480,4 +480,19 @@ void main() {
       '@drawable/ic_stat_notification',
     );
   });
+
+  test('Taken and Skip on a medicine reminder open the dose screen with the action', () {
+    const dose = '/medicines/dose?plan=p1&slot=2026-12-10T08%3A00%3A00%2B08%3A00';
+
+    expect(
+      PushNotifications.responseRoute(dose, 'taken'),
+      '$dose&action=taken',
+    );
+    expect(PushNotifications.responseRoute(dose, 'skip'), '$dose&action=skip');
+    expect(PushNotifications.responseRoute(dose, null), dose);
+    expect(
+      PushNotifications.responseRoute('/conversations/c1', 'reply'),
+      '/conversations/c1?reply=1',
+    );
+  });
 }

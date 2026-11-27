@@ -92,11 +92,11 @@
                 {{-- Left: Sidebar Toggle + Command Search (minimal, zero redundancy with sidebar or page H1) --}}
                 <div class="sc-topbar-left">
                     <button type="button" @click="toggleDrawer($event)" :aria-expanded="drawerOpen.toString()" aria-controls="marketplace-drawer" class="sc-topbar-icon-btn sc-topbar-nav-mobile" aria-label="Open navigation menu">
-                        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" /></svg>
+                        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" /></svg>
                     </button>
 
                     <button type="button" @click="$dispatch('seller-sidebar-toggle')" class="sc-topbar-icon-btn sc-topbar-sidebar-toggle" aria-label="Toggle Seller Center sidebar" title="Toggle sidebar">
-                        <svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5" /><path d="M9 4v16" /></svg>
+                        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5" /><path d="M9 4v16" /></svg>
                     </button>
 
                     <a href="{{ route('seller.dashboard') }}" class="sc-topbar-mobile-brand" aria-label="Everyday Pharmacy Seller Center overview">
@@ -120,7 +120,7 @@
                     >
                         <div data-header-search-shell class="sc-topbar-search" :class="focused && 'is-focused'">
                             <label for="marketplace-search" class="sr-only">Search your products by name or SKU</label>
-                            <svg class="sc-topbar-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path stroke-linecap="round" d="m20 20-3.5-3.5" /></svg>
+                            <svg class="sc-topbar-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path stroke-linecap="round" d="m20 20-3.5-3.5" /></svg>
                             <input
                                 id="marketplace-search"
                                 name="search"
@@ -132,11 +132,11 @@
                                 @blur="focused = false"
                                 value="{{ request('search', $search) }}"
                                 autocomplete="off"
-                                placeholder="Search products or SKU…"
+                                placeholder="Search products or SKU"
                                 class="sc-topbar-search-input"
                             >
                             <button x-cloak x-show="query.length" type="button" @click="query = ''; $nextTick(() => $el.previousElementSibling.focus())" class="sc-topbar-search-clear" aria-label="Clear search">
-                                <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18" /></svg>
+                                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18" /></svg>
                             </button>
                             <kbd x-show="!query.length && !focused" class="sc-topbar-kbd hidden sm:inline-flex" aria-hidden="true">S</kbd>
                             <button x-cloak x-show="query.length" type="submit" class="sc-topbar-search-submit">Go</button>
@@ -157,23 +157,23 @@
                             <button x-ref="accountButton" type="button" @click="toggleAccount($event)" :aria-expanded="accountOpen.toString()" aria-controls="header-account-menu" aria-label="Account menu" title="{{ $user->name }} ({{ $sellerRoleText }})" class="sc-topbar-avatar-trigger" :class="accountOpen && 'is-open'">
                                 <span class="sc-topbar-avatar" aria-hidden="true">{{ $sellerInitials }}</span>
                             </button>
-                            <div id="header-account-menu" x-cloak x-show="accountOpen" x-transition.origin.top.right class="sc-topbar-menu absolute right-0 z-50 mt-2 w-64 max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl border border-line bg-white p-2">
+                            <div id="header-account-menu" x-cloak x-show="accountOpen" x-transition.origin.top.right class="sc-topbar-menu absolute right-0 z-50 mt-2 w-64 max-w-[calc(100vw-1rem)] overflow-hidden rounded-lg border border-line bg-white p-2">
                                 <div class="sc-topbar-menu-head">
                                     <span class="sc-topbar-menu-avatar" aria-hidden="true">{{ $sellerInitials }}</span>
                                     <div class="min-w-0 flex-1">
-                                        <p class="truncate text-sm font-semibold text-ink">{{ $user->name }}</p>
+                                        <p class="truncate text-sm font-medium text-ink">{{ $user->name }}</p>
                                         <p class="truncate text-xs text-muted">{{ $user->email }}</p>
                                         <span class="sc-topbar-menu-role">{{ $sellerRoleText }}</span>
                                     </div>
                                 </div>
                                 <nav aria-label="Account links" class="border-t border-line py-1.5">
                                     <a href="{{ route('profile.edit') }}" class="sc-topbar-menu-item">
-                                        <svg class="size-[17px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" /></svg>
+                                        <svg class="size-4 shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" /></svg>
                                         <span>My account</span>
                                     </a>
                                     @if ($user->isPlatformAdministrator())
                                         <a href="{{ route('dashboard') }}" class="sc-topbar-menu-item">
-                                            <svg class="size-[17px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /></svg>
+                                            <svg class="size-4 shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /></svg>
                                             <span>Admin workspace</span>
                                         </a>
                                     @endif
@@ -184,16 +184,16 @@
                                             @csrf
                                             <input type="hidden" name="workspace" value="customer">
                                             <button type="submit" class="sc-topbar-switch-btn">
-                                                <svg class="size-[18px] shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h15m0 0-4-4m4 4-4 4M20 17H5m0 0 4-4m-4 4 4 4"/></svg>
-                                                <span class="min-w-0 flex-1"><span class="block text-sm font-semibold text-brand">Switch Account</span><span class="block text-xs text-muted">Go to shopping</span></span>
-                                                <svg class="size-4 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                                                <svg class="size-4 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h15m0 0-4-4m4 4-4 4M20 17H5m0 0 4-4m-4 4 4 4"/></svg>
+                                                <span class="min-w-0 flex-1"><span class="block text-sm font-medium text-brand">Switch Account</span><span class="block text-xs text-muted">Go to shopping</span></span>
+                                                <svg class="size-4 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
                                             </button>
                                         </form>
                                     </div>
                                 @endif
                                 <div class="border-t border-line pt-1.5">
                                     <button type="button" data-clerk-sign-out class="sc-topbar-menu-item is-danger w-full text-left">
-                                        <svg class="size-[17px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" /><path d="m10 17 5-5-5-5M15 12H3" /></svg>
+                                        <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" /><path d="m10 17 5-5-5-5M15 12H3" /></svg>
                                         <span>Sign out</span>
                                     </button>
                                 </div>
@@ -524,7 +524,7 @@
                         <span class="workspace-sidebar-brand-name">Everyday Pharmacy</span>
                     @endif
                 </a>
-                <button type="button" @click="closeDrawer" class="workspace-drawer-close grid size-11 place-items-center rounded-md text-muted transition hover:bg-canvas hover:text-ink focus-visible:ring-2 focus-visible:ring-brand" aria-label="Close navigation menu"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
+                <button type="button" @click="closeDrawer" class="workspace-drawer-close grid size-11 place-items-center rounded-md text-muted transition hover:bg-canvas hover:text-ink focus-visible:ring-2 focus-visible:ring-brand" aria-label="Close navigation menu"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
             </div>
 
             @if (! $isSellerWorkspace && ! $isCustomerWorkspace)
@@ -539,7 +539,7 @@
             @endif
 
             @if ($isSellerWorkspace)
-                <x-marketplace.seller-identity class="mx-3.5 mt-3.5" />
+                <x-marketplace.seller-identity class="mx-3 mt-3" />
                 <x-marketplace.seller-nav-links mode="mobile" />
                 <x-marketplace.seller-account-footer mode="mobile" :seller-tenant="$sellerTenant" />
             @elseif ($isCustomerWorkspace)

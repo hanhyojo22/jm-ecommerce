@@ -1,0 +1,306 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+
+import '../core/api_exception.dart';
+import '../models/medication.dart';
+import '../providers/auth_providers.dart';
+import '../providers/medication_providers.dart';
+import '../widgets/status_notice.dart';
+import 'medicines_screen.dart';
+
+/// Spreads the label's doses a day over waking hours; the buyer can change them.
+List<String> defaultDoseTimes(int? dosesPerDay) => switch (dosesPerDay) {
+  null || 1 => ['08:00'],
+  2 => ['08:00', '20:00'],
+  3 => ['08:00', '14:00', '20:00'],
+  4 => ['06:00', '12:00', '18:00', '22:00'],
+  final count => [
+    for (var index = 0; index < count; index++)
+      '${(6 + index * 16 ~/ (count - 1)).toString().padLeft(2, '0')}:00',
+  ],
+};
+
+String _two(int value) => value.toString().padLeft(2, '0');
+
+/// Sets up reminders for one delivered purchase, prefilled from the
+/// pharmacy's label directions when it has them.
+class MedicineSetupScreen extends ConsumerStatefulWidget {
+  const MedicineSetupScreen({super.key, required this.suggestion});
+
+  final MedicationSuggestion suggestion;
+
+  @override
+  ConsumerState<MedicineSetupScreen> createState() =>
+      _MedicineSetupScreenState();
+}
+
+class _MedicineSetupScreenState extends ConsumerState<MedicineSetupScreen> {
+  final _form = GlobalKey<FormState>();
+  late String _kind;
+  late final TextEditingController _dose;
+  late final TextEditingController _unit;
+  late final TextEditingController _courseDays;
+  late final TextEditingController _onHand;
+  late List<String> _times;
+  String? _profileId;
+  bool _showName = false;
+  bool _saving = false;
+
+  MedicationDirections? get _directions => widget.suggestion.directions;
+
+  @override
+  void initState() {
+    super.initState();
+    final directions = _directions;
+    _kind = directions?.medicineKind ?? 'maintenance';
+    String number(double? value) => value == null
+        ? ''
+        : (value == value.roundToDouble() ? '${value.toInt()}' : '$value');
+    _dose = TextEditingController(text: number(directions?.doseQuantity));
+    _unit = TextEditingController(text: directions?.doseUnit ?? 'tablet');
+    _courseDays = TextEditingController(
+      text: directions?.courseDays?.toString() ?? '',
+    );
+    _onHand = TextEditingController();
+    _times = defaultDoseTimes(directions?.dosesPerDay);
+  }
+
+  @override
+  void dispose() {
+    _dose.dispose();
+    _unit.dispose();
+    _courseDays.dispose();
+    _onHand.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final profiles = ref.watch(careProfilesProvider).value ?? const [];
+    final directions = _directions;
+    final needsCount = directions?.packUnits == null;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Set up reminders')),
+      body: Form(
+        key: _form,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text(
+              widget.suggestion.productName,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              directions == null
+                  ? "The pharmacy hasn't added directions for this product. Enter the dose from the box or your doctor."
+                  : 'Filled in from the pharmacy label. Change anything your doctor told you differently.',
+              style: theme.textTheme.bodySmall,
+            ),
+            if (directions?.directionsNote != null) ...[
+              const SizedBox(height: 6),
+              Text(directions!.directionsNote!),
+            ],
+            const SizedBox(height: 20),
+            DropdownButtonFormField<String?>(
+              initialValue: _profileId,
+              decoration: const InputDecoration(labelText: 'Who is it for?'),
+              items: [
+                const DropdownMenuItem(value: null, child: Text('Me')),
+                for (final profile in profiles)
+                  DropdownMenuItem(
+                    value: profile.id,
+                    child: Text(profile.name),
+                  ),
+              ],
+              onChanged: (value) => setState(() => _profileId = value),
+            ),
+            const SizedBox(height: 16),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'maintenance', label: Text('Every day')),
+                ButtonSegment(value: 'course', label: Text('Course')),
+                ButtonSegment(value: 'as_needed', label: Text('As needed')),
+              ],
+              selected: {_kind},
+              onSelectionChanged: (value) =>
+                  setState(() => _kind = value.first),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _dose,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(labelText: 'Dose'),
+                    validator: (value) =>
+                        (double.tryParse(value?.trim() ?? '') ?? 0) <= 0
+                        ? 'Enter the dose'
+                        : null,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    controller: _unit,
+                    decoration: const InputDecoration(
+                      labelText: 'Unit',
+                      hintText: 'tablet, mL, capsule',
+                    ),
+                    validator: (value) =>
+                        (value?.trim().isEmpty ?? true) ? 'Enter a unit' : null,
+                  ),
+                ),
+              ],
+            ),
+            if (_kind != 'as_needed') ...[
+              const SizedBox(height: 16),
+              Text('Times', style: theme.textTheme.titleSmall),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final time in _times)
+                    InputChip(
+                      label: Text(_label(time)),
+                      onPressed: () => _pickTime(time),
+                      onDeleted: _times.length == 1
+                          ? null
+                          : () => setState(() => _times.remove(time)),
+                    ),
+                  ActionChip(
+                    avatar: const Icon(Icons.add, size: 18),
+                    label: const Text('Add time'),
+                    onPressed: () => _pickTime(null),
+                  ),
+                ],
+              ),
+            ],
+            if (_kind == 'course') ...[
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _courseDays,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'How many days?'),
+                validator: (value) => (int.tryParse(value ?? '') ?? 0) < 1
+                    ? 'Enter the number of days'
+                    : null,
+              ),
+            ],
+            if (needsCount) ...[
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _onHand,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'How many did you receive?',
+                  helperText: 'For example 30 tablets or 60 mL',
+                ),
+                validator: (value) =>
+                    double.tryParse(value?.trim() ?? '') == null
+                    ? 'Enter how many you received'
+                    : null,
+              ),
+            ],
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Show the medicine name on the lock screen'),
+              subtitle: const Text(
+                'Off: reminders just say "Time for your medicine".',
+              ),
+              value: _showName,
+              onChanged: (value) => setState(() => _showName = value),
+            ),
+            const SizedBox(height: 8),
+            Text(directionsDisclaimer, style: theme.textTheme.bodySmall),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: _saving ? null : _save,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+              ),
+              child: const Text('Save reminders'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _label(String hhmm) {
+    final parts = hhmm.split(':');
+    return DateFormat('h:mm a')
+        .format(DateTime(2000, 1, 1, int.parse(parts[0]), int.parse(parts[1])));
+  }
+
+  Future<void> _pickTime(String? current) async {
+    final parts = (current ?? '12:00').split(':');
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(
+        hour: int.parse(parts[0]),
+        minute: int.parse(parts[1]),
+      ),
+    );
+    if (picked == null) {
+      return;
+    }
+    final value = '${_two(picked.hour)}:${_two(picked.minute)}';
+    setState(() {
+      if (current != null) {
+        _times.remove(current);
+      }
+      if (!_times.contains(value)) {
+        _times = [..._times, value]..sort();
+      }
+    });
+  }
+
+  Future<void> _save() async {
+    if (!(_form.currentState?.validate() ?? false)) {
+      return;
+    }
+    setState(() => _saving = true);
+    final notice = AppNotice.of(context);
+    final router = GoRouter.of(context);
+    final directions = _directions;
+    try {
+      await ref.read(apiClientProvider).startMedicationPlan({
+        'order_item_id': widget.suggestion.orderItemId,
+        'care_profile_id': _profileId,
+        'medicine_kind': _kind,
+        'dose_quantity': double.parse(_dose.text.trim()),
+        'dose_unit': _unit.text.trim(),
+        'dose_times': _kind == 'as_needed' ? <String>[] : _times,
+        'starts_on': DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        if (_kind == 'course') 'course_days': int.parse(_courseDays.text),
+        if (_onHand.text.trim().isNotEmpty)
+          'units_on_hand': double.parse(_onHand.text.trim()),
+        'min_hours_between': directions?.minHoursBetween,
+        'max_doses_per_day': directions?.maxDosesPerDay,
+        'directions_note': directions?.directionsNote,
+        'show_name_on_lock_screen': _showName,
+      });
+      ref.invalidate(medicationPlansProvider);
+      ref.invalidate(medicationSuggestionsProvider);
+      notice.show('Reminders are set.', kind: NoticeKind.success);
+      router.pop();
+    } on ApiException catch (error) {
+      notice.show(error.friendly);
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
+  }
+}

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:intl/intl.dart';
 
+import '../models/medication.dart';
 import '../models/models.dart';
 import '../models/store_branch.dart';
 import 'api_exception.dart';
@@ -63,6 +64,7 @@ class ApiClient {
         'GET' => await _getWithRetry(path, query, cancelToken),
         'POST' => await _dio.post(path, data: data, cancelToken: cancelToken),
         'PATCH' => await _dio.patch(path, data: data, cancelToken: cancelToken),
+        'PUT' => await _dio.put(path, data: data, cancelToken: cancelToken),
         'DELETE' => await _dio.delete(
           path,
           data: data,
@@ -118,6 +120,118 @@ class ApiClient {
 
   Future<Account> me() async =>
       Account.fromJson(mapOf(await _data('GET', '/me')));
+
+  /// Opting out deletes every plan, dose log, family profile and caregiver link.
+  Future<void> setMedicationConsent(bool enabled) async =>
+      _raw(enabled ? 'PUT' : 'DELETE', '/me/medication-consent');
+
+  Future<List<MedicationPlan>> medicationPlans() async =>
+      listOf(await _data('GET', '/medication-plans'))
+          .map(MedicationPlan.fromJson)
+          .toList();
+
+  Future<List<MedicationSuggestion>> medicationSuggestions() async =>
+      listOf(await _data('GET', '/medication-plans/suggestions'))
+          .map(MedicationSuggestion.fromJson)
+          .toList();
+
+  Future<MedicationPlan> startMedicationPlan(Map<String, dynamic> body) async =>
+      MedicationPlan.fromJson(
+        mapOf(await _data('POST', '/medication-plans', data: body)),
+      );
+
+  Future<MedicationPlan> updateMedicationPlan(
+    String planId,
+    Map<String, dynamic> changes,
+  ) async => MedicationPlan.fromJson(
+    mapOf(await _data('PATCH', '/medication-plans/$planId', data: changes)),
+  );
+
+  Future<void> deleteMedicationPlan(String planId) async =>
+      _raw('DELETE', '/medication-plans/$planId');
+
+  /// Each log carries a client_uuid, so a resent log is never counted twice.
+  /// [warning] is 'too_soon' or 'daily_max' for an as-needed medicine.
+  Future<({MedicationPlan plan, String? warning})> logDoses(
+    String planId,
+    List<Map<String, dynamic>> logs,
+  ) async {
+    final body = mapOf(
+      await _raw(
+        'POST',
+        '/medication-plans/$planId/doses',
+        data: {'logs': logs},
+      ),
+    );
+    return (
+      plan: MedicationPlan.fromJson(mapOf(body['plan'])),
+      warning: body['warning'] as String?,
+    );
+  }
+
+  Future<MedicationPlan> countMedication(
+    String planId,
+    double unitsLeft,
+  ) async => MedicationPlan.fromJson(
+    mapOf(
+      await _data(
+        'POST',
+        '/medication-plans/$planId/count',
+        data: {'units_left': unitsLeft},
+      ),
+    ),
+  );
+
+  Future<List<DoseHistory>> medicationHistory({
+    String? profileId,
+    int days = 30,
+  }) async => listOf(
+    await _data(
+      'GET',
+      '/medication-history',
+      query: {'days': days, 'care_profile_id': ?profileId},
+    ),
+  ).map(DoseHistory.fromJson).toList();
+
+  Future<List<CareProfile>> careProfiles() async =>
+      listOf(await _data('GET', '/care-profiles'))
+          .map(CareProfile.fromJson)
+          .toList();
+
+  Future<CareProfile> saveCareProfile({
+    String? id,
+    required String name,
+    String? relation,
+  }) async => CareProfile.fromJson(
+    mapOf(
+      await _data(
+        id == null ? 'POST' : 'PATCH',
+        id == null ? '/care-profiles' : '/care-profiles/$id',
+        data: {'name': name, 'relation': relation},
+      ),
+    ),
+  );
+
+  Future<void> deleteCareProfile(String id) async =>
+      _raw('DELETE', '/care-profiles/$id');
+
+  Future<Caregivers> caregivers() async =>
+      Caregivers.fromJson(mapOf(await _data('GET', '/caregivers')));
+
+  Future<void> inviteCaregiver({
+    required String email,
+    bool shareMedicineNames = false,
+  }) async => _raw(
+    'POST',
+    '/caregivers',
+    data: {'email': email, 'share_medicine_names': shareMedicineNames},
+  );
+
+  Future<void> acceptCaregiver(String id) async =>
+      _raw('POST', '/caregivers/$id/accept');
+
+  Future<void> removeCaregiver(String id) async =>
+      _raw('DELETE', '/caregivers/$id');
 
   Future<Account> updateCartReminders(bool enabled) async => Account.fromJson(
     mapOf(await _data('PATCH', '/me', data: {'cart_reminders': enabled})),
