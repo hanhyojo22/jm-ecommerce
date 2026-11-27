@@ -32,6 +32,7 @@ class UserResource extends JsonResource
             'email_verified' => $this->hasVerifiedClerkEmail(),
             'is_platform_administrator' => $this->isPlatformAdministrator(),
             'cart_reminders' => (bool) ($this->cart_reminders ?? true),
+            'medication_reminders' => $this->medication_reminders_consent_at !== null,
         ];
     }
 }

@@ -35,6 +35,7 @@ class Account {
     required this.emailVerified,
     required this.isPlatformAdministrator,
     this.cartReminders = true,
+    this.medicationReminders = false,
     this.birthDate,
     this.phone = '',
     this.sex,
@@ -48,6 +49,9 @@ class Account {
   final bool emailVerified;
   final bool isPlatformAdministrator;
   final bool cartReminders;
+
+  /// Whether the buyer opted in to medicine reminders.
+  final bool medicationReminders;
 
   /// A calendar date (no time), so it never shifts a day across time zones.
   final DateTime? birthDate;
@@ -68,6 +72,7 @@ class Account {
     emailVerified: boolean(json['email_verified']),
     isPlatformAdministrator: boolean(json['is_platform_administrator']),
     cartReminders: json['cart_reminders'] != false,
+    medicationReminders: boolean(json['medication_reminders']),
     birthDate: DateTime.tryParse(str(json['birth_date'])),
     phone: str(json['phone']),
     sex: json['sex'] as String?,

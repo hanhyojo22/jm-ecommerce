@@ -30,6 +30,7 @@ class MedicationPlanApiTest extends TestCase
 
         $this->actingAs($buyer)->postJson(route('api.v1.medication-plans.store'), $this->planBody($item))->assertForbidden();
         $this->putJson(route('api.v1.medication-consent.store'))->assertNoContent();
+        $this->getJson(route('api.v1.me'))->assertJsonPath('data.medication_reminders', true);
         $this->postJson(route('api.v1.medication-plans.store'), $this->planBody($item))->assertCreated();
     }
 
