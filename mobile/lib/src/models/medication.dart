@@ -16,6 +16,18 @@ DateTime? _date(dynamic value) {
       : DateTime(year, month, day);
 }
 
+/// "2026-12-10T08:00:00+08:00" → 8:00 on Dec 10, as a plain local time (the app schedules in Manila).
+DateTime? _manilaWallClock(String iso) {
+  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})')
+      .firstMatch(iso);
+  if (match == null) {
+    return null;
+  }
+  final part = [for (var i = 1; i <= 5; i++) int.parse(match.group(i)!)];
+
+  return DateTime(part[0], part[1], part[2], part[3], part[4]);
+}
+
 String _number(double value) =>
     value == value.roundToDouble() ? '${value.toInt()}' : '$value';
 
@@ -118,6 +130,7 @@ class MedicationPlan {
     this.expiresOn,
     this.expiresBeforeRunOut = false,
     this.recentDoseDays,
+    this.answeredSlots = const [],
   });
 
   final String id;
@@ -149,10 +162,20 @@ class MedicationPlan {
   /// As-needed only: days in the last four with a dose.
   final int? recentDoseDays;
 
+  /// Doses marked in the last day, in Philippine wall-clock time: no reminder or follow-up for these.
+  final List<DateTime> answeredSlots;
+
   bool get isAsNeeded => medicineKind == 'as_needed';
   bool get isActive => status == 'active';
   String get doseLabel => '${_number(doseQuantity)} $doseUnit';
-  String get unitsLeftLabel => '${_number(unitsLeft)} $doseUnit';
+  String get unitsLeftLabel => '${_number(unitsLeft)} ${_unitFor(unitsLeft)}';
+
+  /// "6 tablets", "1 tablet"; measures (mL, mg) and units already plural stay as entered.
+  String _unitFor(double amount) {
+    final countable =
+        RegExp(r'^[a-z]{3,}$').hasMatch(doseUnit) && !doseUnit.endsWith('s');
+    return amount != 1 && countable ? '${doseUnit}s' : doseUnit;
+  }
 
   factory MedicationPlan.fromJson(Map<String, dynamic> json) {
     final profile = mapOf(json['care_profile']);
@@ -190,6 +213,12 @@ class MedicationPlan {
       recentDoseDays: json['recent_dose_days'] == null
           ? null
           : integer(json['recent_dose_days']),
+      answeredSlots: (json['answered_slots'] is List)
+          ? (json['answered_slots'] as List)
+                .map((slot) => _manilaWallClock('$slot'))
+                .whereType<DateTime>()
+                .toList()
+          : const [],
     );
   }
 }

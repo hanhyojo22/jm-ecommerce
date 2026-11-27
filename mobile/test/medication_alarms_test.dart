@@ -13,6 +13,7 @@ MedicationPlan plan({
   DateTime? reorderOn,
   DateTime? countPromptOn,
   DateTime? expiresOn,
+  List<DateTime> answeredSlots = const [],
 }) => MedicationPlan(
   id: id,
   productId: 'prod-$id',
@@ -31,6 +32,7 @@ MedicationPlan plan({
   reorderOn: reorderOn,
   countPromptOn: countPromptOn,
   expiresOn: expiresOn,
+  answeredSlots: answeredSlots,
 );
 
 void main() {
@@ -73,6 +75,17 @@ void main() {
       expect(shown.title, 'Time for Amlodipine 5 mg Tablet');
     },
   );
+
+  test('a dose already marked gets no reminder and no follow-up', () {
+    final alarms = buildAlarms([
+      plan(answeredSlots: [DateTime(2026, 12, 10, 8)]),
+    ], now);
+
+    final today = alarms.where((a) => a.at.day == 10).map((a) => a.at).toList();
+    expect(today, isNot(contains(DateTime(2026, 12, 10, 8))));
+    expect(today, isNot(contains(DateTime(2026, 12, 10, 8, 30))));
+    expect(today, contains(DateTime(2026, 12, 10, 20)));
+  });
 
   test('medicines running low within a week share one reorder alarm', () {
     final alarms = buildAlarms([
