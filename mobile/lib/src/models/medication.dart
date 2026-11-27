@@ -152,7 +152,14 @@ class MedicationPlan {
   bool get isAsNeeded => medicineKind == 'as_needed';
   bool get isActive => status == 'active';
   String get doseLabel => '${_number(doseQuantity)} $doseUnit';
-  String get unitsLeftLabel => '${_number(unitsLeft)} $doseUnit';
+  String get unitsLeftLabel => '${_number(unitsLeft)} ${_unitFor(unitsLeft)}';
+
+  /// "6 tablets", "1 tablet"; measures (mL, mg) and units already plural stay as entered.
+  String _unitFor(double amount) {
+    final countable =
+        RegExp(r'^[a-z]{3,}$').hasMatch(doseUnit) && !doseUnit.endsWith('s');
+    return amount != 1 && countable ? '${doseUnit}s' : doseUnit;
+  }
 
   factory MedicationPlan.fromJson(Map<String, dynamic> json) {
     final profile = mapOf(json['care_profile']);

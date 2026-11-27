@@ -258,6 +258,19 @@ class _MedicineListState extends ConsumerState<_MedicineList> {
   bool _askedCount = false;
 
   @override
+  void initState() {
+    super.initState();
+    // The shell's sync is paused while this screen covers it, so changes made here (set-up,
+    // delete, pause, a logged dose) reach the phone's alarms straight away.
+    ref.listenManual(medicationPlansProvider, (_, next) {
+      final plans = next.value;
+      if (plans != null) {
+        unawaited(MedicationAlarms.sync(plans));
+      }
+    }, fireImmediately: true);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final plans = ref.watch(medicationPlansProvider);
     final suggestions = ref.watch(medicationSuggestionsProvider).value ?? [];
