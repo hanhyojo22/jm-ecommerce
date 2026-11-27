@@ -1,7 +1,7 @@
 <x-app-layout>
     @php($itemsByStore = $cart->items->groupBy(fn ($item) => $item->product->store_id))
     @php($itemCount = $cart->items->sum('quantity'))
-    @php($addressFields = ['recipient_name' => 'Recipient name', 'phone' => 'Mobile number', 'address_line' => 'Unit / house no. and street', 'subdivision' => 'Subdivision / village (optional)', 'barangay' => 'Barangay', 'city' => 'City / municipality'])
+    @php($addressFields = ['recipient_name' => 'Recipient name', 'phone' => 'Mobile number', 'address_line' => 'Unit / house no. and street', 'subdivision' => 'Subdivision / village (optional)', 'province' => 'Province', 'city' => 'City / municipality', 'barangay' => 'Barangay'])
     {{-- A rejected submission reopens the step that holds the first field to fix. --}}
     @php($initialStep = $errors->hasAny(array_keys($addressFields)) ? 1 : ($errors->has('payment_method') ? 2 : ($errors->hasAny(['delivery_note', 'prescription', 'prescriptions', 'discount_card', 'discount_card.type', 'discount_card.id_number', 'discount_card.name', 'discount_card_id', 'save_discount_card', 'discount_document']) ? 3 : 1)))
     @php($prescriptionMedicines = $cart->items->filter(fn ($item) => $item->product->requires_prescription)->map(fn ($item) => $item->product->name)->unique())
@@ -44,9 +44,9 @@
                 recipient_name: 'Enter the recipient’s full name.',
                 phone: 'Enter a mobile number like 09171234567.',
                 address_line: 'Enter the unit or house number and street.',
-                barangay: 'Enter the barangay.',
-                city: 'Enter the city.',
-                province: 'Enter the province.',
+                barangay: 'Choose the barangay.',
+                city: 'Choose the city or municipality.',
+                province: 'Choose the province.',
                 postal_code: 'Enter a 4-digit postal code.',
             },
             addressShort: '',
@@ -58,10 +58,12 @@
             choose(id) {
                 this.choice = id;
                 const address = this.addresses.find((item) => item.id === id);
-                for (const field of this.fields) {
+                for (const field of this.fields.filter((field) => ! ['province', 'city', 'barangay'].includes(field))) {
                     document.getElementById(field).value = address?.[field] ?? '';
                 }
-                this.syncAddress();
+                {{-- The place dropdowns fill themselves, then the summary reads them. --}}
+                this.$dispatch('address-chosen', address ?? {});
+                this.$nextTick(() => this.syncAddress());
             },
             syncAddress() {
                 const value = Object.fromEntries(this.fields.map((field) => [field, document.getElementById(field).value.trim()]));
@@ -181,27 +183,32 @@
 
                             <div x-show="showFields" @input="syncAddress(); delete issues[$event.target.id]" @class(['mt-4 border-t border-line pt-[18px]' => $addresses->isNotEmpty()])>
                                 <p x-show="choice !== 'new'" class="mb-3.5 text-[13px] text-muted">Fill in any missing details from this older saved address.</p>
-                                {{-- Name and number share a row, then street, subdivision and barangay, then city. --}}
-                                <div class="grid grid-cols-2 gap-x-3 gap-y-3.5 sm:grid-cols-6">
+                                {{-- Name and number share a row, then street, then subdivision, then province, city and barangay. --}}
+                                <div x-data="addressPlaces(@js(['province' => old('province', $preferredAddress?->province), 'city' => old('city', $preferredAddress?->city), 'barangay' => old('barangay', $preferredAddress?->barangay)]))" @address-chosen.window="use($event.detail)" class="grid grid-cols-2 gap-x-3 gap-y-3.5 sm:grid-cols-6">
                                     @foreach ($addressFields as $field => $label)
-                                        <div @if (in_array($field, ['address_line', 'subdivision', 'barangay', 'city'], true)) x-show="fulfillment === 'delivery'" @endif @class([
-                                            'col-span-2 sm:col-span-3' => in_array($field, ['recipient_name', 'phone', 'subdivision', 'barangay'], true),
-                                            'col-span-2 sm:col-span-6' => $field === 'address_line',
-                                            'col-span-2 sm:col-span-6' => $field === 'city',
+                                        <div @if (in_array($field, ['address_line', 'subdivision', 'province', 'city', 'barangay'], true)) x-show="fulfillment === 'delivery'" @endif @class([
+                                            'col-span-2 sm:col-span-3' => in_array($field, ['recipient_name', 'phone'], true),
+                                            'col-span-2 sm:col-span-6' => in_array($field, ['address_line', 'subdivision'], true),
+                                            'col-span-2 sm:col-span-2' => in_array($field, ['province', 'city', 'barangay'], true),
                                         ])>
                                             <label for="{{ $field }}" class="mb-1.5 block text-[13.5px] font-semibold text-ink">{{ $label }}</label>
-                                            <input id="{{ $field }}" name="{{ $field }}" value="{{ old($field, $preferredAddress?->{$field}) }}" @if (in_array($field, ['address_line', 'barangay', 'city'], true)) :required="fulfillment === 'delivery'" @elseif ($field !== 'subdivision') required @endif
+                                            @if (in_array($field, ['province', 'city', 'barangay'], true))
+                                                <select id="{{ $field }}" name="{{ $field }}" x-model="{{ $field }}" @if ($field === 'province') @change="pickProvince()" @elseif ($field === 'city') @change="pickCity()" @endif :required="fulfillment === 'delivery'" autocomplete="{{ ['province' => 'address-level1', 'city' => 'address-level2', 'barangay' => 'address-level3'][$field] }}"
+                                                    aria-invalid="{{ $errors->has($field) ? 'true' : 'false' }}" aria-describedby="{{ $field }}-error" :aria-invalid="issues.{{ $field }} ? 'true' : 'false'" class="{{ $fieldInput }}">
+                                                    <option value="" x-text="{{ ['province' => "'Choose the province'", 'city' => "province ? 'Choose the city' : 'Choose the province first'", 'barangay' => "city ? 'Choose the barangay' : 'Choose the city first'"][$field] }}"></option>
+                                                    <template x-for="name in {{ $field }}Names" :key="name"><option :value="name" x-text="name" :selected="name === {{ $field }}"></option></template>
+                                                </select>
+                                            @else
+                                            <input id="{{ $field }}" name="{{ $field }}" value="{{ old($field, $preferredAddress?->{$field}) }}" @if ($field === 'address_line') :required="fulfillment === 'delivery'" @elseif ($field !== 'subdivision') required @endif
                                                 @switch($field)
                                                     @case('recipient_name') autocomplete="name" maxlength="150" placeholder="Full name" @break
                                                     @case('phone') type="tel" autocomplete="tel" pattern="(\+63|0)9[0-9]{9}" maxlength="13" placeholder="09171234567" @break
                                                     @case('address_line') autocomplete="address-line1" maxlength="255" placeholder="Lot 5 Blk 2, Rizal Street" @break
                                                     @case('subdivision') autocomplete="address-line2" maxlength="150" @break
-                                                    @case('barangay') autocomplete="address-level3" maxlength="100" @break
-                                                    @case('city') autocomplete="address-level2" maxlength="100" @break
-                                                    @case('province') autocomplete="address-level1" maxlength="100" @break
                                                     @case('postal_code') inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{4}" maxlength="4" @break
                                                 @endswitch
                                                 aria-invalid="{{ $errors->has($field) ? 'true' : 'false' }}" aria-describedby="{{ $field }}-error" :aria-invalid="issues.{{ $field }} ? 'true' : 'false'" class="{{ $fieldInput }}">
+                                            @endif
                                             <p id="{{ $field }}-error" x-show="issues.{{ $field }}" x-text="issues.{{ $field }}" class="mt-[5px] text-[12.5px] font-medium leading-[1.45] text-danger" @unless ($errors->has($field)) style="display: none" @endunless role="alert">{{ $errors->first($field) }}</p>
                                         </div>
                                     @endforeach

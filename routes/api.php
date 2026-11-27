@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\DeliveryAddressController;
 use App\Http\Controllers\Api\V1\DeviceTokenController;
 use App\Http\Controllers\Api\V1\DiscountCardController;
+use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\MedicationConsentController;
 use App\Http\Controllers\Api\V1\MedicationDoseController;
 use App\Http\Controllers\Api\V1\MedicationHistoryController;
@@ -55,6 +56,8 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/products/recommended', [CatalogController::class, 'recommended'])->name('api.v1.products.recommended');
         Route::get('/stores', [CatalogController::class, 'stores'])->name('api.v1.stores.index');
         Route::get('/store-locations', [CatalogController::class, 'storeLocations'])->name('api.v1.store-locations.index');
+        Route::get('/locations', [LocationController::class, 'index'])->name('api.v1.locations.index');
+        Route::get('/locations/barangays', [LocationController::class, 'barangays'])->name('api.v1.locations.barangays');
         Route::get('/stores/{store}', [CatalogController::class, 'store'])->name('api.v1.stores.show');
         Route::get('/stores/{store}/products/{product}', [CatalogController::class, 'show'])->name('api.v1.products.show');
         Route::get('/products/{product}/availability', [CatalogController::class, 'availability'])->name('api.v1.products.availability');

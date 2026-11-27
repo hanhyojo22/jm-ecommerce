@@ -1,5 +1,5 @@
 @php($cancelUrl = $cancelUrl ?? null)
-<form method="POST" action="{{ $action }}" class="grid gap-x-4 gap-y-5 sm:grid-cols-2">
+<form method="POST" action="{{ $action }}" x-data="addressPlaces(@js(['province' => old('province', $address?->province), 'city' => old('city', $address?->city), 'barangay' => old('barangay', $address?->barangay)]))" class="grid gap-x-4 gap-y-5 sm:grid-cols-2">
     @csrf
     @if ($method !== 'POST')@method($method)@endif
     <div>
@@ -17,32 +17,39 @@
         <input id="address_line" name="address_line" value="{{ old('address_line', $address?->address_line) }}" required maxlength="255" autocomplete="address-line1" placeholder="Lot 5 Blk 2, Rizal Street" class="field-control mt-1.5" @error('address_line') aria-invalid="true" aria-describedby="address_line-error" @enderror>
         @error('address_line')<p id="address_line-error" class="mt-1.5 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
     </div>
-    <div>
+    <div class="sm:col-span-2">
         <label for="subdivision" class="block text-meta font-semibold text-ink">Subdivision / village / building (optional)</label>
         <input id="subdivision" name="subdivision" value="{{ old('subdivision', $address?->subdivision) }}" maxlength="150" autocomplete="address-line2" class="field-control mt-1.5" @error('subdivision') aria-invalid="true" aria-describedby="subdivision-error" @enderror>
         @error('subdivision')<p id="subdivision-error" class="mt-1.5 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
     </div>
     <div>
-        <label for="barangay" class="block text-meta font-semibold text-ink">Barangay</label>
-        <input id="barangay" name="barangay" value="{{ old('barangay', $address?->barangay) }}" required maxlength="100" autocomplete="address-level3" class="field-control mt-1.5" @error('barangay') aria-invalid="true" aria-describedby="barangay-error" @enderror>
-        @error('barangay')<p id="barangay-error" class="mt-1.5 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
+        <label for="province" class="block text-meta font-semibold text-ink">Province</label>
+        <select id="province" name="province" x-model="province" @change="pickProvince()" required autocomplete="address-level1" class="field-control mt-1.5" @error('province') aria-invalid="true" aria-describedby="province-error" @enderror>
+            <option value="">Choose the province</option>
+            <template x-for="name in provinceNames" :key="name"><option :value="name" x-text="name" :selected="name === province"></option></template>
+        </select>
+        @error('province')<p id="province-error" class="mt-1.5 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
     </div>
     <div>
         <label for="city" class="block text-meta font-semibold text-ink">City / municipality</label>
-        <input id="city" name="city" value="{{ old('city', $address?->city) }}" required maxlength="100" autocomplete="address-level2" class="field-control mt-1.5" @error('city') aria-invalid="true" aria-describedby="city-error" @enderror>
+        <select id="city" name="city" x-model="city" @change="pickCity()" required autocomplete="address-level2" class="field-control mt-1.5" @error('city') aria-invalid="true" aria-describedby="city-error" @enderror>
+            <option value="" x-text="province ? 'Choose the city or municipality' : 'Choose the province first'">Choose the city or municipality</option>
+            <template x-for="name in cityNames" :key="name"><option :value="name" x-text="name" :selected="name === city"></option></template>
+        </select>
         @error('city')<p id="city-error" class="mt-1.5 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
     </div>
-    <div class="grid grid-cols-[minmax(0,1fr)_7rem] gap-4">
-        <div>
-            <label for="province" class="block text-meta font-semibold text-ink">Province</label>
-            <input id="province" name="province" value="{{ old('province', $address?->province) }}" required maxlength="100" autocomplete="address-level1" placeholder="Metro Manila if in NCR" class="field-control mt-1.5" @error('province') aria-invalid="true" aria-describedby="province-error" @enderror>
-            @error('province')<p id="province-error" class="mt-1.5 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
-        </div>
-        <div>
-            <label for="postal_code" class="block text-meta font-semibold text-ink">Postal code</label>
-            <input id="postal_code" name="postal_code" value="{{ old('postal_code', $address?->postal_code) }}" required inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="postal-code" class="field-control mt-1.5 tabular-nums" @error('postal_code') aria-invalid="true" aria-describedby="postal_code-error" @enderror>
-            @error('postal_code')<p id="postal_code-error" class="mt-1.5 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
-        </div>
+    <div>
+        <label for="barangay" class="block text-meta font-semibold text-ink">Barangay</label>
+        <select id="barangay" name="barangay" x-model="barangay" required autocomplete="address-level3" class="field-control mt-1.5" @error('barangay') aria-invalid="true" aria-describedby="barangay-error" @enderror>
+            <option value="" x-text="city ? 'Choose the barangay' : 'Choose the city first'">Choose the barangay</option>
+            <template x-for="name in barangayNames" :key="name"><option :value="name" x-text="name" :selected="name === barangay"></option></template>
+        </select>
+        @error('barangay')<p id="barangay-error" class="mt-1.5 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
+    </div>
+    <div>
+        <label for="postal_code" class="block text-meta font-semibold text-ink">Postal code</label>
+        <input id="postal_code" name="postal_code" value="{{ old('postal_code', $address?->postal_code) }}" required inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="postal-code" class="field-control mt-1.5 tabular-nums" @error('postal_code') aria-invalid="true" aria-describedby="postal_code-error" @enderror>
+        @error('postal_code')<p id="postal_code-error" class="mt-1.5 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
     </div>
     <div class="flex flex-col-reverse gap-2 border-t border-line-soft pt-5 sm:col-span-2 sm:flex-row sm:justify-end">
         @if ($cancelUrl)

@@ -96,8 +96,9 @@ test('COD checkout preserves the selected variant and its price', async ({ brows
         await page.getByLabel('Recipient name').fill('QA Integration Customer');
         await page.getByLabel('Mobile number').fill('09171234567');
         await page.getByLabel('Unit / house no. and street').fill('25 Market Street');
-        await page.getByLabel('Barangay').fill('Poblacion');
-        await page.getByLabel('City / municipality').fill('Cebu');
+        await page.getByLabel('Province', { exact: true }).selectOption('Cebu');
+        await page.getByLabel('City / municipality', { exact: true }).selectOption('Cebu City');
+        await page.getByLabel('Barangay', { exact: true }).selectOption('Apas');
         await page.getByRole('button', { name: 'Continue to payment' }).click();
         await page.locator('#checkout-form').getByRole('button', { name: 'Review order' }).click();
         await page.locator('#checkout-form').getByRole('button', { name: /Place order/ }).click();

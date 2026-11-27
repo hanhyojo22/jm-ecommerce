@@ -9,6 +9,7 @@ import '../providers/address_providers.dart';
 import '../providers/auth_providers.dart';
 import '../providers/store_locator_providers.dart';
 import '../widgets/common.dart';
+import '../widgets/place_fields.dart';
 import '../widgets/status_notice.dart';
 
 class AddressesScreen extends ConsumerWidget {
@@ -220,6 +221,19 @@ class _AddressFormState extends ConsumerState<AddressForm> {
         field.text = value;
       }
     }
+    _matchPlaces();
+  }
+
+  /// Puts a looked-up province and city in the dropdowns' spelling.
+  Future<void> _matchPlaces() async {
+    try {
+      final provinces = await ref.read(provincesProvider.future);
+      if (mounted) {
+        matchPlaceNames(provinces, _province, _city);
+      }
+    } catch (_) {
+      // The list is a convenience; the looked-up names still work.
+    }
   }
 
   /// Suggestions for the street field, once the customer pauses typing.
@@ -310,46 +324,6 @@ class _AddressFormState extends ConsumerState<AddressForm> {
     _postal.dispose();
     _lineFocus.dispose();
     super.dispose();
-  }
-
-  Widget _cityProvinceFields(BuildContext context) {
-    final city = TextFormField(
-      controller: _city,
-      textCapitalization: TextCapitalization.words,
-      decoration: const InputDecoration(labelText: 'City / municipality'),
-      validator: (value) =>
-          (value ?? '').trim().isEmpty ? 'Enter the city.' : null,
-    );
-    final province = TextFormField(
-      controller: _province,
-      textCapitalization: TextCapitalization.words,
-      decoration: const InputDecoration(
-        labelText: 'Province',
-        hintText: 'Metro Manila if in NCR',
-      ),
-      validator: (value) =>
-          (value ?? '').trim().isEmpty ? 'Enter the province.' : null,
-    );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final stack =
-            constraints.maxWidth < 300 ||
-            MediaQuery.textScalerOf(context).scale(14) > 21;
-
-        if (stack) {
-          return Column(children: [city, const SizedBox(height: 10), province]);
-        }
-
-        return Row(
-          children: [
-            Expanded(child: city),
-            const SizedBox(width: 10),
-            Expanded(child: province),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -496,15 +470,11 @@ class _AddressFormState extends ConsumerState<AddressForm> {
                 ),
               ),
               const SizedBox(height: 10),
-              TextFormField(
-                controller: _barangay,
-                textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(labelText: 'Barangay'),
-                validator: (value) =>
-                    (value ?? '').trim().isEmpty ? 'Enter the barangay.' : null,
+              PlaceFields(
+                province: _province,
+                city: _city,
+                barangay: _barangay,
               ),
-              const SizedBox(height: 10),
-              _cityProvinceFields(context),
               const SizedBox(height: 10),
               TextFormField(
                 controller: _postal,

@@ -9,6 +9,7 @@ import 'package:jmmart/src/models/models.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/providers/store_locator_providers.dart';
 import 'package:jmmart/src/screens/addresses_screen.dart';
+import 'package:jmmart/src/widgets/place_fields.dart';
 
 Future<Address?> _openForm(
   WidgetTester tester, {
@@ -42,12 +43,20 @@ Future<Address?> _openForm(
   return saved;
 }
 
+Future<void> _pick(WidgetTester tester, String field, String name) async {
+  await tester.tap(find.widgetWithText(TextFormField, field));
+  await tester.pumpAndSettle();
+  await tester.tap(find.widgetWithText(ListTile, name));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('an older address must be completed before it saves', (
     tester,
   ) async {
     final saved = await _openForm(
       tester,
+      overrides: [apiClientProvider.overrideWithValue(_LookupApi())],
       initial: const Address(
         id: 'address',
         recipientName: 'Test Customer',
@@ -63,17 +72,74 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(saved, isNull);
-    expect(find.text('Enter the barangay.'), findsOneWidget);
-    expect(find.text('Enter the province.'), findsOneWidget);
+    expect(find.text('Choose the barangay.'), findsOneWidget);
+    expect(find.text('Choose the province.'), findsOneWidget);
     expect(find.text('Use a 4-digit postal code.'), findsOneWidget);
 
-    // Fixing a field clears its error without pressing Save again.
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Barangay'),
-      'Camputhaw',
+    // Fixing a field clears its error without pressing Save again, and a
+    // province that has the saved city keeps it.
+    await _pick(tester, 'Province', 'Cebu');
+    expect(find.text('Choose the province.'), findsNothing);
+    expect(find.text('Cebu City'), findsOneWidget);
+  });
+
+  testWidgets('each place list narrows to the one before it', (tester) async {
+    final api = _LookupApi();
+    await _openForm(
+      tester,
+      overrides: [apiClientProvider.overrideWithValue(api)],
+      initial: const Address(
+        recipientName: 'Test Customer',
+        phone: '09171234567',
+        addressLine: '12 Rizal Street',
+        barangay: 'Camputhaw',
+        city: 'Cebu City',
+        province: 'Cebu',
+        postalCode: '6000',
+      ),
     );
-    await tester.pump();
-    expect(find.text('Enter the barangay.'), findsNothing);
+
+    // Makati is not in Cebu, so the city and barangay empty out.
+    await _pick(tester, 'Province', 'Metro Manila');
+    expect(find.text('Cebu City'), findsNothing);
+    expect(find.text('Camputhaw'), findsNothing);
+
+    await tester.tap(find.widgetWithText(TextFormField, 'City / municipality'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mandaue City'), findsNothing);
+    await tester.tap(find.text('Makati City'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(TextFormField, 'Barangay'));
+    await tester.pumpAndSettle();
+    expect(api.barangaysAsked, [('Metro Manila', 'Makati City')]);
+    expect(find.text('Bel-Air'), findsOneWidget);
+
+    // A barangay missing from the list can still be typed.
+    await tester.enterText(find.byType(TextField).last, 'New Barangay');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Use “New Barangay”'));
+    await tester.pumpAndSettle();
+    expect(find.text('New Barangay'), findsOneWidget);
+  });
+
+  test('looked-up names take the listed spelling and province', () {
+    const provinces = {
+      'Cebu': ['Cebu City', 'Mandaue City', 'San Remigio'],
+      'Metro Manila': ['Makati City', 'Manila'],
+      'Antique': ['San Remigio'],
+    };
+    final province = TextEditingController(text: 'Metro Manila');
+    final city = TextEditingController(text: 'City of Mandaue');
+
+    matchPlaceNames(provinces, province, city);
+    expect((province.text, city.text), ('Cebu', 'Mandaue City'));
+
+    // Two provinces have a San Remigio, so the named province stays.
+    city.text = 'San Remigio';
+    province.text = 'cebu';
+    matchPlaceNames(provinces, province, city);
+    expect((province.text, city.text), ('Cebu', 'San Remigio'));
   });
 
   testWidgets('Use my current location fills the address fields', (
@@ -88,10 +154,6 @@ void main() {
       ],
     );
 
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Province'),
-      'Cebu',
-    );
     await tester.tap(find.text('Use my current location'));
     await tester.pumpAndSettle();
 
@@ -100,7 +162,7 @@ void main() {
     expect(find.text('Camputhaw'), findsOneWidget);
     expect(find.text('Cebu City'), findsOneWidget);
     expect(find.text('6000'), findsOneWidget);
-    // The lookup found no province, so what the customer typed stays.
+    // The lookup found no province; the city's only province fills it.
     expect(find.text('Cebu'), findsOneWidget);
   });
 
@@ -177,6 +239,19 @@ class _LookupApi extends ApiClient {
   }
 
   final List<String> searched = [];
+  final List<(String, String)> barangaysAsked = [];
+
+  @override
+  Future<Map<String, List<String>>> provinces() async => {
+    'Cebu': ['Cebu City', 'Mandaue City'],
+    'Metro Manila': ['Makati City', 'Manila'],
+  };
+
+  @override
+  Future<List<String>> barangays(String province, String city) async {
+    barangaysAsked.add((province, city));
+    return city == 'Cebu City' ? ['Apas', 'Camputhaw'] : ['Bel-Air'];
+  }
 
   @override
   Future<List<Map<String, dynamic>>> searchAddresses(String query) async {
