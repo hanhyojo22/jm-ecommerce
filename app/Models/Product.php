@@ -22,6 +22,7 @@ class Product extends Model
 
     protected $fillable = [
         'tenant_id', 'store_id', 'category_id', 'name', 'generic_name', 'search_keywords', 'dosage_form', 'strength', 'slug', 'sku', 'description', 'price', 'compare_at_price', 'brand', 'manufacturer', 'requires_prescription', 'switch_with_care', 'condition', 'free_shipping', 'stock_quantity', 'status', 'moderation_reason', 'content_changed_at',
+        'medicine_kind', 'pack_units', 'dose_quantity', 'dose_unit', 'doses_per_day', 'course_days', 'min_hours_between', 'max_doses_per_day', 'directions_note',
     ];
 
     /**
@@ -102,9 +103,24 @@ class Product extends Model
         return $genericName;
     }
 
+    /**
+     * The label directions a buyer's reminder plan starts from, or null when this isn't a medicine
+     * or the pharmacy hasn't entered a dose. The app never fills in a dose on its own.
+     *
+     * @return array{medicine_kind: string, pack_units: ?string, dose_quantity: string, dose_unit: ?string, doses_per_day: ?int, course_days: ?int, min_hours_between: ?int, max_doses_per_day: ?int, directions_note: ?string}|null
+     */
+    public function medicationDirections(): ?array
+    {
+        if (($this->medicine_kind ?? 'none') === 'none' || $this->dose_quantity === null) {
+            return null;
+        }
+
+        return $this->only(['medicine_kind', 'pack_units', 'dose_quantity', 'dose_unit', 'doses_per_day', 'course_days', 'min_hours_between', 'max_doses_per_day', 'directions_note']);
+    }
+
     protected function casts(): array
     {
-        return ['price' => 'decimal:2', 'compare_at_price' => 'decimal:2', 'free_shipping' => 'boolean', 'requires_prescription' => 'boolean', 'switch_with_care' => 'boolean', 'content_changed_at' => 'datetime'];
+        return ['price' => 'decimal:2', 'compare_at_price' => 'decimal:2', 'free_shipping' => 'boolean', 'requires_prescription' => 'boolean', 'switch_with_care' => 'boolean', 'content_changed_at' => 'datetime', 'pack_units' => 'decimal:2', 'dose_quantity' => 'decimal:2'];
     }
 
     public function tenant(): BelongsTo

@@ -23,11 +23,12 @@ class OrderItem extends Model
         'line_total',
         'discount_amount',
         'image_path',
+        'medication_directions',
     ];
 
     protected function casts(): array
     {
-        return ['unit_price' => 'decimal:2', 'line_total' => 'decimal:2', 'discount_amount' => 'decimal:2'];
+        return ['unit_price' => 'decimal:2', 'line_total' => 'decimal:2', 'discount_amount' => 'decimal:2', 'medication_directions' => 'array'];
     }
 
     public function product(): BelongsTo
@@ -43,6 +44,17 @@ class OrderItem extends Model
     public function review(): HasOne
     {
         return $this->hasOne(ProductReview::class);
+    }
+
+    /**
+     * The directions a reminder for this purchase starts from: the pharmacist's override from the
+     * prescription review, otherwise the product's current label directions.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function medicationDirections(): ?array
+    {
+        return $this->medication_directions ?? $this->product?->medicationDirections();
     }
 
     public function inventoryAllocations(): HasMany
