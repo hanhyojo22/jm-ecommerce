@@ -27,7 +27,7 @@ class MedicationPlanController extends Controller
     }
 
     /**
-     * Delivered purchases from the last 120 days not yet in a plan, medicines with label
+     * Delivered medicines from the last 120 days not yet in a plan, those with label
      * directions first. Items without directions are offered too: the buyer enters the dose.
      */
     public function suggestions(Request $request): JsonResponse
@@ -37,6 +37,10 @@ class MedicationPlanController extends Controller
                 ->where('delivered_at', '>=', now()->subDays(120))
                 ->whereHas('order', fn ($order) => $order->where('user_id', $request->user()->id)))
             ->whereDoesntHave('medicationPlans')
+            // Medicine only: label directions, a dosage form or a generic name. Diapers and shampoo stay out.
+            ->whereHas('product', fn ($product) => $product->where(fn ($medicine) => $medicine->where('medicine_kind', '!=', 'none')
+                ->orWhereNotNull('dosage_form')
+                ->orWhereNotNull('generic_name')))
             ->with('product')
             ->latest()
             ->limit(50)

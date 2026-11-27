@@ -213,6 +213,7 @@ class _MedicineConsentState extends ConsumerState<MedicineConsent> {
     final notice = AppNotice.of(context);
     try {
       await ref.read(apiClientProvider).setMedicationConsent(true);
+      await MedicationAlarms.requestExactTiming();
       ref.invalidate(meProvider);
     } on ApiException catch (error) {
       notice.show(error.friendly);

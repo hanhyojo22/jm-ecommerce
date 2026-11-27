@@ -319,10 +319,7 @@ class MedicationAlarms {
       if (alarms.isEmpty) {
         return;
       }
-      var exact = await android?.canScheduleExactNotifications() ?? false;
-      if (!exact) {
-        exact = await android?.requestExactAlarmsPermission() ?? false;
-      }
+      final exact = await android?.canScheduleExactNotifications() ?? false;
       for (final alarm in alarms) {
         await _plugin.zonedSchedule(
           alarm.id,
@@ -348,6 +345,23 @@ class MedicationAlarms {
     } catch (error, stack) {
       // Reminders must never break the app; the next sync tries again.
       debugPrint('[Medicine] alarm sync failed: $error\n$stack');
+    }
+  }
+
+  /// Asks once, when the buyer turns reminders on, for alarms at the exact
+  /// minute. Asking on every sync would open Android settings at each launch;
+  /// without it reminders still ring, a few minutes late.
+  static Future<void> requestExactTiming() async {
+    try {
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      if (!(await android?.canScheduleExactNotifications() ?? true)) {
+        await android?.requestExactAlarmsPermission();
+      }
+    } catch (error) {
+      debugPrint('[Medicine] exact alarm request failed: $error');
     }
   }
 

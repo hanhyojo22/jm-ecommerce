@@ -52,6 +52,14 @@ class MedicationPlanApiTest extends TestCase
         $this->getJson(route('api.v1.medication-plans.suggestions'))->assertOk()->assertJsonCount(0, 'data');
     }
 
+    public function test_items_that_are_not_medicine_are_not_suggested(): void
+    {
+        [$buyer] = $this->deliveredItem(directions: ['medicine_kind' => 'none']);
+        $this->consent($buyer);
+
+        $this->getJson(route('api.v1.medication-plans.suggestions'))->assertOk()->assertJsonCount(0, 'data');
+    }
+
     public function test_starting_a_plan_from_an_order_item_uses_pack_units_and_batch_expiry(): void
     {
         [$buyer, $item] = $this->deliveredItem(quantity: 2);
@@ -101,7 +109,7 @@ class MedicationPlanApiTest extends TestCase
 
     public function test_a_buyer_adds_a_delivered_medicine_without_directions_manually(): void
     {
-        [$buyer, $item] = $this->deliveredItem(directions: ['medicine_kind' => 'none']);
+        [$buyer, $item] = $this->deliveredItem(directions: ['medicine_kind' => 'none', 'dosage_form' => 'Tablet']);
         $this->consent($buyer);
 
         $this->getJson(route('api.v1.medication-plans.suggestions'))->assertJsonPath('data.0.directions', null);
