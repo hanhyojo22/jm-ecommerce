@@ -63,15 +63,15 @@
                         <span class="sc-badge" data-tone="neutral">{{ $branches->count() }} branches</span>
                     @endif
                 </div>
-                <p class="sc-subtitle">Track expiry lots, receive supplier deliveries, and reconcile shelf counts for this branch.</p>
+                <p class="sc-subtitle">Track expiry lots, receive supplier deliveries, and reconcile shelf counts for this branch</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
                 <a href="#physical-counts" class="seller-outline-button min-h-11">
-                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></svg>
+                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></svg>
                     Physical counts
                 </a>
                 <a href="#receive-stock" class="seller-primary-button min-h-11">
-                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
                     Receive stock
                 </a>
             </div>
@@ -150,7 +150,7 @@
             @if (session('status'))
                 <div class="sc-notice" data-tone="success" role="status">
                     <div class="flex items-center gap-2.5">
-                        <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                        <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                         <p class="font-medium">{{ session('status') }}</p>
                     </div>
                 </div>
@@ -159,7 +159,7 @@
             @if ($errors->any())
                 <div class="sc-error-summary" role="alert" tabindex="-1" x-init="$nextTick(() => $el.focus())">
                     <div class="sc-error-summary-head">
-                        <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                        <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
                         <span>Stock could not be saved. Review the issues below and try again.</span>
                     </div>
                     <ul class="sc-error-summary-list">
@@ -185,8 +185,8 @@
                 <div class="sc-field sc-stock-search">
                     <label for="search">Find medicine to receive or count</label>
                     <div class="sc-stock-search-wrap">
-                        <svg class="sc-stock-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                        <input id="search" name="search" type="search" value="{{ $search }}" maxlength="100" placeholder="Search brand or generic name…" class="field-control sc-input">
+                        <svg class="sc-stock-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                        <input id="search" name="search" type="search" value="{{ $search }}" maxlength="100" placeholder="Search brand or generic name" class="field-control sc-input">
                     </div>
                 </div>
                 <div class="sc-stock-toolbar-actions">
@@ -202,7 +202,7 @@
                 <div class="sc-stock-section-heading">
                     <div>
                         <h2 id="stock-watch-title" class="sc-card-title">Batch watch</h2>
-                        <p class="sc-card-note">Live inventory alerts across {{ $branch->name }}. Click a watch tile to filter below.</p>
+                        <p class="sc-card-note">Live inventory alerts across {{ $branch->name }} · Click a watch tile to filter below</p>
                     </div>
                 </div>
                 <div class="sc-stock-signals" role="list">
@@ -234,11 +234,11 @@
                     <div class="sc-card-head">
                         <div class="flex items-start gap-3">
                             <span class="sc-settings-card-icon" aria-hidden="true">
-                                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg>
+                                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg>
                             </span>
                             <div>
                                 <h2 id="batches-title" class="sc-card-title">Stock batches</h2>
-                                <p class="sc-card-note">Ordered by soonest expiry. Adjust individual lots for counts, damage, expiry, or quarantine.</p>
+                                <p class="sc-card-note">Ordered by soonest expiry · Adjust individual lots for counts, damage, expiry, or quarantine</p>
                             </div>
                         </div>
                         <span class="sc-stock-total">{{ number_format($batches->total()) }} {{ Str::plural('batch', $batches->total()) }}</span>
@@ -316,7 +316,7 @@
                                                 aria-controls="adjust-panel-{{ $batch->id }}"
                                                 class="sc-stock-adjust-trigger">
                                                 <span x-text="openBatchId === @js($batch->id) ? 'Close' : 'Adjust'">Adjust</span>
-                                                <svg class="size-3.5 transition-transform" :class="openBatchId === @js($batch->id) && 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                                                <svg class="size-4 transition-transform" :class="openBatchId === @js($batch->id) && 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
                                             </button>
                                         </td>
                                     </tr>
@@ -329,7 +329,7 @@
                                                 @method('PATCH')
                                                 <input type="hidden" name="batch_id" value="{{ $batch->id }}">
                                                 <div class="sc-stock-adjust-context">
-                                                    <span class="text-xs font-semibold text-ink">Adjust Lot {{ $batch->lot_number }}</span>
+                                                    <span class="text-xs font-medium text-ink">Adjust Lot {{ $batch->lot_number }}</span>
                                                     <span class="text-xs text-muted">Currently {{ number_format($batch->remaining_quantity) }} {{ Str::plural('unit', $batch->remaining_quantity) }}</span>
                                                 </div>
                                                 <div class="sc-stock-adjust-fields">
@@ -392,11 +392,11 @@
                     <div class="sc-card-head">
                         <div class="flex items-start gap-3">
                             <span class="sc-settings-card-icon" aria-hidden="true">
-                                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+                                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg>
                             </span>
                             <div>
                                 <h2 id="receive-stock-title" class="sc-card-title">Receive a batch</h2>
-                                <p class="sc-card-note">Log an incoming delivery for {{ $branch->name }}.</p>
+                                <p class="sc-card-note">Log an incoming delivery for {{ $branch->name }}</p>
                             </div>
                         </div>
                     </div>
@@ -428,7 +428,7 @@
 
                                 <div class="sc-field">
                                     <label for="receive-lot">Lot number <span class="sc-stock-optional">(required)</span></label>
-                                    <input id="receive-lot" name="lot_number" maxlength="100" value="{{ old('lot_number') }}" placeholder="e.g. LOT-2026-04A" required class="field-control sc-input font-mono text-sm">
+                                    <input id="receive-lot" name="lot_number" maxlength="100" value="{{ old('lot_number') }}" placeholder="e.g. LOT-2026-04A" required class="field-control sc-input sc-code text-sm">
                                 </div>
 
                                 <div class="sc-stock-field-pair">
@@ -445,7 +445,7 @@
 
                             <details class="sc-subtle-disclosure" @if ($hasSupplierOld) open @endif>
                                 <summary>
-                                    <svg class="size-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                                    <svg class="size-4 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
                                     <span>Add supplier &amp; invoice reference <span class="sc-stock-optional">(optional)</span></span>
                                 </summary>
                                 <div class="mt-3 grid gap-3.5">
@@ -461,7 +461,7 @@
                             </details>
 
                             <button type="submit" class="seller-primary-button min-h-11 w-full">
-                                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
                                 Receive stock
                             </button>
                         </form>
@@ -479,11 +479,11 @@
                 <div class="sc-card-head">
                     <div class="flex items-start gap-3">
                         <span class="sc-settings-card-icon" aria-hidden="true">
-                            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+                            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
                         </span>
                         <div>
                             <h2 id="counts-title" class="sc-card-title">Physical stock counts</h2>
-                            <p class="sc-card-note">Update shelf quantities for {{ $branch->name }}. Low stock flags items with 5 or fewer units.</p>
+                            <p class="sc-card-note">Update shelf quantities for {{ $branch->name }} · Low stock flags items with 5 or fewer units</p>
                         </div>
                     </div>
                     @if ($products->isNotEmpty())
@@ -532,7 +532,7 @@
                                             @endphp
                                             <tr x-show="matchesCountFilter(@js($rowKey))" :class="rowDelta(@js($rowKey)) !== 0 && 'is-modified'">
                                                 <td class="sc-count-med">
-                                                    <span class="font-semibold text-ink">{{ $product->name }}</span>
+                                                    <span class="font-medium text-ink">{{ $product->name }}</span>
                                                     @if ($product->generic_name)
                                                         <span class="mt-0.5 block text-xs text-muted">{{ $product->generic_name }}{{ $product->strength ? ' · '.$product->strength : '' }}</span>
                                                     @endif
@@ -558,7 +558,7 @@
                                                 <td class="sc-count-input-cell">
                                                     <div class="sc-stepper">
                                                         <button type="button" @click="stepCount(@js($rowKey), -1)" class="sc-stepper-btn" aria-label="Decrease {{ $product->name }} {{ $variant?->label() }} quantity">
-                                                            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12h14"/></svg>
+                                                            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 12h14"/></svg>
                                                         </button>
                                                         <label for="stock-{{ $product->id }}-{{ $key }}" class="sr-only">Units of {{ $product->name }} {{ $variant?->label() }} on hand</label>
                                                         <input id="stock-{{ $product->id }}-{{ $key }}" name="stock[{{ $product->id }}][{{ $key }}]"
@@ -567,7 +567,7 @@
                                                             x-model.number="counts[@js($rowKey)]"
                                                             class="field-control sc-stepper-input">
                                                         <button type="button" @click="stepCount(@js($rowKey), 1)" class="sc-stepper-btn" aria-label="Increase {{ $product->name }} {{ $variant?->label() }} quantity">
-                                                            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                                                            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
                                                         </button>
                                                     </div>
                                                 </td>
