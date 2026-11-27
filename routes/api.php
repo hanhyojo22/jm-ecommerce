@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AccountController;
+use App\Http\Controllers\Api\V1\CareProfileController;
 use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\CheckoutController;
@@ -8,6 +9,10 @@ use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\DeliveryAddressController;
 use App\Http\Controllers\Api\V1\DeviceTokenController;
 use App\Http\Controllers\Api\V1\DiscountCardController;
+use App\Http\Controllers\Api\V1\MedicationConsentController;
+use App\Http\Controllers\Api\V1\MedicationDoseController;
+use App\Http\Controllers\Api\V1\MedicationHistoryController;
+use App\Http\Controllers\Api\V1\MedicationPlanController;
 use App\Http\Controllers\Api\V1\MessageAttachmentController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\OrderIssueController;
@@ -16,6 +21,7 @@ use App\Http\Controllers\Api\V1\ProductReviewController;
 use App\Http\Controllers\Api\V1\ReturnCaseController;
 use App\Http\Controllers\Api\V1\ReturnCaseEvidenceController;
 use App\Http\Controllers\Api\V1\SavedProductController;
+use App\Http\Middleware\EnsureMedicationConsent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
@@ -82,6 +88,29 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/checkout', [CheckoutController::class, 'store'])
             ->middleware('throttle:checkout')
             ->name('api.v1.checkout.store');
+
+        /*
+         * Medicine reminders. Opting in is the only call allowed before consent.
+         */
+        Route::middleware('throttle:api')->group(function (): void {
+            Route::put('/me/medication-consent', [MedicationConsentController::class, 'store'])->name('api.v1.medication-consent.store');
+            Route::delete('/me/medication-consent', [MedicationConsentController::class, 'destroy'])->name('api.v1.medication-consent.destroy');
+
+            Route::middleware(EnsureMedicationConsent::class)->group(function (): void {
+                Route::get('/medication-plans', [MedicationPlanController::class, 'index'])->name('api.v1.medication-plans.index');
+                Route::get('/medication-plans/suggestions', [MedicationPlanController::class, 'suggestions'])->name('api.v1.medication-plans.suggestions');
+                Route::post('/medication-plans', [MedicationPlanController::class, 'store'])->name('api.v1.medication-plans.store');
+                Route::patch('/medication-plans/{plan}', [MedicationPlanController::class, 'update'])->name('api.v1.medication-plans.update');
+                Route::delete('/medication-plans/{plan}', [MedicationPlanController::class, 'destroy'])->name('api.v1.medication-plans.destroy');
+                Route::post('/medication-plans/{plan}/count', [MedicationPlanController::class, 'count'])->name('api.v1.medication-plans.count');
+                Route::post('/medication-plans/{plan}/doses', [MedicationDoseController::class, 'store'])->name('api.v1.medication-plans.doses.store');
+                Route::get('/medication-history', MedicationHistoryController::class)->name('api.v1.medication-history');
+                Route::get('/care-profiles', [CareProfileController::class, 'index'])->name('api.v1.care-profiles.index');
+                Route::post('/care-profiles', [CareProfileController::class, 'store'])->name('api.v1.care-profiles.store');
+                Route::patch('/care-profiles/{careProfile}', [CareProfileController::class, 'update'])->name('api.v1.care-profiles.update');
+                Route::delete('/care-profiles/{careProfile}', [CareProfileController::class, 'destroy'])->name('api.v1.care-profiles.destroy');
+            });
+        });
 
         Route::get('/delivery-addresses', [DeliveryAddressController::class, 'index'])
             ->middleware('throttle:api')

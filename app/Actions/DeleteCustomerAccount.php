@@ -18,7 +18,7 @@ use Throwable;
  */
 class DeleteCustomerAccount
 {
-    public function __construct(private ClerkUsers $clerkUsers, private SafeExceptionReporter $reporter) {}
+    public function __construct(private ClerkUsers $clerkUsers, private SafeExceptionReporter $reporter, private ForgetMedicationData $forgetMedicationData) {}
 
     public function handle(User $user, ?string $ipAddress = null): void
     {
@@ -48,6 +48,7 @@ class DeleteCustomerAccount
             $user->pushSubscriptions()->delete();
             $user->savedProducts()->detach();
             $user->cart()->first()?->delete();
+            $this->forgetMedicationData->handle($user);
 
             $user->forceFill([
                 'name' => 'Deleted customer',

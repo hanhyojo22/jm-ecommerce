@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -55,6 +56,11 @@ class OrderItem extends Model
     public function medicationDirections(): ?array
     {
         return $this->medication_directions ?? $this->product?->medicationDirections();
+    }
+
+    public function medicationPlans(): BelongsToMany
+    {
+        return $this->belongsToMany(MedicationPlan::class, 'medication_plan_order_items')->withPivot('units');
     }
 
     public function inventoryAllocations(): HasMany
