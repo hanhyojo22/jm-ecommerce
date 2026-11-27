@@ -21,13 +21,136 @@ import 'package:jmmart/src/widgets/common.dart';
 import 'package:jmmart/src/widgets/family_banner_carousel.dart';
 
 void main() {
+  for (final collapsed in [false, true]) {
+    testWidgets('TalkBack opens search with collapsed=$collapsed', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      try {
+        await _pumpShopRouter(tester, _CatalogApi());
+        if (collapsed) {
+          final controller = tester
+              .widget<CustomScrollView>(find.byType(CustomScrollView))
+              .controller!;
+          controller.jumpTo(650);
+          await tester.pumpAndSettle();
+        }
+        final node = tester.getSemantics(
+          find.bySemanticsLabel('Search medicines'),
+        );
+        expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+        node.owner!.performAction(node.id, SemanticsAction.tap);
+        await tester.pumpAndSettle();
+        expect(find.byType(SearchScreen), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      } finally {
+        semantics.dispose();
+      }
+    });
+  }
+
+  testWidgets(
+    'selecting a far category filters products, keeps search compact, and resets via All',
+    (tester) async {
+      final api = _CatalogApi()..categoryItems = _pharmacyCategories;
+      await _pumpShopRouter(tester, api);
+      final controller = tester
+          .widget<CustomScrollView>(find.byType(CustomScrollView))
+          .controller!;
+      controller.jumpTo(260);
+      await tester.pumpAndSettle();
+      final searchTop = tester
+          .getTopLeft(find.bySemanticsLabel('Search medicines'))
+          .dy;
+      await tester.drag(
+        find.byKey(const PageStorageKey('shop-category-circles')),
+        const Offset(-600, 0),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('First Aid').hitTestable());
+      await tester.pumpAndSettle();
+
+      expect(api.lastCategory, 'first-aid');
+      expect(
+        find.byKey(const Key('shop-collapsed-quick-actions')),
+        findsOneWidget,
+      );
+      expect(find.bySemanticsLabel('Deals').hitTestable(), findsOneWidget);
+      expect(find.text('First Aid').hitTestable(), findsNWidgets(2));
+      expect(find.text('All').hitTestable(), findsOneWidget);
+      expect(controller.offset, 0);
+      expect(
+        tester.getTopLeft(find.bySemanticsLabel('Search medicines')).dy,
+        searchTop,
+      );
+
+      await tester.tap(find.text('All'));
+      await tester.pumpAndSettle();
+      expect(api.lastCategory, isNull);
+      expect(find.byType(FamilyBannerCarousel), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final brightness in Brightness.values) {
+    testWidgets(
+      'collapsed search and quick action icons honor 2x text in $brightness',
+      (tester) async {
+        final api = _CatalogApi()..categoryItems = _pharmacyCategories;
+        await _pumpShopRouter(
+          tester,
+          api,
+          width: 320,
+          textScale: 2,
+          brightness: brightness,
+        );
+        final controller = tester
+            .widget<CustomScrollView>(find.byType(CustomScrollView))
+            .controller!;
+        controller.jumpTo(controller.position.maxScrollExtent);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('shop-collapsed-quick-actions')),
+          findsOneWidget,
+        );
+        for (final label in ['Deals', 'Branches', 'Saved', 'Reorder']) {
+          expect(find.bySemanticsLabel(label).hitTestable(), findsOneWidget);
+        }
+        expect(
+          MediaQuery.textScalerOf(tester.element(find.text('Search medicines')))
+              .scale(16),
+          32,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'empty deals keep the compact header and a way back to browsing',
+    (tester) async {
+      await _pumpShopRouter(tester, _CatalogApi());
+      await tester.tap(find.text('Deals'));
+      await tester.pumpAndSettle();
+      expect(find.text('Nothing matches that search'), findsOneWidget);
+      final search = find.bySemanticsLabel('Search medicines');
+      expect(search.hitTestable(), findsOneWidget);
+      expect(tester.getTopLeft(search).dy, lessThan(20));
+      await tester.tap(find.text('All'));
+      await tester.pumpAndSettle();
+      expect(find.byType(FamilyBannerCarousel), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('the home family banner opens medicine search', (tester) async {
     await _pumpShopRouter(tester, _CatalogApi());
     expect(find.byType(FamilyBannerCarousel), findsOneWidget);
 
     await tester.tap(
       find.bySemanticsLabel(
-        'Care for the whole family. Shop essentials. Banner 1 of 4.',
+        'Care for the whole family. Browse vitamins. Banner 1 of 4.',
       ),
     );
     await tester.pumpAndSettle();
@@ -35,6 +158,74 @@ void main() {
     expect(find.byType(SearchScreen), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('quick actions render cleanly with 48dp targets and open deals/routes', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      final api = _CatalogApi()
+        ..deals = [_product(50, name: 'Big saving', compareAt: '110000.00')];
+      await _pumpShopRouter(tester, api);
+
+      for (final label in ['Deals', 'Branches', 'Saved', 'Reorder']) {
+        expect(find.text(label), findsOneWidget);
+      }
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+
+      await tester.tap(find.text('Deals'));
+      await tester.pumpAndSettle();
+      expect(api.dealsFeedRequests, 1);
+
+      await tester.tap(find.text('All'));
+      await tester.pumpAndSettle();
+      expect(find.text('Branches'), findsOneWidget);
+
+      await tester.tap(find.text('Branches'));
+      await tester.pumpAndSettle();
+      expect(find.text('Branch Locator Page'), findsOneWidget);
+    } finally {
+      semantics.dispose();
+    }
+  });
+
+  for (final brightness in Brightness.values) {
+    testWidgets('quick actions stay readable at 2x text in $brightness', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      try {
+        await _pumpShopRouter(
+          tester,
+          _CatalogApi(),
+          width: 320,
+          textScale: 2,
+          brightness: brightness,
+        );
+
+        final deals = tester.getRect(find.text('Deals'));
+        final branches = tester.getRect(find.text('Branches'));
+        final saved = tester.getRect(find.text('Saved'));
+        expect(branches.top, deals.top);
+        expect(saved.top, greaterThan(deals.bottom));
+        expect(tester.takeException(), isNull);
+        expect(
+          tester
+              .getSemantics(find.bySemanticsLabel('Saved'))
+              .getSemanticsData()
+              .hasAction(SemanticsAction.tap),
+          isTrue,
+        );
+
+        await tester.tap(find.text('Saved'));
+        await tester.pumpAndSettle();
+        expect(find.text('Saved Items Page'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      } finally {
+        semantics.dispose();
+      }
+    });
+  }
 
   testWidgets('search placeholder scrolls without submitting a search', (
     tester,
@@ -387,7 +578,7 @@ void main() {
   });
 
   testWidgets(
-    'scrolling collapses the branch band to search only and pins category artwork pills',
+    'scrolling collapses the branch band to search and pins quick action icons',
     (tester) async {
       final semantics = tester.ensureSemantics();
       try {
@@ -421,7 +612,7 @@ void main() {
         await tester.drag(find.byType(CustomScrollView), const Offset(0, -650));
         await tester.pumpAndSettle();
 
-        // Branch header & fulfillment strip collapse away completely; only search stays pinned.
+        // Branch header & fulfillment strip collapse away; search and quick actions stay pinned.
         expect(find.text('1.2 km'), findsNothing);
         expect(find.text('Cebu Capitol'), findsNothing);
         expect(
@@ -429,19 +620,95 @@ void main() {
           findsOneWidget,
         );
 
-        // Category rail stays pinned with circular artwork badges right below search.
-        final categoryPill = find.text('Fashion');
-        expect(categoryPill.hitTestable(), findsOneWidget);
-        expect(tester.getBottomLeft(categoryPill).dy, lessThan(180));
+        // Category circles scroll away while icon-only quick actions stay pinned below search.
+        expect(find.text('Fashion').hitTestable(), findsNothing);
+        final quickBar = find.byKey(const Key('shop-collapsed-quick-actions'));
+        expect(quickBar, findsOneWidget);
+        for (final label in ['Deals', 'Branches', 'Saved', 'Reorder']) {
+          expect(find.bySemanticsLabel(label).hitTestable(), findsOneWidget);
+        }
+        expect(tester.getBottomLeft(quickBar).dy, lessThan(180));
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
 
-        await tester.tap(categoryPill);
+        await tester.tap(find.bySemanticsLabel('Deals'));
         await tester.pumpAndSettle();
-        expect(api.lastCategory, 'fashion');
+        expect(api.dealsFeedRequests, 1);
         expect(tester.takeException(), isNull);
       } finally {
         semantics.dispose();
       }
+    },
+  );
+
+  testWidgets(
+    'partial header drags snap cleanly and quick actions crossfade never goes blank',
+    (tester) async {
+      await _pumpCatalog(
+        tester,
+        _CatalogApi(),
+        locator: const StoreLocatorState(
+          branches: [
+            BranchDistance(
+              StoreBranch(
+                id: 'cebu',
+                branchId: 'B-CEBU',
+                name: 'Everyday Pharmacy Cebu Capitol',
+                address: 'Cebu',
+                latitude: 10.3,
+                longitude: 123.9,
+                deliveryFee: '45.00',
+                freeDeliveryMinimum: '500.00',
+                open24Hours: true,
+              ),
+              1.2,
+            ),
+          ],
+        ),
+      );
+
+      final scroll = tester.widget<CustomScrollView>(
+        find.byType(CustomScrollView),
+      );
+      final controller = scroll.controller!;
+
+      // Small drag (<45% of collapse range) snaps cleanly back to expanded.
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -40));
+      await tester.pumpAndSettle();
+      expect(controller.offset, 0.0);
+      expect(find.text('1.2 km'), findsOneWidget);
+
+      // Larger partial drag (>=45%) snaps cleanly to full collapsed search bar.
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -90));
+      await tester.pumpAndSettle();
+      expect(controller.offset, greaterThan(100.0));
+      expect(find.text('1.2 km'), findsNothing);
+      expect(
+        find.bySemanticsLabel('Search medicines').hitTestable(),
+        findsOneWidget,
+      );
+
+      // Sweeping through the collapse transition never leaves quick actions invisible.
+      for (var offset = 0.0; offset <= 320.0; offset += 20.0) {
+        controller.jumpTo(offset);
+        await tester.pump();
+        final opacities = tester.widgetList<Opacity>(
+          find.ancestor(
+            of: find.bySemanticsLabel('Deals'),
+            matching: find.byType(Opacity),
+          ),
+        );
+        expect(opacities, isNotEmpty, reason: 'Missing Deals at $offset');
+        final maxOpacity = opacities
+            .map((widget) => widget.opacity)
+            .reduce((a, b) => a > b ? a : b);
+        expect(
+          maxOpacity,
+          greaterThan(0.2),
+          reason: 'Blank quick actions dip at scroll offset $offset',
+        );
+      }
+      expect(tester.takeException(), isNull);
     },
   );
 
@@ -616,7 +883,7 @@ void main() {
       ),
     );
     expect(find.text('24 hours'), findsOneWidget);
-    expect(find.textContaining('min'), findsNothing);
+    expect(find.textContaining(RegExp(r'\bmin(s|utes?)?\b')), findsNothing);
 
     await tester.pumpWidget(const SizedBox());
     await _pumpCatalog(tester, _CatalogApi(), locator: locator(open: false));
@@ -748,7 +1015,8 @@ void main() {
       ];
     await _pumpCatalog(tester, api);
 
-    // The deals strip precedes the feed (whose cards repeat the badges).
+    // The deals showcase band precedes the feed (whose cards repeat the badges).
+    expect(find.text('Up to 50% off'), findsOneWidget);
     expect(find.text('See all'), findsOneWidget);
     expect(
       tester.getTopLeft(find.text('-50%').first).dx,
@@ -1122,6 +1390,34 @@ void main() {
   }
 }
 
+const _pharmacyCategories = [
+  Category(
+    id: 'rx',
+    name: 'Prescription Medicines',
+    slug: 'prescription-medicines',
+    productCount: 20,
+  ),
+  Category(
+    id: 'pain',
+    name: 'Pain & Fever',
+    slug: 'pain-fever',
+    productCount: 15,
+  ),
+  Category(
+    id: 'cough',
+    name: 'Cough & Colds',
+    slug: 'cough-colds',
+    productCount: 10,
+  ),
+  Category(
+    id: 'vitamins',
+    name: 'Vitamins & Supplements',
+    slug: 'vitamins-supplements',
+    productCount: 8,
+  ),
+  Category(id: 'aid', name: 'First Aid', slug: 'first-aid', productCount: 5),
+];
+
 Future<void> _pumpCatalog(
   WidgetTester tester,
   _CatalogApi api, {
@@ -1177,6 +1473,7 @@ Future<void> _pumpShopRouter(
   double width = 390,
   double height = 844,
   double textScale = 1,
+  Brightness brightness = Brightness.light,
   SearchHistory? initialHistory,
 }) async {
   tester.view.physicalSize = Size(width, height);
@@ -1192,6 +1489,18 @@ Future<void> _pumpShopRouter(
       GoRoute(
         path: '/search',
         builder: (context, state) => const SearchScreen(),
+      ),
+      GoRoute(
+        path: '/branches',
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text('Branch Locator Page')),
+        ),
+      ),
+      GoRoute(
+        path: '/saved',
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text('Saved Items Page')),
+        ),
       ),
       GoRoute(
         path: '/conversations/:id',
@@ -1212,7 +1521,7 @@ Future<void> _pumpShopRouter(
           initialSearchHistoryProvider.overrideWithValue(initialHistory),
       ],
       child: MaterialApp.router(
-        theme: buildAppTheme(),
+        theme: buildAppTheme(brightness: brightness),
         routerConfig: router,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(

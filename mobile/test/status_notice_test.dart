@@ -6,24 +6,77 @@ import 'package:jmmart/src/widgets/status_notice.dart';
 import 'package:phosphor_icons/phosphor_icons.dart';
 
 void main() {
-  testWidgets('success uses the previous plain snackbar and expires', (
+  testWidgets(
+    'success uses the minimal ink pill without a close button, respects bottomInset, and expires',
+    (tester) async {
+      var taps = 0;
+      final key = GlobalKey<ScaffoldState>();
+      await _pump(tester, key, onTap: () => taps++);
+      AppNotice.of(
+        key.currentContext!,
+        bottomInset: 64,
+      ).show('Your review was published.', kind: NoticeKind.success);
+      await tester.pumpAndSettle();
+      expect(find.byType(StatusNoticeCard), findsOneWidget);
+      expect(find.byIcon(PhosphorIconsRegular.checkCircle), findsOneWidget);
+      expect(find.byTooltip('Dismiss message'), findsNothing);
+      expect(find.text('Your review was published.'), findsOneWidget);
+      expect(find.byType(Dialog), findsNothing);
+      expect(
+        tester.getBottomLeft(find.byType(StatusNoticeCard)).dy,
+        lessThan(540),
+      );
+      await tester.tap(find.text('Keep shopping'));
+      expect(taps, 1);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      expect(find.text('Your review was published.'), findsNothing);
+    },
+  );
+
+  testWidgets('Undo renders arrowCounterClockwise inline and runs action once', (
     tester,
   ) async {
-    var taps = 0;
+    var undos = 0;
     final key = GlobalKey<ScaffoldState>();
-    await _pump(tester, key, onTap: () => taps++);
-    AppNotice.of(key.currentContext!)
-        .show('Your review was published.', kind: NoticeKind.success);
+    await _pump(tester, key);
+    AppNotice.of(key.currentContext!).show(
+      'Removed Biogesic 500mg Tablet',
+      kind: NoticeKind.info,
+      actionLabel: 'Undo',
+      onAction: () => undos++,
+    );
     await tester.pumpAndSettle();
+    expect(
+      find.byIcon(PhosphorIconsRegular.arrowCounterClockwise),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+    expect(undos, 1);
     expect(find.byType(StatusNoticeCard), findsNothing);
-    expect(find.byIcon(PhosphorIconsRegular.checkCircle), findsNothing);
-    expect(find.text('Your review was published.'), findsOneWidget);
-    expect(find.byType(Dialog), findsNothing);
-    await tester.tap(find.text('Keep shopping'));
-    expect(taps, 1);
-    await tester.pump(const Duration(seconds: 4));
-    await tester.pumpAndSettle();
-    expect(find.text('Your review was published.'), findsNothing);
+  });
+
+  testWidgets('RefreshNoticeStrip displays warning icon and runs action', (
+    tester,
+  ) async {
+    var retries = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: Scaffold(
+          body: RefreshNoticeStrip(
+            message: 'Could not refresh products.',
+            actionLabel: 'Try again',
+            onAction: () => retries++,
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Could not refresh products.'), findsOneWidget);
+    expect(find.byIcon(PhosphorIconsRegular.warningCircle), findsOneWidget);
+    await tester.tap(find.text('Try again'));
+    expect(retries, 1);
   });
 
   testWidgets(
@@ -153,10 +206,7 @@ void main() {
           );
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
-          expect(
-            find.byType(StatusNoticeCard),
-            kind == NoticeKind.success ? findsNothing : findsOneWidget,
-          );
+          expect(find.byType(StatusNoticeCard), findsOneWidget);
           if (kind == NoticeKind.success) {
             await tester.pump(const Duration(seconds: 4));
           } else {

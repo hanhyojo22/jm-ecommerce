@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jmmart/src/app.dart';
 import 'package:jmmart/src/core/api_client.dart';
 import 'package:jmmart/src/models/models.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
@@ -12,12 +13,22 @@ import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
-  test('light and dark themes expose distinct readable surfaces', () {
+  test('light and dark themes expose distinct readable surfaces and Option A tokens', () {
     final light = buildAppTheme();
     final dark = buildAppTheme(brightness: Brightness.dark);
 
     expect(light.colorScheme.brightness, Brightness.light);
     expect(dark.colorScheme.brightness, Brightness.dark);
+    expect(light.colorScheme.primary, const Color(0xFF0F3D9E));
+    expect(light.colorScheme.secondary, const Color(0xFFFFC82C));
+    expect(
+      light.extension<AppBrandColors>()?.dealsBand,
+      const Color(0xFFEBF1FF),
+    );
+    expect(
+      dark.extension<AppBrandColors>()?.dealsBand,
+      const Color(0xFF111B36),
+    );
     expect(
       dark.scaffoldBackgroundColor.computeLuminance(),
       lessThan(light.scaffoldBackgroundColor.computeLuminance()),
@@ -35,6 +46,13 @@ void main() {
       light.colorScheme.primary,
     );
     expect(light.navigationBarTheme.indicatorColor, isNot(Colors.transparent));
+  });
+
+  testWidgets('JmMartApp wires darkTheme on MaterialApp', (tester) async {
+    await tester.pumpWidget(const JmMartApp());
+    final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(app.darkTheme, isNotNull);
+    expect(app.darkTheme?.brightness, Brightness.dark);
   });
 
   testWidgets('order detail header fits a phone with large text', (

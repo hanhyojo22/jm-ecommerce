@@ -17,6 +17,7 @@ import '../widgets/common.dart';
 import '../widgets/family_banner_carousel.dart';
 import '../widgets/product_feed.dart';
 import '../widgets/shell.dart';
+import '../widgets/status_notice.dart';
 import '../widgets/store_locator.dart';
 
 class CatalogScreen extends ConsumerStatefulWidget {
@@ -29,6 +30,9 @@ class CatalogScreen extends ConsumerStatefulWidget {
 class _CatalogScreenState extends ConsumerState<CatalogScreen> {
   final _scrollController = ScrollController();
   final _productsHeadingKey = GlobalKey();
+  final _orderAgainKey = GlobalKey();
+  bool _snappingHeader = false;
+  double _headerCollapseRange = 0;
   void _clearFilters() {
     ref.read(catalogFilterProvider.notifier)
       ..setQuery('')
@@ -47,6 +51,24 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     ref.read(catalogFilterProvider.notifier)
       ..setQuery('')
       ..setCategory(slug);
+  }
+
+  void _openReorder(List<Product> boughtBefore) {
+    final target = _orderAgainKey.currentContext;
+    if (boughtBefore.isNotEmpty && target != null) {
+      unawaited(
+        Scrollable.ensureVisible(
+          target,
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 240),
+          curve: Curves.easeOutCubic,
+          alignment: 0.12,
+        ),
+      );
+      return;
+    }
+    ref.read(shellTabProvider.notifier).select(1);
   }
 
   @override
@@ -115,54 +137,109 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
 
     final scheme = theme.colorScheme;
     final textScaler = MediaQuery.textScalerOf(context);
-    final headerScaler = textScaler.clamp(maxScaleFactor: 1.6);
-    final barHeight = headerScaler.scale(48).clamp(48.0, 56.0);
+    final searchStyle = theme.textTheme.bodyLarge!;
+    final barHeight =
+        (textScaler.scale(searchStyle.fontSize!) * searchStyle.height! + 24)
+            .clamp(48.0, double.infinity);
     final topPadding = MediaQuery.paddingOf(context).top;
     final mediaSize = MediaQuery.sizeOf(context);
     final reducedMotion = MediaQuery.disableAnimationsOf(context);
-    final hasCategoryItems = categories.value?.isNotEmpty ?? false;
     // Short landscape viewports keep only the search bar pinned so cards still fit.
-    final pinCategories = mediaSize.height >= 480;
-    final dockCategoryRail = hasCategoryItems && pinCategories;
-    final slab = skySlab(scheme);
+    final showQuickActions =
+        !needsBranch && (!browsing || feed?.products.isNotEmpty == true);
+    final pinQuickActions = mediaSize.height >= 480;
+    final dockBottomRail = showQuickActions && pinQuickActions;
+    final slab = brandSlab(scheme);
 
+    final dark = theme.brightness == Brightness.dark;
     // Looks like the search field, but opens the full search page, as tapping search does in
     // most shopping apps; the page has the keyboard, history and suggestions.
     final searchBar = Semantics(
       button: true,
       label: 'Search medicines',
+      onTap: () => context.push('/search'),
       excludeSemantics: true,
-      child: Material(
-        color: scheme.surfaceContainerLowest,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        shape: StadiumBorder(side: BorderSide(color: scheme.outline)),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => context.push('/search'),
-          child: SizedBox(
-            height: barHeight,
-            child: Row(
-              children: [
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(start: 16, end: 10),
-                  child: Icon(
-                    Icons.search_rounded,
-                    size: 20,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                Expanded(
-                  child: DefaultTextStyle.merge(
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(barHeight / 2),
+          boxShadow: [
+            BoxShadow(
+              color: (dark ? Colors.black : const Color(0xFF091947)).withValues(
+                alpha: dark ? 0.34 : 0.22,
+              ),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Material(
+          color: dark ? scheme.surfaceContainerLow : scheme.surfaceContainerLowest,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          shape: StadiumBorder(
+            side: BorderSide(
+              color: dark
+                  ? scheme.outlineVariant
+                  : scheme.primary.withValues(alpha: 0.12),
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => context.push('/search'),
+            child: SizedBox(
+              height: barHeight,
+              child: Row(
+                children: [
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      start: 16,
+                      end: 10,
                     ),
-                    child: const _ScrollingSearchPlaceholder(),
+                    child: Icon(
+                      PhosphorIconsBold.magnifyingGlass,
+                      size: 19,
+                      color: scheme.primary,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 16),
-              ],
+                  Expanded(
+                    child: DefaultTextStyle.merge(
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      child: const _ScrollingSearchPlaceholder(),
+                    ),
+                  ),
+                  if (mediaSize.width >= 340 && textScaler.scale(14) <= 18) ...[
+                    const SizedBox(width: 8),
+                    ExcludeSemantics(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: scheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 4,
+                          ),
+                          child: Text(
+                            'OTC & Rx',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: dark
+                                  ? scheme.onPrimaryContainer
+                                  : scheme.primary,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                  ] else
+                    const SizedBox(width: 16),
+                ],
+              ),
             ),
           ),
         ),
@@ -180,11 +257,13 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
       searchBar: searchBar,
       reducedMotion: reducedMotion,
       refreshing: refreshing,
-      dockCategoryRail: dockCategoryRail,
-      forceFlatBottom: dockCategoryRail && !browsing,
+      dockBottomRail: dockBottomRail,
+      forceFlatBottom: dockBottomRail && !browsing,
+      compactOnly: !browsing,
       onTapBranch: () => showBranchSelectorSheet(context),
       onRetryBranches: () => ref.invalidate(storeBranchesProvider),
     );
+    _headerCollapseRange = headerDelegate.collapseRange;
 
     return PopScope(
       canPop: !shopTabActive || filter.isDefault,
@@ -212,10 +291,50 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
 
                 return NotificationListener<ScrollNotification>(
                   onNotification: (notification) {
-                    if (notification.depth == 0 &&
-                        notification.metrics.axis == Axis.vertical &&
+                    if (notification.depth != 0) {
+                      return false;
+                    }
+                    if (notification is ScrollStartNotification &&
+                        notification.dragDetails != null) {
+                      _snappingHeader = false;
+                    }
+                    if (notification.metrics.axis == Axis.vertical &&
                         notification.metrics.extentAfter < 500) {
                       unawaited(ref.read(productsProvider.notifier).loadMore());
+                    }
+                    if (notification is ScrollEndNotification &&
+                        !_snappingHeader &&
+                        !reducedMotion &&
+                        _headerCollapseRange > 1 &&
+                        _scrollController.hasClients) {
+                      final pos = _scrollController.position;
+                      if (pos.maxScrollExtent >= _headerCollapseRange &&
+                          pos.pixels > 0.5 &&
+                          pos.pixels < _headerCollapseRange - 0.5) {
+                        final target = pos.pixels >= _headerCollapseRange * 0.45
+                            ? _headerCollapseRange
+                            : 0.0;
+                        _snappingHeader = true;
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!mounted ||
+                              !_scrollController.hasClients ||
+                              !_snappingHeader) {
+                            _snappingHeader = false;
+                            return;
+                          }
+                          unawaited(
+                            _scrollController
+                                .animateTo(
+                                  target,
+                                  duration: const Duration(milliseconds: 180),
+                                  curve: Curves.easeOutCubic,
+                                )
+                                .whenComplete(() {
+                                  _snappingHeader = false;
+                                }),
+                          );
+                        });
+                      }
                     }
 
                     return false;
@@ -233,66 +352,113 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                           pinned: true,
                           delegate: headerDelegate,
                         ),
+                        if (showQuickActions)
+                          SliverPersistentHeader(
+                            pinned: pinQuickActions,
+                            delegate: _QuickActionsHeaderDelegate(
+                              dealsActive: filter.onSale,
+                              compactOnly: !browsing,
+                              pinQuickActions: pinQuickActions,
+                              viewportWidth: mediaSize.width,
+                              slab: slab,
+                              theme: theme,
+                              textScaler: textScaler,
+                              reducedMotion: reducedMotion,
+                              textDirection: Directionality.of(context),
+                              onDeals: filter.onSale
+                                  ? _clearFilters
+                                  : _showDeals,
+                              onBranches: () => context.push('/branches'),
+                              onSaved: () => context.push('/saved'),
+                              onReorder: () => _openReorder(boughtBefore),
+                            ),
+                          ),
                         if (browsing &&
                             !needsBranch &&
                             feed?.products.isNotEmpty == true)
                           SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                             sliver: SliverToBoxAdapter(
                               child: FamilyBannerCarousel(
                                 onShop: () => context.push('/search'),
+                                onBrowseCategory: (slug) {
+                                  final exists =
+                                      categories.value?.any(
+                                        (category) => category.slug == slug,
+                                      ) ??
+                                      false;
+                                  if (exists) {
+                                    _browseCategory(slug);
+                                  } else {
+                                    context.push('/search');
+                                  }
+                                },
+                                onShowDeals: _showDeals,
+                                onOpenBranches: () => context.push('/branches'),
                               ),
                             ),
                           ),
-                        categories.when(
-                          data: (items) => items.isEmpty
-                              ? const SliverToBoxAdapter(
-                                  child: SizedBox.shrink(),
-                                )
-                              : SliverPersistentHeader(
-                                  pinned: pinCategories,
-                                  delegate: _CategoryHeaderDelegate(
-                                    categories: items,
-                                    selected: filter.category,
-                                    dealsActive: filter.onSale,
-                                    compactOnly: !browsing,
-                                    pinCategories: pinCategories,
-                                    slab: slab,
-                                    theme: theme,
-                                    textScaler: textScaler,
-                                    reducedMotion: reducedMotion,
-                                    onSelected: _selectCategory,
+                        if (browsing)
+                          categories.when(
+                            data: (items) => items.isEmpty
+                                ? const SliverToBoxAdapter(
+                                    child: SizedBox.shrink(),
+                                  )
+                                : SliverPadding(
+                                    padding: const EdgeInsets.only(top: 20),
+                                    sliver: SliverToBoxAdapter(
+                                      child: Semantics(
+                                        container: true,
+                                        label: 'Shop by category',
+                                        child: _CategoryCirclesStrip(
+                                          options: _sortedCategoryOptions(
+                                            items,
+                                          ),
+                                          onSelected: _selectCategory,
+                                        ),
+                                      ),
+                                    ),
                                   ),
+                            loading: () => const SliverToBoxAdapter(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 16,
                                 ),
-                          loading: () => const SliverToBoxAdapter(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 16,
+                                child: LinearProgressIndicator(),
                               ),
-                              child: LinearProgressIndicator(),
+                            ),
+                            // The products error below already offers the page's retry.
+                            error: (error, stack) =>
+                                products.hasError && feed == null
+                                ? const SliverToBoxAdapter(
+                                    child: SizedBox.shrink(),
+                                  )
+                                : SliverToBoxAdapter(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                      ),
+                                      child: TextButton.icon(
+                                        onPressed: () =>
+                                            ref.invalidate(categoriesProvider),
+                                        icon: const Icon(Icons.refresh_rounded),
+                                        label: const Text('Reload categories'),
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                        if (!browsing && !needsBranch)
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                            sliver: SliverToBoxAdapter(
+                              child: _ActiveFilterBar(
+                                filter: filter,
+                                categories: categories.value ?? const [],
+                                onClear: _clearFilters,
+                              ),
                             ),
                           ),
-                          // The products error below already offers the page's retry.
-                          error: (error, stack) =>
-                              products.hasError && feed == null
-                              ? const SliverToBoxAdapter(
-                                  child: SizedBox.shrink(),
-                                )
-                              : SliverToBoxAdapter(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                    ),
-                                    child: TextButton.icon(
-                                      onPressed: () =>
-                                          ref.invalidate(categoriesProvider),
-                                      icon: const Icon(Icons.refresh_rounded),
-                                      label: const Text('Reload categories'),
-                                    ),
-                                  ),
-                                ),
-                        ),
                         if (browsing && needsBranch)
                           const SliverPadding(
                             padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -319,6 +485,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                           if (browsing && boughtBefore.isNotEmpty)
                             SliverToBoxAdapter(
                               child: _ProductRail(
+                                key: _orderAgainKey,
                                 title: 'Order again',
                                 products: boughtBefore,
                               ),
@@ -371,19 +538,14 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
           ),
           // Offline, the app-wide bar already says so.
           if (products.hasError && feed != null && online)
-            MaterialBanner(
-              content: Text(
-                products.error is ApiException &&
-                        (products.error! as ApiException).isNetwork
-                    ? 'No internet. Showing earlier products.'
-                    : 'Could not refresh products.',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: _refreshProducts,
-                  child: const Text('Try again'),
-                ),
-              ],
+            RefreshNoticeStrip(
+              message:
+                  products.error is ApiException &&
+                      (products.error! as ApiException).isNetwork
+                  ? 'No internet. Showing earlier products.'
+                  : 'Could not refresh products.',
+              actionLabel: 'Try again',
+              onAction: _refreshProducts,
             ),
         ],
       ),
@@ -468,7 +630,7 @@ class _ScrollingSearchPlaceholderState
   );
 }
 
-/// "Deals for you": the deepest markdowns in the loaded feed, in a swipeable row.
+/// "Deals for you": the deepest markdowns in the loaded feed, in a showcase band.
 class _TopDeals extends StatelessWidget {
   const _TopDeals({required this.products, required this.onSeeAll});
 
@@ -496,103 +658,780 @@ class _TopDeals extends StatelessWidget {
 
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final brandColors = AppBrandColors.of(context);
+    final maxDiscount = deals.first.discount;
 
     return Padding(
-      padding: const EdgeInsets.only(top: 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Semantics(
-                    header: true,
-                    child: Text.rich(
-                      TextSpan(
+      padding: const EdgeInsets.only(top: 20),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: brandColors.dealsBand,
+          border: Border.symmetric(
+            horizontal: BorderSide(color: brandColors.dealsBandBorder),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 4,
                         children: [
-                          TextSpan(
-                            text: 'Top ',
-                            style: TextStyle(color: scheme.primary),
+                          Semantics(
+                            header: true,
+                            child: Text(
+                              'Top deals',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontSize: 19,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.4,
+                              ),
+                            ),
                           ),
-                          const TextSpan(text: 'deals'),
+                          MediaQuery.withClampedTextScaling(
+                            maxScaleFactor: 1.3,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: scheme.error,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                child: Text(
+                                  'Up to $maxDiscount% off',
+                                  maxLines: 1,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: scheme.onError,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.4,
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: onSeeAll,
+                      style: TextButton.styleFrom(
+                        foregroundColor: scheme.primary,
+                        minimumSize: const Size(64, 48),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        tapTargetSize: MaterialTapTargetSize.padded,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(appSurfaceRadius),
+                        ),
+                        textStyle: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
+                      child: const Text('See all'),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                TextButton(
-                  onPressed: onSeeAll,
-                  style: TextButton.styleFrom(
-                    foregroundColor: scheme.primary,
-                    minimumSize: const Size(64, 48),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    tapTargetSize: MaterialTapTargetSize.padded,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(appSurfaceRadius),
-                    ),
-                    textStyle: theme.textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  child: const Text('See all'),
-                ),
-              ],
-            ),
-          ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            // Same height for every card in the rail, buttons on one line.
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final deal in deals.take(10))
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(end: 10),
-                      child: SizedBox(
-                        width: 160,
-                        child: ProductCard(
-                          product: deal.product,
-                          discovery: true,
-                          showAddToCart: true,
-                          fillHeight: true,
-                          stackCartControls: ProductCard.stacksCartAt(
-                            context,
-                            160,
+              ),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                // Same height for every card in the rail, buttons on one line.
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final deal in deals.take(10))
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(end: 10),
+                          child: SizedBox(
+                            width: _railCardWidth,
+                            child: ProductCard(
+                              product: deal.product,
+                              discovery: true,
+                              showAddToCart: true,
+                              fillHeight: true,
+                              stackCartControls: ProductCard.stacksCartAt(
+                                context,
+                                _railCardWidth,
+                              ),
+                              onTap: () => context.push(
+                                '/product/${deal.product.store?.slug ?? ''}/${deal.product.slug}',
+                              ),
+                            ),
                           ),
-                          onTap: () => context.push(
-                            '/product/${deal.product.store?.slug ?? ''}/${deal.product.slug}',
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+typedef _QuickActionItem = ({String label, IconData icon, VoidCallback onTap});
+
+List<_QuickActionItem> _buildQuickActionItems({
+  required VoidCallback onDeals,
+  required VoidCallback onBranches,
+  required VoidCallback onSaved,
+  required VoidCallback onReorder,
+}) => [
+  (label: 'Deals', icon: PhosphorIconsDuotone.sealPercent, onTap: onDeals),
+  (
+    label: 'Branches',
+    icon: PhosphorIconsDuotone.storefront,
+    onTap: onBranches,
+  ),
+  (label: 'Saved', icon: PhosphorIconsDuotone.heart, onTap: onSaved),
+  (
+    label: 'Reorder',
+    icon: PhosphorIconsDuotone.clockCounterClockwise,
+    onTap: onReorder,
+  ),
+];
+
+/// Morphs the expanded quick-action circles into a compact row of 4 icon-only
+/// actions pinned directly beneath the collapsed Shop search bar.
+class _QuickActionsHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _QuickActionsHeaderDelegate({
+    required this.dealsActive,
+    required this.compactOnly,
+    required this.pinQuickActions,
+    required this.viewportWidth,
+    required this.slab,
+    required this.theme,
+    required this.textScaler,
+    required this.reducedMotion,
+    required this.textDirection,
+    required this.onDeals,
+    required this.onBranches,
+    required this.onSaved,
+    required this.onReorder,
+  });
+
+  static const _pinnedExtent = 56.0;
+
+  final bool dealsActive;
+  final bool compactOnly;
+  final bool pinQuickActions;
+  final double viewportWidth;
+  final ({Color fill, Color ink}) slab;
+  final ThemeData theme;
+  final TextScaler textScaler;
+  final bool reducedMotion;
+  final TextDirection textDirection;
+  final VoidCallback onDeals;
+  final VoidCallback onBranches;
+  final VoidCallback onSaved;
+  final VoidCallback onReorder;
+
+  double get _expandedExtent {
+    final stripWidth = (viewportWidth - 32.0).clamp(0.0, double.infinity);
+    final labelSize = textScaler.scale(12);
+    final columns = (stripWidth - 24) / 4 < labelSize * 5 ? 2 : 4;
+    final tileWidth = ((stripWidth - (columns - 1) * 8) / columns).clamp(
+      0.0,
+      double.infinity,
+    );
+    final textMaxWidth = (tileWidth - 4.0).clamp(0.0, double.infinity);
+    final labelStyle = theme.textTheme.labelMedium?.copyWith(
+      fontWeight: FontWeight.w700,
+    );
+
+    double tileHeight(String label) {
+      final painter = TextPainter(
+        text: TextSpan(text: label, style: labelStyle),
+        textAlign: TextAlign.center,
+        textDirection: textDirection,
+        textScaler: textScaler,
+      )..layout(maxWidth: textMaxWidth);
+      final height = 76.0 + painter.height + 4.0;
+      painter.dispose();
+      return height;
+    }
+
+    final row1A = tileHeight('Deals');
+    final row1B = tileHeight('Branches');
+    final row2A = tileHeight('Saved');
+    final row2B = tileHeight('Reorder');
+
+    if (columns == 4) {
+      var tallest = row1A > row1B ? row1A : row1B;
+      if (row2A > tallest) {
+        tallest = row2A;
+      }
+      if (row2B > tallest) {
+        tallest = row2B;
+      }
+      return 16.0 + tallest;
+    }
+
+    final row1 = row1A > row1B ? row1A : row1B;
+    final row2 = row2A > row2B ? row2A : row2B;
+    return 16.0 + row1 + 8.0 + row2;
+  }
+
+  @override
+  double get minExtent =>
+      compactOnly || pinQuickActions ? _pinnedExtent : _expandedExtent;
+
+  @override
+  double get maxExtent => compactOnly ? _pinnedExtent : _expandedExtent;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final delta = maxExtent - minExtent;
+    // Short landscape keeps the strip expanded instead of collapsing at delta == 0.
+    final rawT = compactOnly
+        ? 1.0
+        : (delta <= 0 ? 0.0 : (shrinkOffset / delta).clamp(0.0, 1.0));
+    final t = reducedMotion ? (rawT >= 0.5 ? 1.0 : 0.0) : rawT;
+
+    final bgColor = Color.lerp(
+      theme.scaffoldBackgroundColor,
+      slab.fill,
+      ((t - 0.15) / 0.70).clamp(0.0, 1.0),
+    )!;
+    final bottomRadius = lerpDouble(
+      0.0,
+      18.0,
+      ((t - 0.25) / 0.75).clamp(0.0, 1.0),
+    )!;
+    final scheme = theme.colorScheme;
+    final dark = scheme.brightness == Brightness.dark;
+    final shadowAlpha = ((t - 0.65) / 0.35).clamp(0.0, 1.0);
+
+    final expandedOpacity = compactOnly
+        ? 0.0
+        : (reducedMotion
+              ? (t < 0.5 ? 1.0 : 0.0)
+              : (1.0 - ((t - 0.15) / 0.50)).clamp(0.0, 1.0));
+    final iconsOpacity = compactOnly
+        ? 1.0
+        : (reducedMotion
+              ? (t >= 0.5 ? 1.0 : 0.0)
+              : ((t - 0.40) / 0.45).clamp(0.0, 1.0));
+    final iconsInteractive = compactOnly || t >= 0.5;
+    final items = _buildQuickActionItems(
+      onDeals: onDeals,
+      onBranches: onBranches,
+      onSaved: onSaved,
+      onReorder: onReorder,
+    );
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.vertical(
+          bottom: Radius.circular(bottomRadius),
+        ),
+        boxShadow: shadowAlpha > 0
+            ? [
+                BoxShadow(
+                  color: (dark ? Colors.black : const Color(0xFF0A163A))
+                      .withValues(alpha: (dark ? 0.30 : 0.14) * shadowAlpha),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : const [],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.vertical(
+          bottom: Radius.circular(bottomRadius),
+        ),
+        child: Material(
+          color: bgColor,
+          child: Semantics(
+            container: true,
+            label: 'Quick actions',
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (expandedOpacity > 0.01)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      ignoring: iconsInteractive,
+                      child: ExcludeSemantics(
+                        excluding: iconsInteractive,
+                        child: ClipRect(
+                          child: OverflowBox(
+                            alignment: Alignment.topCenter,
+                            minHeight: _expandedExtent,
+                            maxHeight: _expandedExtent,
+                            child: Opacity(
+                              opacity: expandedOpacity,
+                              child: Transform.translate(
+                                offset: Offset(0, reducedMotion ? 0 : -12.0 * t),
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    12,
+                                    16,
+                                    4,
+                                  ),
+                                  child: _QuickActionsStrip(items: items),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                ],
-              ),
+                  ),
+                if (iconsOpacity > 0.01)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      ignoring: !iconsInteractive,
+                      child: ExcludeSemantics(
+                        excluding: !iconsInteractive,
+                        child: Align(
+                          alignment: Alignment.center,
+                          child: Opacity(
+                            opacity: iconsOpacity,
+                            child: Transform.translate(
+                              offset: Offset(
+                                0,
+                                reducedMotion ? 0 : (1.0 - iconsOpacity) * 8.0,
+                              ),
+                              child: _CollapsedQuickActionsBar(
+                                items: items,
+                                dealsActive: dealsActive,
+                                slab: slab,
+                                reducedMotion: reducedMotion,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _QuickActionsHeaderDelegate oldDelegate) =>
+      dealsActive != oldDelegate.dealsActive ||
+      compactOnly != oldDelegate.compactOnly ||
+      pinQuickActions != oldDelegate.pinQuickActions ||
+      viewportWidth != oldDelegate.viewportWidth ||
+      slab != oldDelegate.slab ||
+      theme != oldDelegate.theme ||
+      textScaler != oldDelegate.textScaler ||
+      reducedMotion != oldDelegate.reducedMotion ||
+      textDirection != oldDelegate.textDirection;
+}
+
+class _CollapsedQuickActionsBar extends StatelessWidget {
+  const _CollapsedQuickActionsBar({
+    required this.items,
+    required this.dealsActive,
+    required this.slab,
+    required this.reducedMotion,
+  });
+
+  final List<_QuickActionItem> items;
+  final bool dealsActive;
+  final ({Color fill, Color ink}) slab;
+  final bool reducedMotion;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      key: const Key('shop-collapsed-quick-actions'),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Row(
+        children: [
+          for (final item in items)
+            Expanded(
+              child: _CollapsedQuickActionButton(
+                item: item,
+                active: dealsActive && item.label == 'Deals',
+                slab: slab,
+                reducedMotion: reducedMotion,
+              ),
+            ),
         ],
       ),
     );
   }
 }
 
+class _CollapsedQuickActionButton extends StatelessWidget {
+  const _CollapsedQuickActionButton({
+    required this.item,
+    required this.active,
+    required this.slab,
+    required this.reducedMotion,
+  });
+
+  final _QuickActionItem item;
+  final bool active;
+  final ({Color fill, Color ink}) slab;
+  final bool reducedMotion;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final dark = scheme.brightness == Brightness.dark;
+    final brand = AppBrandColors.of(context);
+
+    return Center(
+      child: Semantics(
+        button: true,
+        selected: active,
+        label: item.label,
+        onTap: item.onTap,
+        excludeSemantics: true,
+        child: Tooltip(
+          message: item.label,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: item.onTap,
+              child: SizedBox.square(
+                dimension: 48,
+                child: Center(
+                  child: AnimatedContainer(
+                    duration: reducedMotion
+                        ? Duration.zero
+                        : const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: active
+                          ? brand.sunGold
+                          : Colors.white.withValues(alpha: dark ? 0.08 : 0.14),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: active
+                            ? Colors.transparent
+                            : Colors.white.withValues(
+                                alpha: dark ? 0.14 : 0.20,
+                              ),
+                      ),
+                    ),
+                    child: Center(
+                      child: PhosphorIcon(
+                        item.icon,
+                        size: 22,
+                        color: active ? brand.onSunGold : slab.ink,
+                        duotoneSecondaryColor: active
+                            ? scheme.primary
+                            : brand.sunGold,
+                        duotoneSecondaryOpacity: active ? 0.22 : 0.90,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Active filter summary above filtered product results with an `All` reset pill.
+class _ActiveFilterBar extends StatelessWidget {
+  const _ActiveFilterBar({
+    required this.filter,
+    required this.categories,
+    required this.onClear,
+  });
+
+  final CatalogFilter filter;
+  final List<Category> categories;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final dark = scheme.brightness == Brightness.dark;
+    final allInk = dark ? scheme.onSecondaryContainer : scheme.primary;
+    final activeLabel = _activeLabel();
+
+    return Semantics(
+      container: true,
+      label: 'Active filter',
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Semantics(
+            button: true,
+            label: 'All',
+            onTap: onClear,
+            excludeSemantics: true,
+            child: Material(
+              color: dark
+                  ? scheme.surfaceContainerLow
+                  : scheme.surfaceContainerLowest,
+              shape: StadiumBorder(
+                side: BorderSide(color: scheme.outlineVariant),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: onClear,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 48),
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.fromSTEB(
+                      12,
+                      0,
+                      14,
+                      0,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          PhosphorIconsRegular.squaresFour,
+                          size: 16,
+                          color: allInk,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'All',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: scheme.onSurface,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (activeLabel != null)
+            Semantics(
+              button: true,
+              label: 'Clear $activeLabel filter',
+              onTap: onClear,
+              excludeSemantics: true,
+              child: Material(
+                color: scheme.primaryContainer,
+                shape: StadiumBorder(
+                  side: BorderSide(
+                    color: scheme.primary.withValues(alpha: dark ? 0.45 : 0.25),
+                  ),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: onClear,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.fromSTEB(
+                        14,
+                        0,
+                        10,
+                        0,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              activeLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: scheme.onPrimaryContainer,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Icon(
+                            PhosphorIconsBold.x,
+                            size: 14,
+                            color: scheme.onPrimaryContainer,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String? _activeLabel() {
+    if (filter.category != null) {
+      return categories
+              .where((category) => category.slug == filter.category)
+              .firstOrNull
+              ?.name ??
+          _formatSlug(filter.category!);
+    }
+    if (filter.onSale) {
+      return 'On sale';
+    }
+    if (filter.query.trim().isNotEmpty) {
+      return '“${filter.query.trim()}”';
+    }
+    return null;
+  }
+
+  static String _formatSlug(String slug) {
+    final words = slug
+        .split(RegExp(r'[-_]+'))
+        .where((word) => word.isNotEmpty)
+        .map((word) => '${word[0].toUpperCase()}${word.substring(1)}');
+    final joined = words.join(' ');
+    return joined.isEmpty ? slug : joined;
+  }
+}
+
+/// Pharmacy shortcuts keep their labels readable at larger text sizes.
+class _QuickActionsStrip extends StatelessWidget {
+  const _QuickActionsStrip({required this.items});
+
+  final List<_QuickActionItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final labelSize = MediaQuery.textScalerOf(context).scale(12);
+        final columns = (constraints.maxWidth - 24) / 4 < labelSize * 5 ? 2 : 4;
+        final width = (constraints.maxWidth - (columns - 1) * 8) / columns;
+
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final item in items)
+              SizedBox(
+                width: width,
+                child: _QuickActionTile(
+                  label: item.label,
+                  icon: item.icon,
+                  onTap: item.onTap,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _QuickActionTile extends StatelessWidget {
+  const _QuickActionTile({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final dark = scheme.brightness == Brightness.dark;
+    final brand = AppBrandColors.of(context);
+
+    return Semantics(
+      button: true,
+      label: label,
+      onTap: onTap,
+      excludeSemantics: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Ink(
+                    decoration: ShapeDecoration(
+                      color: scheme.primaryContainer,
+                      shape: const CircleBorder(),
+                    ),
+                    child: SizedBox.square(
+                      dimension: 56,
+                      child: Center(
+                        child: PhosphorIcon(
+                          icon,
+                          size: 30,
+                          color: dark
+                              ? scheme.onPrimaryContainer
+                              : scheme.primary,
+                          duotoneSecondaryColor: brand.sunGold,
+                          duotoneSecondaryOpacity: dark ? 0.85 : 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: scheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Wide enough for the price and cart button on one line at normal text size.
-const _railCardWidth = 180.0;
+const _railCardWidth = 172.0;
 
 /// A titled sideways row of product cards, such as "Order again"; [ranked] numbers them 1, 2, 3….
 class _ProductRail extends StatelessWidget {
   const _ProductRail({
+    super.key,
     required this.title,
     required this.products,
     this.ranked = false,
@@ -755,358 +1594,52 @@ IconData categoryIcon(String name) {
   return PhosphorIconsRegular.pill;
 }
 
-class _CategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
-  const _CategoryHeaderDelegate({
-    required this.categories,
-    required this.selected,
-    required this.dealsActive,
-    required this.compactOnly,
-    required this.pinCategories,
-    required this.slab,
-    required this.theme,
-    required this.textScaler,
-    required this.reducedMotion,
-    required this.onSelected,
-  });
+List<({String name, String slug})> _sortedCategoryOptions(
+  List<Category> categories,
+) {
+  const categoryOrder = [
+    'prescription-medicines',
+    'pain-fever',
+    'cough-colds',
+    'vitamins-supplements',
+    'first-aid',
+  ];
+  final sortedCategories = [...categories]
+    ..sort((a, b) {
+      final aIndex = categoryOrder.indexOf(a.slug);
+      final bIndex = categoryOrder.indexOf(b.slug);
+      final byPosition = (aIndex < 0 ? categoryOrder.length : aIndex).compareTo(
+        bIndex < 0 ? categoryOrder.length : bIndex,
+      );
+      if (byPosition != 0) {
+        return byPosition;
+      }
+      final byCount = b.productCount.compareTo(a.productCount);
+      return byCount != 0 ? byCount : a.name.compareTo(b.name);
+    });
 
-  final List<Category> categories;
-  final String? selected;
-  final bool dealsActive;
-  final bool compactOnly;
-  final bool pinCategories;
-  final ({Color fill, Color ink}) slab;
-  final ThemeData theme;
-  final TextScaler textScaler;
-  final bool reducedMotion;
-  final ValueChanged<String?> onSelected;
-
-  TextScaler get _pillScaler => textScaler.clamp(maxScaleFactor: 1.6);
-
-  double get _pillVisualHeight => _pillScaler.scale(42).clamp(42.0, 50.0);
-
-  double get _pinnedExtent => (_pillVisualHeight + 14.0).clamp(56.0, 64.0);
-
-  double get _expandedExtent {
-    final style = theme.textTheme.labelMedium;
-    final labelHeight =
-        textScaler.scale(style?.fontSize ?? 12) * (style?.height ?? 1.5);
-    return 20.0 + 72.0 + labelHeight * 2 + 16.0;
-  }
-
-  @override
-  double get minExtent =>
-      compactOnly || pinCategories ? _pinnedExtent : _expandedExtent;
-
-  @override
-  double get maxExtent => compactOnly ? _pinnedExtent : _expandedExtent;
-
-  List<({String name, String? slug})> _sortedOptions() {
-    const categoryOrder = [
-      'electronics',
-      'fashion',
-      'home-living',
-      'health-beauty',
-      'sports-outdoors',
-    ];
-    final sortedCategories = [...categories]
-      ..sort((a, b) {
-        final aIndex = categoryOrder.indexOf(a.slug);
-        final bIndex = categoryOrder.indexOf(b.slug);
-        final byPosition = (aIndex < 0 ? categoryOrder.length : aIndex)
-            .compareTo(bIndex < 0 ? categoryOrder.length : bIndex);
-        if (byPosition != 0) {
-          return byPosition;
-        }
-        final byCount = b.productCount.compareTo(a.productCount);
-        return byCount != 0 ? byCount : a.name.compareTo(b.name);
-      });
-
-    return <({String name, String? slug})>[
-      if (selected != null || dealsActive) (name: 'All', slug: null),
-      for (final category in sortedCategories)
-        (name: category.name, slug: category.slug),
-    ];
-  }
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    final delta = maxExtent - minExtent;
-    final rawT = delta <= 0 ? 1.0 : (shrinkOffset / delta).clamp(0.0, 1.0);
-    final visualT = compactOnly
-        ? 1.0
-        : (reducedMotion
-              ? (rawT >= 0.5 ? 1.0 : 0.0)
-              : Curves.easeOutCubic.transform(rawT));
-    final options = _sortedOptions();
-    final showPills = visualT >= 0.55;
-    final bgColor = Color.lerp(
-      theme.scaffoldBackgroundColor,
-      slab.fill,
-      visualT,
-    )!;
-    final bottomRadius = lerpDouble(0.0, 18.0, visualT)!;
-    final scheme = theme.colorScheme;
-    final borderAlpha = ((visualT - 0.6) / 0.4).clamp(0.0, 1.0);
-
-    return ColoredBox(
-      color: theme.scaffoldBackgroundColor,
-      child: Material(
-        color: bgColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-            bottom: Radius.circular(bottomRadius),
-          ),
-          side: borderAlpha > 0
-              ? BorderSide(
-                  color: scheme.outlineVariant.withValues(alpha: borderAlpha),
-                  width: 0.8,
-                )
-              : BorderSide.none,
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Semantics(
-          container: true,
-          label: 'Shop by category',
-          child: showPills
-              ? Opacity(
-                  opacity: compactOnly || reducedMotion
-                      ? 1.0
-                      : ((visualT - 0.55) / 0.45).clamp(0.0, 1.0),
-                  child: MediaQuery(
-                    data: MediaQuery.of(
-                      context,
-                    ).copyWith(textScaler: _pillScaler),
-                    child: _CategoryPillsRail(
-                      options: options,
-                      selected: selected,
-                      dealsActive: dealsActive,
-                      hitHeight: (_pinnedExtent - 6.0).clamp(50.0, 58.0),
-                      pillHeight: _pillVisualHeight,
-                      reducedMotion: reducedMotion,
-                      onSelected: onSelected,
-                    ),
-                  ),
-                )
-              : ClipRect(
-                  child: OverflowBox(
-                    alignment: Alignment.topCenter,
-                    minHeight: _expandedExtent,
-                    maxHeight: _expandedExtent,
-                    child: Opacity(
-                      opacity: reducedMotion
-                          ? 1.0
-                          : (1.0 - visualT / 0.55).clamp(0.0, 1.0),
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 20),
-                        child: _CategoryCirclesStrip(
-                          options: options,
-                          selected: selected,
-                          dealsActive: dealsActive,
-                          onSelected: onSelected,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(covariant _CategoryHeaderDelegate oldDelegate) =>
-      categories != oldDelegate.categories ||
-      selected != oldDelegate.selected ||
-      dealsActive != oldDelegate.dealsActive ||
-      compactOnly != oldDelegate.compactOnly ||
-      pinCategories != oldDelegate.pinCategories ||
-      slab != oldDelegate.slab ||
-      theme != oldDelegate.theme ||
-      textScaler != oldDelegate.textScaler ||
-      reducedMotion != oldDelegate.reducedMotion;
-}
-
-class _CategoryPillsRail extends StatelessWidget {
-  const _CategoryPillsRail({
-    required this.options,
-    required this.selected,
-    required this.dealsActive,
-    required this.hitHeight,
-    required this.pillHeight,
-    required this.reducedMotion,
-    required this.onSelected,
-  });
-
-  final List<({String name, String? slug})> options;
-  final String? selected;
-  final bool dealsActive;
-  final double hitHeight;
-  final double pillHeight;
-  final bool reducedMotion;
-  final ValueChanged<String?> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final dark = scheme.brightness == Brightness.dark;
-
-    return Align(
-      alignment: Alignment.topCenter,
-      child: SizedBox(
-        height: hitHeight,
-        child: ListView.separated(
-          key: const PageStorageKey('shop-category-pills'),
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: options.length,
-          separatorBuilder: (context, index) => const SizedBox(width: 8),
-          itemBuilder: (context, index) {
-            final option = options[index];
-            final active =
-                option.slug == selected &&
-                !(option.slug == null && dealsActive);
-            final fill = active
-                ? (dark ? scheme.tertiary : scheme.primary)
-                : scheme.surfaceContainerLowest;
-            final fg = active
-                ? (dark ? scheme.onTertiary : scheme.onPrimary)
-                : scheme.onSurface;
-
-            return Semantics(
-              button: true,
-              selected: active,
-              label: option.name,
-              onTap: () => onSelected(active ? null : option.slug),
-              excludeSemantics: true,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  customBorder: const StadiumBorder(),
-                  onTap: () => onSelected(active ? null : option.slug),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minWidth: 52,
-                      minHeight: hitHeight,
-                      maxHeight: hitHeight,
-                    ),
-                    child: Center(
-                      child: AnimatedContainer(
-                        duration: reducedMotion
-                            ? Duration.zero
-                            : const Duration(milliseconds: 180),
-                        curve: Curves.easeOutCubic,
-                        height: pillHeight,
-                        padding: const EdgeInsetsDirectional.fromSTEB(
-                          5,
-                          0,
-                          14,
-                          0,
-                        ),
-                        decoration: ShapeDecoration(
-                          color: fill,
-                          shape: StadiumBorder(
-                            side: BorderSide(
-                              color: active
-                                  ? Colors.transparent
-                                  : scheme.outlineVariant,
-                            ),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: active
-                                    ? scheme.surfaceContainerLowest
-                                    : scheme.secondaryContainer,
-                                shape: BoxShape.circle,
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: option.slug == null
-                                  ? Icon(
-                                      active
-                                          ? PhosphorIconsBold.check
-                                          : PhosphorIconsRegular.squaresFour,
-                                      size: 17,
-                                      color: active
-                                          ? scheme.primary
-                                          : scheme.onSecondaryContainer,
-                                    )
-                                  : Padding(
-                                      padding: const EdgeInsets.all(4),
-                                      child: Image.asset(
-                                        'assets/categories/${option.slug}.webp',
-                                        fit: BoxFit.contain,
-                                        cacheWidth: 96,
-                                        excludeFromSemantics: true,
-                                        errorBuilder:
-                                            (context, error, stackTrace) =>
-                                                Icon(
-                                                  categoryIcon(option.name),
-                                                  size: 17,
-                                                  color: active
-                                                      ? scheme.primary
-                                                      : scheme
-                                                            .onSecondaryContainer,
-                                                ),
-                                      ),
-                                    ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              option.name,
-                              maxLines: 1,
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: fg,
-                                fontWeight: active
-                                    ? FontWeight.w800
-                                    : FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
+  return <({String name, String slug})>[
+    for (final category in sortedCategories)
+      (name: category.name, slug: category.slug),
+  ];
 }
 
 class _CategoryCirclesStrip extends StatelessWidget {
-  const _CategoryCirclesStrip({
-    required this.options,
-    required this.selected,
-    required this.dealsActive,
-    required this.onSelected,
-  });
+  const _CategoryCirclesStrip({required this.options, required this.onSelected});
 
-  final List<({String name, String? slug})> options;
-  final String? selected;
-  final bool dealsActive;
+  final List<({String name, String slug})> options;
   final ValueChanged<String?> onSelected;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final scaler = MediaQuery.textScalerOf(context);
     final categoryLabelStyle = theme.textTheme.labelMedium;
     final categoryLabelHeight =
         scaler.scale(categoryLabelStyle?.fontSize ?? 12) *
         (categoryLabelStyle?.height ?? 1.5);
+    final brandColors = AppBrandColors.of(context);
 
     return SizedBox(
       height: 72 + categoryLabelHeight * 2 + 16,
@@ -1118,71 +1651,48 @@ class _CategoryCirclesStrip extends StatelessWidget {
         separatorBuilder: (context, index) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final option = options[index];
-          final active =
-              option.slug == selected && !(option.slug == null && dealsActive);
-          final scheme = theme.colorScheme;
+          final circleFill = brandColors.categoryTint(
+            option.slug,
+            theme.brightness,
+          );
 
           return SizedBox(
             // Wide enough at 2× text that one-word names like "Electronics" never split mid-word.
             width: scaler.scale(92).clamp(92, 184),
             child: Semantics(
               button: true,
-              selected: active,
               label: option.name,
-              onTap: () => onSelected(active ? null : option.slug),
+              onTap: () => onSelected(option.slug),
               excludeSemantics: true,
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(appSurfaceRadius),
-                  onTap: () => onSelected(active ? null : option.slug),
+                  onTap: () => onSelected(option.slug),
                   child: Column(
                     children: [
-                      AnimatedContainer(
-                        duration: MediaQuery.disableAnimationsOf(context)
-                            ? Duration.zero
-                            : const Duration(milliseconds: 200),
-                        curve: Curves.easeOutCubic,
+                      Container(
                         width: 72,
                         height: 72,
                         decoration: BoxDecoration(
-                          color: active
-                              ? scheme.primaryContainer
-                              : scheme.secondaryContainer,
+                          color: circleFill,
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: active ? scheme.primary : Colors.transparent,
-                            width: 2,
-                          ),
                         ),
                         clipBehavior: Clip.antiAlias,
-                        child: option.slug == null
-                            ? Icon(
-                                active
-                                    ? PhosphorIconsBold.check
-                                    : PhosphorIconsRegular.squaresFour,
-                                size: 26,
-                                color: active
-                                    ? scheme.onPrimaryContainer
-                                    : scheme.onSecondaryContainer,
-                              )
-                            : Padding(
-                                padding: const EdgeInsets.all(8),
-                                child: Image.asset(
-                                  'assets/categories/${option.slug}.webp',
-                                  fit: BoxFit.contain,
-                                  cacheWidth: 192,
-                                  excludeFromSemantics: true,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Icon(
-                                        categoryIcon(option.name),
-                                        size: 26,
-                                        color: active
-                                            ? scheme.onPrimaryContainer
-                                            : scheme.onSecondaryContainer,
-                                      ),
-                                ),
-                              ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Image.asset(
+                            'assets/categories/${option.slug}.webp',
+                            fit: BoxFit.contain,
+                            cacheWidth: 192,
+                            excludeFromSemantics: true,
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                              categoryIcon(option.name),
+                              size: 26,
+                              color: scheme.onSecondaryContainer,
+                            ),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Text(
@@ -1191,12 +1701,8 @@ class _CategoryCirclesStrip extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.labelMedium?.copyWith(
-                          color: active
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurface,
-                          fontWeight: active
-                              ? FontWeight.w700
-                              : FontWeight.w600,
+                          color: scheme.onSurface,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],

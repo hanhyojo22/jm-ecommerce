@@ -80,7 +80,7 @@ class ApiException implements Exception {
     final message = switch (error.type) {
       DioExceptionType.connectionTimeout ||
       DioExceptionType.sendTimeout ||
-      DioExceptionType.receiveTimeout => 'Your connection is too slow right now. Check your Wi-Fi or mobile data and try again.',
+      DioExceptionType.receiveTimeout => 'Connection is too slow. Try again.',
       DioExceptionType.connectionError =>
         'No internet connection. Check your Wi-Fi or mobile data.',
       DioExceptionType.badCertificate =>
@@ -88,7 +88,7 @@ class ApiException implements Exception {
       DioExceptionType.cancel => 'The request was cancelled.',
       // Render answers 502/503 with a plain page while the server restarts.
       DioExceptionType.badResponse when (status ?? 0) >= 500 =>
-        "Can't reach Everyday Pharmacy right now. Try again in a minute.",
+        "Can't reach Everyday Pharmacy. Try again.",
       _ => 'Something went wrong. Please try again.',
     };
 

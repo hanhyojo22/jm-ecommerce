@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Everyday Pharmacy — Flutter Collapsible Header Mockup</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --background: #0b1120;
+      --card: #111827;
+      --border: #1f2937;
+      --foreground: #f8fafc;
+      --muted-foreground: #94a3b8;
+      --primary: #2563eb;
+      --primary-foreground: #ffffff;
+      --secondary: #1e293b;
+      --secondary-foreground: #e2e8f0;
+      --code-foreground: #cbd5e1;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    .tabular { font-variant-numeric: tabular-nums; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .phone-scroll::-webkit-scrollbar { width: 4px; }
+    .phone-scroll::-webkit-scrollbar-thumb { background: rgba(100,116,139,0.28); border-radius: 999px; }
+    .touch-debug [data-touch="true"] {
+      outline: 1.5px dashed #ef4444 !important;
+      outline-offset: -1.5px;
+      position: relative;
+    }
+    .touch-debug [data-touch="true"]::after {
+      content: attr(data-size);
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      background: #ef4444;
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      line-height: 1;
+      padding: 2px 3px;
+      border-radius: 3px;
+      pointer-events: none;
+      z-index: 40;
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased m-0 p-4 md:p-6">
+  <div class="max-w-6xl mx-auto space-y-5">
+
+    <!-- Top Control Deck -->
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]">UI/UX Pro Max</span>
+            <h1 class="text-base md:text-lg font-bold tracking-tight text-[var(--foreground)]">Flutter Collapsible Homepage Header — Mockup Explorer</h1>
+          </div>
+          <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Scroll inside the phone or drag the collapse scrubber to test SliverPersistentHeader transitions in real time.</p>
+        </div>
+
+        <div class="inline-flex rounded-lg border border-[var(--border)] p-0.5 bg-[var(--background)]" role="tablist" aria-label="Homepage screen type">
+          <button id="screen-shop" type="button" onclick="setScreen('shop')" class="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors bg-[var(--primary)] text-[var(--primary-foreground)]">
+            Shop Home (CatalogScreen)
+          </button>
+          <button id="screen-store" type="button" onclick="setScreen('store')" class="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors text-[var(--muted-foreground)]">
+            Store Home (StoreScreen)
+          </button>
+        </div>
+      </div>
+
+      <div id="variant-bar" class="grid grid-cols-2 lg:grid-cols-4 gap-2 pt-1">
+        <button type="button" data-variant="a" onclick="setVariant('a')" class="variant-btn text-left p-2.5 rounded-lg border transition-all">
+          <div class="flex items-center justify-between gap-1">
+            <span class="text-xs font-bold">A · Clean Surface Morph</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-emerald-500/15 text-emerald-400">Recommended</span>
+          </div>
+          <p class="text-[11px] text-[var(--muted-foreground)] mt-0.5 leading-snug">Daylight white surface → docks compact branch chip beside search (60dp).</p>
+        </button>
+
+        <button type="button" data-variant="b" onclick="setVariant('b')" class="variant-btn text-left p-2.5 rounded-lg border transition-all">
+          <div class="flex items-center justify-between gap-1">
+            <span class="text-xs font-bold">B · Sky + Category Rail</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-medium border border-[var(--border)] text-[var(--muted-foreground)]">Browse-first</span>
+          </div>
+          <p class="text-[11px] text-[var(--muted-foreground)] mt-0.5 leading-snug">Keeps skySlab warmth → pins search + horizontal category pills (96dp).</p>
+        </button>
+
+        <button type="button" data-variant="c" onclick="setVariant('c')" class="variant-btn text-left p-2.5 rounded-lg border transition-all">
+          <div class="flex items-center justify-between gap-1">
+            <span class="text-xs font-bold">C · Navy Slab → Split Pill</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-medium border border-[var(--border)] text-[var(--muted-foreground)]">Max feed</span>
+          </div>
+          <p class="text-[11px] text-[var(--muted-foreground)] mt-0.5 leading-snug">Flat #000B88 navy hero band → retracts into unified split search pill (56dp).</p>
+        </button>
+
+        <button type="button" data-variant="before" onclick="setVariant('before')" class="variant-btn text-left p-2.5 rounded-lg border transition-all">
+          <div class="flex items-center justify-between gap-1">
+            <span class="text-xs font-bold">Current (Before)</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-500/15 text-amber-400">Static 212dp</span>
+          </div>
+          <p class="text-[11px] text-[var(--muted-foreground)] mt-0.5 leading-snug">Fixed Column header + 3 tall forecast cards that never collapse.</p>
+        </button>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-[var(--border)] text-xs">
+        <div class="flex items-center gap-3 flex-1 min-w-[240px]">
+          <label for="scroll-slider" class="font-semibold text-[var(--muted-foreground)] whitespace-nowrap">Collapse:</label>
+          <input id="scroll-slider" type="range" min="0" max="260" value="0" class="w-full max-w-[220px] accent-blue-500 cursor-pointer" oninput="onSliderInput(this.value)" />
+          <span id="collapse-pct" class="font-mono tabular text-xs font-semibold min-w-[44px]">0%</span>
+          <div class="hidden sm:flex items-center gap-1">
+            <button type="button" onclick="jumpScroll(0)" class="px-2 py-1 rounded border border-[var(--border)] hover:bg-[var(--secondary)] text-[11px]">Expanded</button>
+            <button type="button" onclick="jumpScroll(65)" class="px-2 py-1 rounded border border-[var(--border)] hover:bg-[var(--secondary)] text-[11px]">50%</button>
+            <button type="button" onclick="jumpScroll(160)" class="px-2 py-1 rounded border border-[var(--border)] hover:bg-[var(--secondary)] text-[11px]">Collapsed</button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <button id="btn-theme" type="button" onclick="toggleAppTheme()" class="px-2.5 py-1.5 rounded-md border border-[var(--border)] font-semibold flex items-center gap-1.5 hover:bg-[var(--secondary)]">
+            <span id="theme-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
+            <span id="theme-label">App: Light</span>
+          </button>
+          <button id="btn-motion" type="button" onclick="toggleReducedMotion()" class="px-2.5 py-1.5 rounded-md border border-[var(--border)] font-medium hover:bg-[var(--secondary)]">
+            Motion: Standard
+          </button>
+          <button id="btn-touch" type="button" onclick="toggleTouchBounds()" class="px-2.5 py-1.5 rounded-md border border-[var(--border)] font-medium hover:bg-[var(--secondary)]">
+            48dp Targets: Off
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div class="lg:col-span-6 flex flex-col items-center">
+        <div id="phone-frame" class="w-[378px] sm:w-[390px] h-[780px] rounded-[46px] p-[11px] shadow-2xl relative select-none transition-colors" style="background:#0f172a; box-shadow: 0 22px 50px -12px rgba(0,0,0,0.6), inset 0 0 0 2px #334155;">
+          <div class="absolute top-[19px] left-1/2 -translate-x-1/2 w-[104px] h-[25px] rounded-full z-50 flex items-center justify-between px-2.5" style="background:#020617;">
+            <span class="w-2 h-2 rounded-full" style="background:#0f172a;"></span>
+            <span class="w-2.5 h-2.5 rounded-full" style="background:#1e293b;"></span>
+          </div>
+
+          <div id="flutter-screen" class="w-full h-full rounded-[36px] overflow-hidden flex flex-col relative transition-colors" style="font-family: Inter, system-ui, -apple-system, sans-serif;">
+            <div id="status-bar" class="h-[40px] px-6 pt-2 flex items-center justify-between text-xs font-bold z-30 shrink-0 transition-colors">
+              <span class="tabular">9:41</span>
+              <div class="flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 18a2 2 0 1 1 0 4 2 2 0 0 1 0-4Zm-4.95-2.95a7 7 0 0 1 9.9 0l-1.41 1.41a5 5 0 0 0-7.08 0l-1.41-1.41Zm-2.83-2.83a11 11 0 0 1 15.56 0l-1.41 1.41a9 9 0 0 0-12.74 0l-1.41-1.41Z"/></svg>
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="7" width="17" height="10" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><rect x="4.5" y="9.5" width="11" height="5" rx="1"/><path d="M21 10v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </div>
+            </div>
+
+            <div id="sliver-header-host" class="shrink-0 z-20 relative overflow-hidden"></div>
+
+            <div id="feed-scroll" class="phone-scroll flex-1 overflow-y-auto overflow-x-hidden relative">
+              <div id="feed-content" class="pb-6"></div>
+            </div>
+
+            <div id="branch-sheet" class="hidden absolute inset-0 z-40 flex flex-col justify-end" style="background:rgba(11,15,28,0.48);">
+              <div id="branch-sheet-card" class="rounded-t-[24px] p-5 space-y-3 shadow-xl">
+                <div class="w-10 h-1 rounded-full mx-auto opacity-40" style="background:currentColor;"></div>
+                <div class="flex items-center justify-between">
+                  <h3 class="text-base font-extrabold tracking-tight">Choose pharmacy branch</h3>
+                  <button type="button" onclick="closeBranchSheet()" class="w-11 h-11 rounded-full flex items-center justify-center opacity-75 hover:opacity-100" aria-label="Close branch selector">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+                <div id="branch-list" class="space-y-2"></div>
+              </div>
+            </div>
+
+            <div id="bottom-nav" class="h-[68px] shrink-0 grid grid-cols-5 items-center px-1 z-30 border-t"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-6 space-y-4">
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold">Live SliverPersistentHeader Telemetry</h2>
+            <span id="state-pill" class="text-xs font-semibold px-2 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)]">Expanded (t = 0.00)</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+            <div class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+              <div class="text-[var(--muted-foreground)]">Header Height</div>
+              <div id="metric-height" class="text-base font-bold font-mono tabular mt-0.5">148 dp</div>
+            </div>
+            <div class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+              <div class="text-[var(--muted-foreground)]">Pinned Min</div>
+              <div id="metric-min" class="text-base font-bold font-mono tabular mt-0.5">60 dp</div>
+            </div>
+            <div class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+              <div class="text-[var(--muted-foreground)]">Space Reclaimed</div>
+              <div id="metric-saved" class="text-base font-bold font-mono tabular text-emerald-400 mt-0.5">+152 dp</div>
+            </div>
+            <div class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+              <div class="text-[var(--muted-foreground)]">Feed Viewport</div>
+              <div id="metric-viewport" class="text-base font-bold font-mono tabular mt-0.5">82%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <h2 id="spec-title" class="text-sm font-bold">Option A · Clean Surface Morph</h2>
+            <span class="text-xs text-[var(--muted-foreground)] font-mono">theme.dart + PhosphorIcons</span>
+          </div>
+          <p id="spec-summary" class="text-xs text-[var(--muted-foreground)] leading-relaxed"></p>
+          <div id="spec-points" class="space-y-2 pt-1 text-xs"></div>
+        </div>
+
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-3">
+          <h2 class="text-sm font-bold">UI/UX Pro Max Guardrails Applied</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+              <div class="font-semibold">1. Zero Layout Thrash (60fps)</div>
+              <p class="text-[var(--muted-foreground)] mt-0.5">Collapsing rows use Opacity + Transform.translate inside SliverPersistentHeader(pinned: true) instead of nested scroll views.</p>
+            </div>
+            <div class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+              <div class="font-semibold">2. 48dp Hit Targets & Safe Areas</div>
+              <p class="text-[var(--muted-foreground)] mt-0.5">Compact branch chip & search pill maintain >=48dp interactive height with 8dp gap; toggle "48dp Targets" above to verify.</p>
+            </div>
+            <div class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+              <div class="font-semibold">3. Reduced Motion & Dynamic Type</div>
+              <p class="text-[var(--muted-foreground)] mt-0.5">Honors MediaQuery.disableAnimationsOf(context) (stops hint ticker & snaps clean states) and clamps textScaler up to 1.6x.</p>
+            </div>
+            <div class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+              <div class="font-semibold">4. Exact theme.dart Tokens</div>
+              <p class="text-[var(--muted-foreground)] mt-0.5">Uses #000B88 Navy, #F8BF0B Sun Accent, skySlab, Manrope tabular numerals (₱), and PhosphorIcons vector glyphs.</p>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-lg bg-[var(--background)] border border-[var(--border)] font-mono text-xs overflow-x-auto text-[var(--code-foreground)] leading-relaxed">
+<pre id="flutter-snippet" class="m-0 whitespace-pre"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const TOKENS = {
+      light: {
+        primary: '#000B88',
+        onPrimary: '#FFFFFF',
+        accent: '#F8BF0B',
+        sunWash: '#FFF4D1',
+        skyFill: '#E4F2FD',
+        skyInk: '#000B88',
+        surface: '#F4F8FC',
+        surfaceLowest: '#FFFFFF',
+        surfaceHigh: '#EAF3FB',
+        onSurface: '#111A33',
+        onSurfaceVariant: '#525D78',
+        outline: '#8790A8',
+        hairline: '#DCE2EE',
+        openGreen: '#2F855A',
+        openBg: '#E6F4EC',
+        saleRed: '#DC2626',
+        storeNavyStart: '#071C94',
+        storeNavyEnd: '#2346C8'
+      },
+      dark: {
+        primary: '#B8C4FF',
+        brandSlabFill: '#13216E',
+        brandSlabInk: '#DCE4FF',
+        onPrimary: '#00105C',
+        accent: '#FFC94A',
+        sunWash: '#13216E',
+        skyFill: '#13216E',
+        skyInk: '#DCE4FF',
+        surface: '#0B0F1C',
+        surfaceLowest: '#10162A',
+        surfaceHigh: '#151C33',
+        onSurface: '#E8EEFF',
+        onSurfaceVariant: '#98A4C2',
+        outline: '#5C6784',
+        hairline: '#2A3350',
+        openGreen: '#7ADFA0',
+        openBg: 'rgba(122,223,160,0.14)',
+        saleRed: '#F87171',
+        storeNavyStart: '#040E52',
+        storeNavyEnd: '#13216E'
+      }
+    };
+
+    const BRANCHES = [
+      { id: 'capitol', short: 'Cebu Capitol', full: 'Everyday Pharmacy Cebu Capitol', tag: 'Nearest branch', km: '1.2 km', status: 'Open 24h', fee: '₱45', freeMin: '₱500' },
+      { id: 'lahug', short: 'IT Park Lahug', full: 'Everyday Pharmacy IT Park Lahug', tag: 'Your branch', km: '3.4 km', status: 'Open 24h', fee: 'Free', freeMin: null },
+      { id: 'fuente', short: 'Fuente Osmeña', full: 'Everyday Pharmacy Fuente Osmeña', tag: 'Selected branch', km: '2.1 km', status: 'Open · til 10 PM', fee: '₱35', freeMin: '₱400' }
+    ];
+
+    const CATEGORIES = [
+      { slug: 'all', name: 'All', icon: 'squares' },
+      { slug: 'rx', name: 'Prescription', icon: 'rx' },
+      { slug: 'pain', name: 'Pain & Fever', icon: 'thermo' },
+      { slug: 'vitamins', name: 'Vitamins', icon: 'sparkle' },
+      { slug: 'cold', name: 'Cough & Cold', icon: 'wind' },
+      { slug: 'firstaid', name: 'First Aid', icon: 'kit' }
+    ];
+
+    const PRODUCTS = [
+      { name: 'Biogesic Paracetamol 500mg (20 Tabs)', cat: 'pain', price: '₱85.00', old: '₱105.00', disc: '-19%', sold: '1.4k sold', rank: 1, rx: false, tint: '#E4F2FD' },
+      { name: 'ImmunPro Sodium Ascorbate + Zinc (30s)', cat: 'vitamins', price: '₱265.00', old: '₱310.00', disc: '-15%', sold: '980 sold', rank: 2, rx: false, tint: '#FFF4D1' },
+      { name: 'Neozep Forte Non-Drowsy (10 Caps)', cat: 'cold', price: '₱72.00', old: '₱88.00', disc: '-18%', sold: '820 sold', rank: 3, rx: false, tint: '#E4F2FD' },
+      { name: 'Betadine Antiseptic Wound Solution 60mL', cat: 'firstaid', price: '₱148.00', old: '₱185.00', disc: '-20%', sold: '610 sold', rank: null, rx: false, tint: '#FFF4D1' },
+      { name: 'Centrum Advance Multivitamins (30 Tabs)', cat: 'vitamins', price: '₱445.00', old: null, disc: null, sold: '540 sold', rank: null, rx: false, tint: '#E4F2FD' },
+      { name: 'Amoxicillin 500mg Capsule (Rx · 10s)', cat: 'rx', price: '₱120.00', old: null, disc: null, sold: '410 sold', rank: null, rx: true, tint: '#EAF3FB' },
+      { name: 'Advil Ibuprofen Liqui-Gels 200mg (10s)', cat: 'pain', price: '₱132.00', old: '₱150.00', disc: '-12%', sold: '390 sold', rank: null, rx: false, tint: '#FFF4D1' },
+      { name: 'MediPlast Waterproof Sterile Strips (20s)', cat: 'firstaid', price: '₱64.00', old: null, disc: null, sold: '310 sold', rank: null, rx: false, tint: '#E4F2FD' }
+    ];
+
+    const SEARCH_HINTS = [
+      'Search medicines',
+      'Search generic or brand name',
+      'Search vitamins & supplements',
+      'Search first aid essentials'
+    ];
+
+    let state = {
+      screen: 'shop',
+      variant: 'a',
+      dark: false,
+      reducedMotion: false,
+      touchDebug: false,
+      scrollOffset: 0,
+      branchIndex: 0,
+      selectedCat: 'all',
+      bannerIndex: 0,
+      hintIndex: 0,
+      cartCount: 3
+    };
+
+    function iconSvg(name, size = 18, strokeWidth = 2) {
+      const s = `width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"`;
+      switch (name) {
+        case 'pin-fill':
+          return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 5.4 7.05 11.5 7.35 11.76a1 1 0 0 0 1.3 0C12.95 21.5 20 15.4 20 10a8 8 0 0 0-8-8Zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z"/></svg>`;
+        case 'search':
+          return `<svg ${s}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>`;
+        case 'caret':
+          return `<svg ${s}><path d="m6 9 6 6 6-6"/></svg>`;
+        case 'truck':
+          return `<svg ${s}><path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>`;
+        case 'squares':
+          return `<svg ${s}><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>`;
+        case 'rx':
+          return `<svg ${s}><path d="M6 4h6a4 4 0 0 1 0 8H6V4Z"/><path d="M6 12v8"/><path d="m12 12 6 8"/><path d="m18 14-6 6"/></svg>`;
+        case 'thermo':
+          return `<svg ${s}><path d="M14 14.76V5a2 2 0 1 0-4 0v9.76a4 4 0 1 0 4 0Z"/></svg>`;
+        case 'sparkle':
+          return `<svg ${s}><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3Z"/></svg>`;
+        case 'wind':
+          return `<svg ${s}><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg>`;
+        case 'kit':
+          return `<svg ${s}><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M12 11v5"/><path d="M9.5 13.5h5"/></svg>`;
+        case 'pill':
+          return `<svg ${s}><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>`;
+        case 'plus':
+          return `<svg ${s}><path d="M12 5v14M5 12h14"/></svg>`;
+        case 'arrow-left':
+          return `<svg ${s}><path d="m15 18-6-6 6-6"/></svg>`;
+        case 'shield-check':
+          return `<svg ${s}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>`;
+        case 'star-fill':
+          return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="#F8BF0B"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2Z"/></svg>`;
+        case 'emblem':
+          return `<svg width="${size}" height="${size}" viewBox="0 0 36 28" fill="none"><circle cx="14" cy="11" r="8" fill="#F8BF0B"/><path d="M12 23h14a5.5 5.5 0 0 0 .6-10.96A7 7 0 0 0 13.4 9.5 5 5 0 0 0 12 19.4" fill="#FFFFFF" stroke="#000B88" stroke-width="1.6"/></svg>`;
+        default:
+          return '';
+      }
+    }
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+    function getExtents() {
+      if (state.screen === 'store') return { max: 176, min: 92, range: 110 };
+      switch (state.variant) {
+        case 'a': return { max: 148, min: 60, range: 105 };
+        case 'b': return { max: 162, min: 96, range: 105 };
+        case 'c': return { max: 156, min: 56, range: 110 };
+        case 'before': return { max: 212, min: 212, range: 1 };
+      }
+    }
+
+    function renderHeader() {
+      const tPal = state.dark ? TOKENS.dark : TOKENS.light;
+      const host = document.getElementById('sliver-header-host');
+      const statusBar = document.getElementById('status-bar');
+      const branch = BRANCHES[state.branchIndex];
+      const ext = getExtents();
+      const rawT = ext.max === ext.min ? 0 : clamp(state.scrollOffset / ext.range, 0, 1);
+      const t = state.reducedMotion ? (rawT >= 0.5 ? 1 : 0) : rawT;
+      const curH = Math.round(lerp(ext.max, ext.min, t));
+      const hint = SEARCH_HINTS[state.hintIndex];
+      const feeSummary = branch.fee === 'Free' ? 'Free delivery' : `${branch.fee} delivery · Free > ${branch.freeMin}`;
+
+      if (state.screen === 'store') {
+        statusBar.style.background = tPal.storeNavyStart;
+        statusBar.style.color = '#FFFFFF';
+        const heroOpacity = clamp(1 - t * 1.35, 0, 1);
+        const compactTitleOpacity = clamp((t - 0.45) * 1.8, 0, 1);
+
+        host.innerHTML = `
+          <div style="height:${curH}px; background:${tPal.surfaceLowest}; border-bottom:1px solid ${tPal.hairline};" class="flex flex-col justify-between relative overflow-hidden">
+            <div style="background:linear-gradient(135deg, ${tPal.storeNavyStart}, ${tPal.storeNavyEnd}); color:#FFFFFF;" class="px-3 pt-1.5 pb-2.5 flex-1 flex flex-col justify-between overflow-hidden">
+              <div class="flex items-center gap-2 h-[44px]">
+                <button type="button" data-touch="true" data-size="44dp" onclick="setScreen('shop')" class="w-10 h-11 rounded-xl flex items-center justify-center shrink-0 hover:bg-white/10" aria-label="Back to Shop">${iconSvg('arrow-left', 20)}</button>
+                <div style="opacity:${compactTitleOpacity}; max-width:${Math.round(compactTitleOpacity * 112)}px;" class="overflow-hidden whitespace-nowrap transition-none shrink-0">
+                  <div class="text-xs font-extrabold tracking-tight pr-1">Cebu Capitol</div>
+                  <div class="text-[10px] text-amber-300 font-semibold">★ 4.9 · Open 24h</div>
+                </div>
+                <div data-touch="true" data-size="44dp" class="flex-1 h-[40px] rounded-xl px-3 flex items-center gap-2" style="background:${tPal.surfaceLowest}; color:${tPal.onSurfaceVariant}; border:1.5px solid rgba(248,191,11,0.75);">
+                  ${iconSvg('search', 16)}
+                  <span class="text-xs font-medium truncate">Search in ${branch.short}</span>
+                </div>
+              </div>
+              <div style="opacity:${heroOpacity}; transform:translateY(${Math.round(-t * 18)}px); pointer-events:${heroOpacity < 0.2 ? 'none' : 'auto'};" class="flex items-center justify-between gap-3 px-1 pt-1">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.2);">${iconSvg('emblem', 26)}</div>
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-sm font-extrabold truncate">${branch.full}</span>
+                      <span class="text-amber-300 shrink-0">${iconSvg('shield-check', 14)}</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-[11px] text-blue-100 tabular mt-0.5">
+                      <span class="inline-flex items-center gap-1">${iconSvg('star-fill', 11)} 4.9</span><span>·</span><span>142 medicines</span><span>·</span><span>${branch.km}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="background:${tPal.surfaceLowest};" class="h-[40px] px-3 flex items-center gap-4 overflow-x-auto no-scrollbar shrink-0">
+              ${CATEGORIES.map(c => {
+                const active = state.selectedCat === c.slug;
+                const col = active ? (state.dark ? tPal.accent : tPal.primary) : tPal.onSurfaceVariant;
+                return `<button type="button" data-touch="true" data-size="40dp" onclick="selectCategory('${c.slug}')" class="h-full text-xs whitespace-nowrap relative flex items-center font-${active ? 'extrabold' : 'semibold'}" style="color:${col};">${c.name}${active ? `<span class="absolute bottom-0 left-0 right-0 h-[3px] rounded-t" style="background:${col};"></span>` : ''}</button>`;
+              }).join('')}
+            </div>
+          </div>`;
+        return;
+      }
+
+      if (state.variant === 'a') {
+        const bg = t > 0.15 ? tPal.surfaceLowest : tPal.surface;
+        statusBar.style.background = bg;
+        statusBar.style.color = tPal.onSurface;
+        const topFade = clamp(1 - t * 1.45, 0, 1);
+        const dockChip = clamp((t - 0.35) * 1.55, 0, 1);
+        const chipW = Math.round(dockChip * 124);
+
+        host.innerHTML = `
+          <div style="height:${curH}px; background:${bg}; border-bottom:1px solid ${t > 0.12 ? tPal.hairline : 'transparent'};" class="px-4 relative flex flex-col justify-end pb-2.5 transition-colors">
+            <div style="opacity:${topFade}; transform:translateY(${Math.round(-t * 22)}px); pointer-events:${topFade < 0.2 ? 'none' : 'auto'};" class="absolute top-1 left-4 right-4 space-y-2">
+              <div class="flex items-center justify-between gap-2">
+                <button type="button" data-touch="true" data-size="48dp" onclick="openBranchSheet()" class="min-h-[44px] -ml-1 px-1.5 rounded-xl flex items-center gap-2 text-left" style="color:${tPal.onSurface};">
+                  <span class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background:${tPal.skyFill}; color:${tPal.skyInk};">${iconSvg('pin-fill', 16)}</span>
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-1 text-[16px] font-extrabold tracking-tight leading-tight"><span class="truncate">${branch.short}</span><span class="opacity-70">${iconSvg('caret', 14, 2.4)}</span></div>
+                    <div class="text-[11px] font-medium leading-tight" style="color:${tPal.onSurfaceVariant};">${branch.tag} · ${branch.km}</div>
+                  </div>
+                </button>
+                <div class="shrink-0">${iconSvg('emblem', 30)}</div>
+              </div>
+              <button type="button" onclick="openBranchSheet()" class="w-full py-1.5 px-3 rounded-lg flex items-center justify-between text-[11px] font-semibold tabular" style="background:${tPal.surfaceLowest}; border:1px solid ${tPal.hairline}; color:${tPal.onSurfaceVariant};">
+                <span class="inline-flex items-center gap-1.5 font-bold" style="color:${tPal.openGreen};"><span class="w-1.5 h-1.5 rounded-full" style="background:${tPal.openGreen};"></span>${branch.status}</span>
+                <span class="opacity-40">|</span>
+                <span class="inline-flex items-center gap-1">${iconSvg('truck', 13)} ${feeSummary}</span>
+              </button>
+            </div>
+            <div class="flex items-center gap-2 h-[46px]">
+              <div style="width:${chipW}px; opacity:${dockChip}; margin-right:${dockChip > 0.05 ? 2 : -8}px;" class="overflow-hidden shrink-0">
+                <button type="button" data-touch="true" data-size="46dp" onclick="openBranchSheet()" class="h-[46px] w-[122px] px-2.5 rounded-full flex items-center gap-1.5 text-xs font-bold whitespace-nowrap" style="background:${tPal.skyFill}; color:${tPal.skyInk};">
+                  <span class="shrink-0">${iconSvg('pin-fill', 14)}</span><span class="truncate">${branch.short.replace('Cebu ', '')}</span><span class="shrink-0 opacity-75">${iconSvg('caret', 12, 2.4)}</span>
+                </button>
+              </div>
+              <button type="button" data-touch="true" data-size="46dp" onclick="pulseSearch()" class="flex-1 h-[46px] rounded-full px-3.5 flex items-center gap-2.5 text-left transition-colors" style="background:${tPal.surfaceLowest}; border:1px solid ${t > 0.4 ? tPal.outline : tPal.hairline}; color:${tPal.onSurfaceVariant}; box-shadow: 0 1px 2px rgba(17,26,51,0.04);">
+                <span style="color:${state.dark ? tPal.accent : tPal.primary};">${iconSvg('search', 18, 2.2)}</span>
+                <span class="text-[13.5px] font-medium truncate flex-1">${hint}</span>
+              </button>
+            </div>
+          </div>`;
+        return;
+      }
+
+      if (state.variant === 'b') {
+        statusBar.style.background = tPal.skyFill;
+        statusBar.style.color = tPal.skyInk;
+        const topFade = clamp(1 - t * 1.4, 0, 1);
+        const catReveal = clamp((t - 0.25) * 1.35, 0, 1);
+        const radius = Math.round(lerp(22, 0, t));
+
+        host.innerHTML = `
+          <div style="height:${curH}px; background:${tPal.skyFill}; color:${tPal.skyInk}; border-bottom-left-radius:${radius}px; border-bottom-right-radius:${radius}px; border-bottom:${t > 0.85 ? `1px solid ${tPal.hairline}` : 'none'};" class="px-4 relative flex flex-col justify-end pb-2.5 overflow-hidden">
+            <div style="opacity:${topFade}; transform:translateY(${Math.round(-t * 24)}px); pointer-events:${topFade < 0.2 ? 'none' : 'auto'};" class="absolute top-1 left-4 right-4 space-y-2">
+              <div class="flex items-center justify-between">
+                <button type="button" data-touch="true" data-size="46dp" onclick="openBranchSheet()" class="min-h-[44px] flex items-center gap-2 text-left">
+                  ${iconSvg('pin-fill', 18)}
+                  <div>
+                    <div class="flex items-center gap-1 text-[16px] font-extrabold leading-tight"><span>${branch.short}</span>${iconSvg('caret', 13, 2.5)}</div>
+                    <div class="text-[11px] opacity-75 font-medium">${branch.tag} · ${branch.status} · ${feeSummary}</div>
+                  </div>
+                </button>
+                ${iconSvg('emblem', 28)}
+              </div>
+            </div>
+            <div class="space-y-2">
+              <div class="flex items-center gap-2">
+                <button type="button" data-touch="true" data-size="44dp" onclick="pulseSearch()" class="flex-1 h-[44px] rounded-full px-3.5 flex items-center gap-2 text-left" style="background:${tPal.surfaceLowest}; color:${tPal.onSurfaceVariant}; border:1px solid ${tPal.hairline};">
+                  ${iconSvg('search', 17, 2.2)}
+                  <span class="text-[13px] font-medium truncate flex-1">${hint}</span>
+                  ${t > 0.5 ? `<span onclick="event.stopPropagation(); openBranchSheet();" class="text-[11px] font-bold px-2 py-0.5 rounded-full" style="background:${tPal.skyFill}; color:${tPal.skyInk};">${branch.short.replace('Cebu ', '')} ▾</span>` : ''}
+                </button>
+              </div>
+              <div style="height:${Math.round(lerp(28, 34, catReveal))}px;" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                ${CATEGORIES.map(c => {
+                  const active = state.selectedCat === c.slug;
+                  const pillBg = active ? (state.dark ? tPal.accent : tPal.primary) : tPal.surfaceLowest;
+                  const pillFg = active ? (state.dark ? '#00105C' : '#FFFFFF') : tPal.onSurface;
+                  return `<button type="button" data-touch="true" data-size="34dp" onclick="selectCategory('${c.slug}')" class="h-[32px] px-3 rounded-full text-[11.5px] font-bold whitespace-nowrap flex items-center gap-1.5 shrink-0" style="background:${pillBg}; color:${pillFg}; border:1px solid ${active ? 'transparent' : tPal.hairline};">${c.name}</button>`;
+                }).join('')}
+              </div>
+            </div>
+          </div>`;
+        return;
+      }
+
+      if (state.variant === 'c') {
+        const navyBg = state.dark ? tPal.brandSlabFill : '#000B88';
+        const collapsedSurface = t > 0.78;
+        statusBar.style.background = collapsedSurface ? tPal.surfaceLowest : navyBg;
+        statusBar.style.color = collapsedSurface ? tPal.onSurface : '#FFFFFF';
+        const topFade = clamp(1 - t * 1.4, 0, 1);
+
+        host.innerHTML = `
+          <div style="height:${curH}px; background:${collapsedSurface ? tPal.surfaceLowest : navyBg}; border-bottom:${collapsedSurface ? `1px solid ${tPal.hairline}` : 'none'};" class="px-4 relative flex flex-col justify-end pb-2 transition-colors">
+            <div style="opacity:${topFade}; transform:translateY(${Math.round(-t * 24)}px); pointer-events:${topFade < 0.2 ? 'none' : 'auto'};" class="absolute top-1 left-4 right-4 text-white space-y-2">
+              <div class="flex items-center justify-between">
+                <button type="button" data-touch="true" data-size="46dp" onclick="openBranchSheet()" class="min-h-[44px] flex items-center gap-2 text-left">
+                  <span style="color:#F8BF0B;">${iconSvg('pin-fill', 18)}</span>
+                  <div>
+                    <div class="flex items-center gap-1 text-[16px] font-extrabold tracking-tight"><span>${branch.short}</span><span class="opacity-80">${iconSvg('caret', 13, 2.4)}</span></div>
+                    <div class="text-[11px] text-blue-200 font-medium">${branch.status} · ${branch.km} · ${feeSummary}</div>
+                  </div>
+                </button>
+                ${iconSvg('emblem', 28)}
+              </div>
+            </div>
+            <div class="h-[44px] rounded-full flex items-center px-1" style="background:${tPal.surfaceLowest}; border:1px solid ${collapsedSurface ? tPal.outline : 'transparent'};">
+              <button type="button" data-touch="true" data-size="44dp" onclick="pulseSearch()" class="flex-1 h-full px-3 flex items-center gap-2 text-left min-w-0" style="color:${tPal.onSurfaceVariant};">
+                <span style="color:${state.dark ? tPal.accent : '#000B88'};">${iconSvg('search', 17, 2.2)}</span>
+                <span class="text-[13px] font-medium truncate">${hint}</span>
+              </button>
+              <span class="h-5 w-[1px]" style="background:${tPal.hairline};"></span>
+              <button type="button" data-touch="true" data-size="44dp" onclick="openBranchSheet()" class="h-[36px] px-3 rounded-full flex items-center gap-1 text-xs font-extrabold shrink-0" style="color:${state.dark ? tPal.accent : '#000B88'};">${iconSvg('pin-fill', 13)}<span>${branch.short.replace('Cebu ', '')}</span></button>
+            </div>
+          </div>`;
+        return;
+      }
+
+      statusBar.style.background = tPal.skyFill;
+      statusBar.style.color = tPal.skyInk;
+      host.innerHTML = `
+        <div style="height:212px; background:${tPal.skyFill}; color:${tPal.skyInk}; border-bottom-left-radius:24px; border-bottom-right-radius:24px;" class="px-4 pt-1 pb-3.5 flex flex-col justify-between">
+          <button type="button" data-touch="true" data-size="48dp" onclick="openBranchSheet()" class="flex items-center justify-between text-left min-h-[48px]">
+            <div class="flex items-center gap-2.5">${iconSvg('pin-fill', 20)}<div><div class="text-[18px] font-extrabold leading-tight flex items-center gap-1">${branch.short} ${iconSvg('caret', 12, 2.5)}</div><div class="text-[11px] opacity-75">${branch.tag}</div></div></div>
+            ${iconSvg('emblem', 28)}
+          </button>
+          <button type="button" data-touch="true" data-size="48dp" onclick="pulseSearch()" class="h-[48px] rounded-full px-4 flex items-center gap-2.5 text-left" style="background:${tPal.surfaceLowest}; border:1px solid ${tPal.outline}; color:${tPal.onSurfaceVariant};">${iconSvg('search', 18, 2)}<span class="text-[14px] font-medium truncate">${hint}</span></button>
+          <div class="grid grid-cols-3 gap-2 pt-1">
+            <div class="p-2 rounded-xl" style="background:${tPal.surfaceLowest};"><div class="text-xs font-extrabold" style="color:${tPal.openGreen};">Open</div><div class="text-[10.5px]" style="color:${tPal.onSurfaceVariant};">24 hours</div></div>
+            <div class="p-2 rounded-xl" style="background:${tPal.surfaceLowest};"><div class="text-xs font-extrabold tabular" style="color:${tPal.skyInk};">${branch.km}</div><div class="text-[10.5px]" style="color:${tPal.onSurfaceVariant};">From you</div></div>
+            <div class="p-2 rounded-xl" style="background:${tPal.surfaceLowest};"><div class="text-xs font-extrabold tabular" style="color:${tPal.skyInk};">${branch.fee}</div><div class="text-[10.5px] truncate" style="color:${tPal.onSurfaceVariant};">${branch.freeMin ? `Free > ${branch.freeMin}` : 'Delivery'}</div></div>
+          </div>
+        </div>`;
+    }
+
+    function renderFeed() {
+      const tPal = state.dark ? TOKENS.dark : TOKENS.light;
+      const screenEl = document.getElementById('flutter-screen');
+      screenEl.style.background = tPal.surface;
+      screenEl.style.color = tPal.onSurface;
+      screenEl.classList.toggle('touch-debug', state.touchDebug);
+      const visibleProducts = state.selectedCat === 'all' ? PRODUCTS : PRODUCTS.filter(p => p.cat === state.selectedCat);
+      const banners = [
+        { tag: 'FAMILY CARE', title: 'Care for the whole family.', sub: 'Everyday essentials stocked at your branch.' },
+        { tag: 'MORNING JOY', title: 'Little routines. Big love.', sub: 'Daily vitamins & supplements ready today.' },
+        { tag: 'BEDTIME COMFORT', title: 'Comfort in every moment.', sub: 'Trusted fever & cold relief, 24 hours.' }
+      ];
+      const b = banners[state.bannerIndex];
+
+      document.getElementById('feed-content').innerHTML = `
+        <div class="px-4 pt-3.5 space-y-5">
+          ${state.screen === 'shop' ? `
+          <div class="rounded-[18px] p-4 relative overflow-hidden" style="background:${state.dark ? '#151C33' : '#000B88'}; color:#FFFFFF;">
+            <div class="flex items-start justify-between gap-3">
+              <div class="space-y-1.5 max-w-[230px]">
+                <span class="inline-block text-[10px] font-extrabold tracking-widest uppercase" style="color:#F8BF0B;">${b.tag}</span>
+                <h2 class="text-[18px] font-extrabold leading-tight tracking-tight">${b.title}</h2>
+                <p class="text-[11.5px] text-blue-100 leading-snug">${b.sub}</p>
+              </div>
+              <div class="shrink-0 pt-1">${iconSvg('emblem', 42)}</div>
+            </div>
+            <div class="flex items-center justify-between mt-3 pt-2 border-t border-white/10">
+              <div class="flex items-center gap-1.5">
+                ${banners.map((_, idx) => `<button type="button" onclick="setBanner(${idx})" aria-label="Slide ${idx + 1}" class="h-1.5 rounded-full transition-all" style="width:${idx === state.bannerIndex ? 18 : 6}px; background:${idx === state.bannerIndex ? '#F8BF0B' : 'rgba(255,255,255,0.35)'};"></button>`).join('')}
+              </div>
+              <span class="text-[11px] font-bold" style="color:#F8BF0B;">Shop essentials →</span>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-2.5">
+              <h3 class="text-[15px] font-extrabold tracking-tight">Shop by category</h3>
+              ${state.selectedCat !== 'all' ? `<button type="button" onclick="selectCategory('all')" class="text-xs font-bold" style="color:${tPal.primary};">Reset</button>` : ''}
+            </div>
+            <div class="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
+              ${CATEGORIES.filter(c => c.slug !== 'all').map(c => {
+                const active = state.selectedCat === c.slug;
+                return `<button type="button" data-touch="true" data-size="68dp" onclick="selectCategory('${active ? 'all' : c.slug}')" class="w-[68px] shrink-0 flex flex-col items-center gap-1.5 text-center">
+                  <span class="w-[54px] h-[54px] rounded-full flex items-center justify-center transition-colors" style="background:${active ? tPal.skyFill : tPal.surfaceLowest}; color:${active ? tPal.skyInk : tPal.onSurface}; border:${active ? `2px solid ${tPal.skyInk}` : `1px solid ${tPal.hairline}`};">${iconSvg(c.icon, 22, 1.9)}</span>
+                  <span class="text-[11px] font-${active ? 'extrabold' : 'semibold'} leading-tight line-clamp-2">${c.name}</span>
+                </button>`;
+              }).join('')}
+            </div>
+          </div>` : ''}
+          <div>
+            <div class="flex items-baseline justify-between mb-2.5">
+              <h3 class="text-[16px] font-extrabold tracking-tight">${state.selectedCat === 'all' ? (state.screen === 'store' ? 'In stock at this branch' : 'Popular at your branch') : CATEGORIES.find(c => c.slug === state.selectedCat)?.name}</h3>
+              <span class="text-xs font-semibold tabular" style="color:${tPal.onSurfaceVariant};">${visibleProducts.length} items</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              ${visibleProducts.map(p => `
+                <div class="rounded-[12px] overflow-hidden flex flex-col justify-between" style="background:${tPal.surfaceLowest}; border:1px solid ${tPal.hairline};">
+                  <div>
+                    <div class="h-[104px] relative flex items-center justify-center" style="background:${state.dark ? tPal.surfaceHigh : p.tint};">
+                      <span style="color:${state.dark ? tPal.primary : '#000B88'}; opacity:0.85;">${iconSvg(p.rx ? 'rx' : 'pill', 34, 1.7)}</span>
+                      ${p.rank ? `<span class="absolute top-2 left-2 w-6 h-6 rounded-[6px] text-[11px] font-extrabold flex items-center justify-center tabular" style="background:#000B88; color:#FFFFFF;">${p.rank}</span>` : ''}
+                      ${p.disc ? `<span class="absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-[10px] font-extrabold tabular" style="background:${tPal.saleRed}; color:#FFFFFF;">${p.disc}</span>` : ''}
+                      ${p.rx ? `<span class="absolute bottom-1.5 left-2 px-1.5 py-0.5 rounded text-[10px] font-bold" style="background:#FFF4D1; color:#4A2C00;">Rx Required</span>` : ''}
+                    </div>
+                    <div class="p-2.5 pb-1.5">
+                      <div class="text-[12.5px] font-bold leading-snug line-clamp-2 min-h-[34px]">${p.name}</div>
+                      <div class="text-[10.5px] mt-1 tabular" style="color:${tPal.onSurfaceVariant};">${p.sold}</div>
+                    </div>
+                  </div>
+                  <div class="px-2.5 pb-2.5 pt-1 flex items-center justify-between gap-1">
+                    <div class="tabular">
+                      <div class="text-[14px] font-extrabold" style="color:${p.disc ? tPal.saleRed : tPal.onSurface};">${p.price}</div>
+                      ${p.old ? `<div class="text-[10.5px] line-through" style="color:${tPal.onSurfaceVariant};">${p.old}</div>` : '<div class="h-[14px]"></div>'}
+                    </div>
+                    <button type="button" data-touch="true" data-size="44dp" onclick="addToCart()" aria-label="Add ${p.name} to cart" class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style="background:${state.dark ? tPal.brandSlabFill : '#000B88'}; color:#FFFFFF;">${iconSvg('plus', 16, 2.4)}</button>
+                  </div>
+                </div>`).join('')}
+            </div>
+          </div>
+          <div class="rounded-[12px] p-3.5 flex items-center justify-between" style="background:${tPal.surfaceLowest}; border:1px solid ${tPal.hairline};">
+            <div><div class="text-xs font-extrabold">End of branch highlights</div><div class="text-[11px]" style="color:${tPal.onSurfaceVariant};">Notice how the pinned header stayed compact while browsing.</div></div>
+            <button type="button" onclick="jumpScroll(0)" class="px-3 py-2 rounded-lg text-xs font-bold shrink-0" style="background:${tPal.skyFill}; color:${tPal.skyInk};">Top ↑</button>
+          </div>
+        </div>`;
+      renderBottomNav();
+    }
+
+    function renderBottomNav() {
+      const tPal = state.dark ? TOKENS.dark : TOKENS.light;
+      const nav = document.getElementById('bottom-nav');
+      nav.style.background = tPal.surfaceLowest;
+      nav.style.borderColor = tPal.hairline;
+      const items = [
+        { label: 'Shop', active: true, badge: 0, path: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1V10Z"/>' },
+        { label: 'Orders', active: false, badge: 0, path: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>' },
+        { label: 'Messages', active: false, badge: 2, path: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/>' },
+        { label: 'Cart', active: false, badge: state.cartCount, path: '<path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/>' },
+        { label: 'Account', active: false, badge: 0, path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c1.8-3.6 5-5 8-5s6.2 1.4 8 5"/>' }
+      ];
+      nav.innerHTML = items.map(it => {
+        const col = it.active ? (state.dark ? tPal.primary : '#000B88') : tPal.onSurfaceVariant;
+        return `<button type="button" data-touch="true" data-size="56dp" onclick="jumpScroll(0)" class="flex flex-col items-center justify-center gap-0.5 py-1 relative">
+          <span class="w-12 h-7 rounded-full flex items-center justify-center relative" style="background:${it.active ? tPal.sunWash : 'transparent'}; color:${col};">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="${it.active ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${it.path}</svg>
+            ${it.badge > 0 ? `<span class="absolute -top-1 right-1 min-w-[16px] h-[16px] px-1 rounded-full text-[9.5px] font-extrabold flex items-center justify-center tabular" style="background:${state.dark ? tPal.primary : '#000B88'}; color:${state.dark ? '#00105C' : '#FFFFFF'};">${it.badge}</span>` : ''}
+          </span>
+          <span class="text-[11px] font-${it.active ? 'extrabold' : 'semibold'}" style="color:${col};">${it.label}</span>
+        </button>`;
+      }).join('');
+    }
+
+    function updateSpecsAndMetrics() {
+      const ext = getExtents();
+      const rawT = ext.max === ext.min ? 0 : clamp(state.scrollOffset / ext.range, 0, 1);
+      const t = state.reducedMotion ? (rawT >= 0.5 ? 1 : 0) : rawT;
+      const curH = Math.round(lerp(ext.max, ext.min, t));
+      const savedVsCurrent = 212 - ext.min;
+      const feedPct = Math.round(((672 - curH) / 672) * 100);
+
+      document.getElementById('collapse-pct').textContent = `${Math.round(t * 100)}%`;
+      document.getElementById('metric-height').textContent = `${curH} dp`;
+      document.getElementById('metric-min').textContent = `${ext.min} dp`;
+      document.getElementById('metric-saved').textContent = savedVsCurrent > 0 ? `+${savedVsCurrent} dp` : '0 dp';
+      document.getElementById('metric-viewport').textContent = `${feedPct}%`;
+      document.getElementById('state-pill').textContent = t === 0 ? `Expanded (t = 0.00)` : (t >= 0.99 ? `Pinned Compact (t = 1.00)` : `Morphing (t = ${t.toFixed(2)})`);
+
+      document.getElementById('variant-bar').style.display = state.screen === 'shop' ? 'grid' : 'none';
+      document.querySelectorAll('.variant-btn').forEach(btn => {
+        const active = btn.dataset.variant === state.variant;
+        btn.className = `variant-btn text-left p-2.5 rounded-lg border transition-all ${active ? 'border-blue-500 bg-[var(--secondary)]' : 'border-[var(--border)] bg-[var(--background)] opacity-85 hover:opacity-100'}`;
+      });
+      document.getElementById('screen-shop').className = `px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${state.screen === 'shop' ? 'bg-[var(--primary)] text-[var(--primary-foreground)]' : 'text-[var(--muted-foreground)]'}`;
+      document.getElementById('screen-store').className = `px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${state.screen === 'store' ? 'bg-[var(--primary)] text-[var(--primary-foreground)]' : 'text-[var(--muted-foreground)]'}`;
+
+      const specMap = {
+        a: {
+          title: 'Option A · Clean Surface Morph (Recommended)',
+          summary: 'Replaces the static 212dp sky slab and 3 stacked forecast cards with a calm daylight surface (#F4F8FC → #FFFFFF), a single unified fulfillment status pill, and an inline morphing branch chip (Capitol ▾) that docks smoothly beside the 46dp search bar.',
+          points: [
+            '• Eliminates visual card clutter: 3 tall forecast boxes become 1 quiet tabular status bar.',
+            '• Smooth horizontal dock: compact branch selector slides beside Search so both remain 1-tap reachable.',
+            '• Reclaims +152dp of vertical feed space compared to the current fixed header.'
+          ],
+          code: `SliverPersistentHeader(\n  pinned: true,\n  delegate: CleanShopHeaderDelegate(\n    maxContentExtent: 148,\n    minContentExtent: 60,\n    reducedMotion: MediaQuery.disableAnimationsOf(context),\n  ),\n)`
+        },
+        b: {
+          title: 'Option B · Sky Horizon + Pinned Category Rail',
+          summary: 'Keeps Everyday Pharmacy’s signature skySlab (#E4F2FD light / #13216E dark) while collapsing the branch block and pinning a compact horizontal Category Chip Rail right below Search.',
+          points: [
+            '• Preserves brand continuity with skySlab(scheme) in theme.dart.',
+            '• Category pills stay pinned at 96dp so shoppers can switch categories anywhere down the feed.',
+            '• Branch shortcut badge tucks neatly inside the trailing edge of Search when collapsed.'
+          ],
+          code: `SliverPersistentHeader(\n  pinned: true,\n  delegate: SkyCategoryHeaderDelegate(\n    slab: skySlab(theme.colorScheme),\n    maxContentExtent: 162,\n    minContentExtent: 96,\n  ),\n)`
+        },
+        c: {
+          title: 'Option C · Flat Brand Navy Slab → Minimal Split Pill',
+          summary: 'Follows the Flat Slab Rule (#000B88 solid navy, zero shadow, #F8BF0B sun-yellow pin & emblem) at scroll 0, then retracts into a crisp 56dp surface bar holding a unified Search | Branch split pill.',
+          points: [
+            '• Strongest brand authority at scroll 0, paired with maximum product viewport (83%) while scrolling.',
+            '• Unified split control keeps Search + Switch branch inside one clean stadium contour.',
+            '• Flips SystemUiOverlayStyle.light → .dark once the navy slab retracts.'
+          ],
+          code: `SliverPersistentHeader(\n  pinned: true,\n  delegate: NavySplitPillHeaderDelegate(\n    slab: brandSlab(theme.colorScheme),\n    maxContentExtent: 156,\n    minContentExtent: 56,\n  ),\n)`
+        },
+        before: {
+          title: 'Current Baseline · Fixed Column BranchHeader (Non-Collapsing)',
+          summary: 'How CatalogScreen behaves today: BranchHeader sits in a Column outside CustomScrollView, keeping 212dp permanently locked on screen.',
+          points: [
+            '• 0dp reclaimed on scroll — ~32% of small phone screens stays occupied by static chrome.',
+            '• 3 separate 52dp white forecast cards compete visually with Search.'
+          ],
+          code: `Column(children: [search, Expanded(child: CustomScrollView(...))])`
+        }
+      };
+      const storeSpec = {
+        title: 'Store Homepage (StoreScreen) · Smooth Hero → AppBar Morph',
+        summary: 'Unifies StoreScreen’s fixed AppBar and scrolling _StoreHero into a single SliverPersistentHeader so store identity smoothly fades into the pinned search bar above category tabs.',
+        points: [
+          '• Eliminates abrupt jump when _StoreHero scrolls off-screen.',
+          '• Keeps Back, compact store badge, Search, and category tabs pinned in 92dp.'
+        ],
+        code: `SliverPersistentHeader(\n  pinned: true,\n  delegate: StoreCollapsibleHeaderDelegate(maxContentExtent: 176, minContentExtent: 92),\n)`
+      };
+      const activeSpec = state.screen === 'store' ? storeSpec : specMap[state.variant];
+      document.getElementById('spec-title').textContent = activeSpec.title;
+      document.getElementById('spec-summary').textContent = activeSpec.summary;
+      document.getElementById('spec-points').innerHTML = activeSpec.points.map(pt => `<div class="text-[var(--foreground)] leading-relaxed">${pt}</div>`).join('');
+      document.getElementById('flutter-snippet').textContent = activeSpec.code;
+    }
+
+    function syncAll() { renderHeader(); updateSpecsAndMetrics(); }
+
+    const feedScrollEl = document.getElementById('feed-scroll');
+    feedScrollEl.addEventListener('scroll', () => {
+      state.scrollOffset = feedScrollEl.scrollTop;
+      document.getElementById('scroll-slider').value = Math.min(260, Math.round(state.scrollOffset));
+      syncAll();
+    }, { passive: true });
+
+    function onSliderInput(val) { const num = Number(val); state.scrollOffset = num; feedScrollEl.scrollTop = num; syncAll(); }
+    function jumpScroll(target) { feedScrollEl.scrollTo({ top: target, behavior: state.reducedMotion ? 'auto' : 'smooth' }); state.scrollOffset = target; document.getElementById('scroll-slider').value = Math.min(260, target); syncAll(); }
+    function setVariant(v) { state.variant = v; renderFeed(); syncAll(); }
+    function setScreen(s) { state.screen = s; jumpScroll(0); renderFeed(); syncAll(); }
+    function toggleAppTheme() {
+      state.dark = !state.dark;
+      document.getElementById('theme-label').textContent = state.dark ? 'App: Dark' : 'App: Light';
+      document.getElementById('theme-dot').className = `w-2.5 h-2.5 rounded-full inline-block ${state.dark ? 'bg-indigo-400' : 'bg-amber-400'}`;
+      renderFeed(); syncAll();
+    }
+    function toggleReducedMotion() { state.reducedMotion = !state.reducedMotion; document.getElementById('btn-motion').textContent = state.reducedMotion ? 'Motion: Reduced' : 'Motion: Standard'; if (state.reducedMotion) state.hintIndex = 0; syncAll(); }
+    function toggleTouchBounds() { state.touchDebug = !state.touchDebug; document.getElementById('btn-touch').textContent = state.touchDebug ? '48dp Targets: On' : '48dp Targets: Off'; renderFeed(); syncAll(); }
+    function selectCategory(slug) { state.selectedCat = slug; renderFeed(); syncAll(); }
+    function setBanner(idx) { state.bannerIndex = idx; renderFeed(); }
+    function addToCart() { state.cartCount += 1; renderBottomNav(); }
+    function pulseSearch() { state.hintIndex = (state.hintIndex + 1) % SEARCH_HINTS.length; syncAll(); }
+    function openBranchSheet() {
+      const tPal = state.dark ? TOKENS.dark : TOKENS.light;
+      const sheet = document.getElementById('branch-sheet');
+      const card = document.getElementById('branch-sheet-card');
+      card.style.background = tPal.surfaceLowest;
+      card.style.color = tPal.onSurface;
+      document.getElementById('branch-list').innerHTML = BRANCHES.map((b, idx) => {
+        const active = idx === state.branchIndex;
+        return `<button type="button" onclick="pickBranch(${idx})" class="w-full p-3 rounded-xl flex items-center justify-between text-left" style="background:${active ? tPal.skyFill : tPal.surface}; color:${active ? tPal.skyInk : tPal.onSurface}; border:1.5px solid ${active ? tPal.skyInk : tPal.hairline};">
+          <div><div class="text-xs font-extrabold">${b.full}</div><div class="text-[11px] opacity-80 mt-0.5 tabular">${b.status} · ${b.km} · ${b.fee} delivery</div></div>
+          <span class="text-xs font-bold">${active ? 'Active' : 'Select'}</span>
+        </button>`;
+      }).join('');
+      sheet.classList.remove('hidden');
+    }
+    function closeBranchSheet() { document.getElementById('branch-sheet').classList.add('hidden'); }
+    function pickBranch(idx) { state.branchIndex = idx; closeBranchSheet(); syncAll(); }
+
+    setInterval(() => { if (state.reducedMotion) return; state.hintIndex = (state.hintIndex + 1) % SEARCH_HINTS.length; renderHeader(); }, 3200);
+    renderFeed(); syncAll();
+  </script>
+</body>
+</html>

@@ -21,6 +21,7 @@ class JmMartApp extends StatelessWidget {
       return MaterialApp(
         title: 'Everyday Pharmacy',
         theme: buildAppTheme(),
+        darkTheme: buildAppTheme(brightness: Brightness.dark),
         debugShowCheckedModeBanner: false,
         home: const MissingConfigScreen(),
       );
@@ -31,6 +32,7 @@ class JmMartApp extends StatelessWidget {
       child: MaterialApp.router(
         title: 'Everyday Pharmacy',
         theme: buildAppTheme(),
+        darkTheme: buildAppTheme(brightness: Brightness.dark),
         debugShowCheckedModeBanner: false,
         routerConfig: appRouter,
         // Shared notices use MaterialApp's ScaffoldMessenger.

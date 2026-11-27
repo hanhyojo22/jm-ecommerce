@@ -1,0 +1,3535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Everyday Pharmacy — Snackbar, Toast & Notice Polish Mockup</title>
+  <style>
+    @font-face {
+      font-family: 'Manrope';
+      src: url('../mobile/assets/fonts/Manrope-Regular.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Manrope';
+      src: url('../mobile/assets/fonts/Manrope-Medium.ttf') format('truetype');
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Manrope';
+      src: url('../mobile/assets/fonts/Manrope-SemiBold.ttf') format('truetype');
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Manrope';
+      src: url('../mobile/assets/fonts/Manrope-Bold.ttf') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Manrope';
+      src: url('../mobile/assets/fonts/Manrope-ExtraBold.ttf') format('truetype');
+      font-weight: 800;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root {
+      --studio-bg: #0b1120;
+      --studio-surface: #111827;
+      --studio-surface-2: #182235;
+      --studio-border: #223049;
+      --studio-fg: #f8fafc;
+      --studio-muted: #94a3b8;
+      --studio-gold: #ffc82c;
+      --studio-cobalt: #0f3d9e;
+      --studio-teal: #0f766e;
+      --studio-mint: #5eead4;
+      --studio-red: #dc2626;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at 18% 0%, #16223d 0%, var(--studio-bg) 52%);
+      color: var(--studio-fg);
+      font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    button, input {
+      font-family: inherit;
+    }
+
+    .tabular {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .studio-shell {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 10px 18px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Compact Control Bar (fits comfortably above fold on 1100x800) */
+    .control-deck {
+      background: rgba(17, 24, 39, 0.96);
+      border: 1px solid var(--studio-border);
+      border-radius: 14px;
+      padding: 10px 14px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .deck-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px 10px;
+    }
+
+    .deck-brand-cluster {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .deck-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 5px;
+      background: rgba(255, 200, 44, 0.14);
+      color: var(--studio-gold);
+      border: 1px solid rgba(255, 200, 44, 0.28);
+    }
+
+    .deck-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+    }
+
+    .quick-toggles {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .segmented {
+      display: inline-flex;
+      padding: 2.5px;
+      border-radius: 9px;
+      background: var(--studio-bg);
+      border: 1px solid var(--studio-border);
+      gap: 2px;
+    }
+
+    .seg-btn {
+      border: 0;
+      background: transparent;
+      color: var(--studio-muted);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 9px;
+      border-radius: 6.5px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    .seg-btn.active {
+      background: #1e3a8a;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(30, 58, 138, 0.42);
+    }
+
+    .seg-btn.rec.active {
+      background: #0f3d9e;
+      box-shadow: inset 0 0 0 1px rgba(94, 234, 212, 0.45);
+    }
+
+    .seg-btn:hover:not(.active) {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .ctrl-pill {
+      border: 1px solid var(--studio-border);
+      background: var(--studio-bg);
+      color: #e2e8f0;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5.5px 9px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .ctrl-pill:hover {
+      background: var(--studio-surface-2);
+      border-color: #475569;
+    }
+
+    .ctrl-pill.active {
+      background: #1d4ed8;
+      border-color: #60a5fa;
+      color: #ffffff;
+    }
+
+    .ctrl-pill.gold-btn {
+      background: rgba(255, 200, 44, 0.14);
+      border-color: rgba(255, 200, 44, 0.36);
+      color: #ffd866;
+    }
+
+    .ctrl-pill.gold-btn:hover {
+      background: rgba(255, 200, 44, 0.24);
+    }
+
+    /* Scenario + Minimalist Tuning Row */
+    .scenario-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 8px;
+      padding-top: 7px;
+      border-top: 1px solid var(--studio-border);
+    }
+
+    .scenario-label {
+      font-size: 10.5px;
+      font-weight: 800;
+      color: var(--studio-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-right: 2px;
+    }
+
+    .sc-pills {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 5px;
+      flex: 1;
+    }
+
+    .sc-btn {
+      border: 1px solid var(--studio-border);
+      background: rgba(15, 23, 42, 0.85);
+      color: #cbd5e1;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4.5px 9px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .sc-btn:hover {
+      border-color: #64748b;
+      color: #ffffff;
+    }
+
+    .sc-btn.active {
+      background: var(--studio-gold);
+      border-color: var(--studio-gold);
+      color: #0d1f4f;
+      font-weight: 800;
+      box-shadow: 0 3px 10px rgba(255, 200, 44, 0.25);
+    }
+
+    .sc-dot {
+      width: 6.5px;
+      height: 6.5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .sc-btn.active .sc-dot {
+      box-shadow: 0 0 0 1.5px rgba(13, 31, 79, 0.35);
+    }
+
+    .tuning-inline {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding-left: 8px;
+      border-left: 1px solid var(--studio-border);
+    }
+
+    .tuning-inline.hidden {
+      display: none;
+    }
+
+    .tuning-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .tuning-lbl {
+      font-size: 10.5px;
+      font-weight: 800;
+      color: #93c5fd;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* Stage Workspace */
+    .stage-workspace {
+      display: grid;
+      grid-template-columns: auto minmax(340px, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .stage-workspace.compare-mode {
+      grid-template-columns: 1fr;
+    }
+
+    @media (max-width: 960px) {
+      .stage-workspace {
+        grid-template-columns: 1fr;
+        justify-items: center;
+      }
+    }
+
+    .phones-cluster {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .phone-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .phone-caption {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 366px;
+      padding: 0 4px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+
+    .compare-mode .phone-caption {
+      width: 344px;
+    }
+
+    .caption-chip {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2.5px 8px;
+      border-radius: 999px;
+      background: rgba(15, 61, 158, 0.48);
+      color: #bfdbfe;
+      border: 1px solid rgba(96, 165, 250, 0.36);
+    }
+
+    .caption-chip.before {
+      background: rgba(245, 158, 11, 0.16);
+      color: #fcd34d;
+      border-color: rgba(245, 158, 11, 0.34);
+    }
+
+    .caption-chip.rec {
+      background: rgba(16, 185, 129, 0.18);
+      color: #6ee7b7;
+      border-color: rgba(16, 185, 129, 0.36);
+    }
+
+    /* Compact Above-the-Fold Phone Bezel (374x604px -> entire phone + snackbar fit inside 800px viewport) */
+    .phone-bezel {
+      width: 374px;
+      height: 604px;
+      padding: 7px;
+      border-radius: 38px;
+      background: linear-gradient(145deg, #27344f 0%, #0f172a 100%);
+      box-shadow:
+        0 22px 52px rgba(0, 0, 0, 0.52),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .compare-mode .phone-bezel {
+      width: 352px;
+      height: 604px;
+      border-radius: 36px;
+    }
+
+    .phone-screen {
+      --p-primary: #0f3d9e;
+      --p-on-primary: #ffffff;
+      --p-primary-soft: #e8effd;
+      --p-gold: #ffc82c;
+      --p-gold-ink: #0d1f4f;
+      --p-teal: #0f766e;
+      --p-teal-soft: #e6f6f4;
+      --p-canvas: #f5f6f9;
+      --p-card: #ffffff;
+      --p-card-2: #edf1f8;
+      --p-card-border: #e4e8f2;
+      --p-card-shadow: 0 2px 10px rgba(15, 29, 64, 0.055);
+      --p-ink: #0d1f4f;
+      --p-muted: #52607a;
+      --p-error: #dc2626;
+      --p-error-deep: #991b1b;
+      --p-error-soft: #fef2f2;
+      --p-rx-bg: #eef2ff;
+      --p-rx-fg: #3730a3;
+      --p-deals-band: #ebf1ff;
+      --p-deals-border: #dbe6fe;
+      --p-nav-bg: #ffffff;
+      --p-nav-border: #e4e8f2;
+      --p-nav-pill: #e8effd;
+      --p-inverse: #2e3036;
+      --p-on-inverse: #f2f0f4;
+      --p-font-scale: 1;
+
+      width: 100%;
+      height: 100%;
+      border-radius: 36px;
+      background: var(--p-canvas);
+      color: var(--p-ink);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .phone-screen[data-theme="dark"] {
+      --p-primary: #7aa2ff;
+      --p-on-primary: #0b132b;
+      --p-primary-soft: #112254;
+      --p-gold: #ffc82c;
+      --p-gold-ink: #0d1f4f;
+      --p-teal: #5eead4;
+      --p-teal-soft: #123635;
+      --p-canvas: #0b1020;
+      --p-card: #131b30;
+      --p-card-2: #16203a;
+      --p-card-border: #243052;
+      --p-card-shadow: none;
+      --p-ink: #f1f5f9;
+      --p-muted: #9aa9c7;
+      --p-error: #f87171;
+      --p-error-deep: #7f1d1d;
+      --p-error-soft: #3b1519;
+      --p-rx-bg: #1e2859;
+      --p-rx-fg: #c7d2fe;
+      --p-deals-band: #111b36;
+      --p-deals-border: #223159;
+      --p-nav-bg: #131b30;
+      --p-nav-border: #243052;
+      --p-nav-pill: #1b2a52;
+      --p-inverse: #e3e2e6;
+      --p-on-inverse: #1b1b1f;
+    }
+
+    .phone-screen.scale-lg {
+      --p-font-scale: 1.32;
+    }
+
+    /* Top Status Bar */
+    .android-statusbar {
+      height: 23px;
+      padding: 4px 18px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10.5px;
+      font-weight: 700;
+      background: #0f3d9e;
+      color: #ffffff;
+      flex-shrink: 0;
+      z-index: 3;
+    }
+
+    .phone-screen[data-theme="dark"] .android-statusbar {
+      background: #112254;
+    }
+
+    .phone-screen[data-backdrop="cart"] .android-statusbar,
+    .phone-screen[data-backdrop="product"] .android-statusbar {
+      background: var(--p-canvas);
+      color: var(--p-ink);
+    }
+
+    /* App Shell Body */
+    .phone-app-body {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .screen-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      scrollbar-width: none;
+      position: relative;
+    }
+
+    .screen-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Home Header (Option A Exact Match, Compact for Above-Fold Framing) */
+    .home-header-band {
+      background: #0f3d9e;
+      color: #ffffff;
+      padding: 6px 12px 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      border-bottom-left-radius: 16px;
+      border-bottom-right-radius: 16px;
+    }
+
+    .phone-screen[data-theme="dark"] .home-header-band {
+      background: #112254;
+    }
+
+    .header-top-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .brand-emblem {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: #0b2d78;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .brand-sun {
+      position: absolute;
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #ffc82c;
+      top: 5px;
+      right: 5px;
+    }
+
+    .brand-cross {
+      width: 16px;
+      height: 16px;
+      color: #ffffff;
+      position: relative;
+      z-index: 1;
+    }
+
+    .header-wordmark {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.08;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .wm-top {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      color: #ffc82c;
+    }
+
+    .wm-main {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+    }
+
+    .branch-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+
+    .branch-open {
+      color: #6ee7b7;
+      font-weight: 800;
+    }
+
+    .search-field {
+      background: #ffffff;
+      border-radius: 999px;
+      height: 34px;
+      padding: 0 11px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: #52607a;
+      font-size: 11.5px;
+      font-weight: 600;
+    }
+
+    .phone-screen[data-theme="dark"] .search-field {
+      background: #131b30;
+      border: 1px solid #243052;
+      color: #9aa9c7;
+    }
+
+    .search-tag {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: #e8effd;
+      color: #0f3d9e;
+    }
+
+    .phone-screen[data-theme="dark"] .search-tag {
+      background: #1b2a52;
+      color: #7aa2ff;
+    }
+
+    /* Refresh Banner Slot */
+    .refresh-banner-slot {
+      flex-shrink: 0;
+    }
+
+    /* Home Content */
+    .home-pad {
+      padding: 8px 10px 72px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+    }
+
+    .qa-btn {
+      background: var(--p-card);
+      border: 1px solid var(--p-card-border);
+      border-radius: 10px;
+      padding: 6px 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      color: var(--p-ink);
+      font-size: 10px;
+      font-weight: 700;
+      box-shadow: var(--p-card-shadow);
+    }
+
+    .qa-ico {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      background: var(--p-primary-soft);
+      color: var(--p-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hero-split {
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0f3d9e;
+      color: #ffffff;
+      display: grid;
+      grid-template-columns: 1.18fr 0.9fr;
+      min-height: 94px;
+      position: relative;
+      box-shadow: 0 6px 16px rgba(15, 61, 158, 0.2);
+    }
+
+    .phone-screen[data-theme="dark"] .hero-split {
+      background: #112254;
+    }
+
+    .hero-copy {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 6px;
+      z-index: 2;
+    }
+
+    .hero-eyebrow {
+      align-self: flex-start;
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    .hero-title {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.18;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-cta {
+      align-self: flex-start;
+      background: #ffc82c;
+      color: #0d1f4f;
+      border: 0;
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 10.5px;
+      font-weight: 800;
+    }
+
+    .hero-photo {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .hero-photo::after {
+      content: '';
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 24px;
+      background: linear-gradient(90deg, #0f3d9e 0%, rgba(15, 61, 158, 0) 100%);
+    }
+
+    .phone-screen[data-theme="dark"] .hero-photo::after {
+      background: linear-gradient(90deg, #112254 0%, rgba(17, 34, 84, 0) 100%);
+    }
+
+    .section-hdr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .deals-pill {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #ffc82c;
+      color: #0d1f4f;
+    }
+
+    .deals-band {
+      background: var(--p-deals-band);
+      border: 1px solid var(--p-deals-border);
+      border-radius: 14px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .products-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    .prod-card {
+      background: var(--p-card);
+      border: 1px solid var(--p-card-border);
+      border-radius: 12px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: var(--p-card-shadow);
+    }
+
+    .prod-thumb {
+      height: 52px;
+      border-radius: 8px;
+      background: var(--p-card-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .prod-rx {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 5px;
+      border-radius: 5px;
+      background: var(--p-rx-bg);
+      color: var(--p-rx-fg);
+    }
+
+    .prod-off {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 5px;
+      border-radius: 5px;
+      background: #dc2626;
+      color: #ffffff;
+    }
+
+    .prod-name {
+      font-size: 11.5px;
+      font-weight: 700;
+      line-height: 1.25;
+      color: var(--p-ink);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 29px;
+    }
+
+    .prod-meta {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--p-teal);
+    }
+
+    .prod-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: auto;
+    }
+
+    .prod-price {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: var(--p-primary);
+    }
+
+    .prod-old {
+      font-size: 10px;
+      color: var(--p-muted);
+      text-decoration: line-through;
+      margin-left: 3px;
+      font-weight: 500;
+    }
+
+    /* Plain transparent 48x48dp cart/tote button per user preference */
+    .plain-tote-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      border: 0;
+      background: transparent;
+      color: var(--p-primary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: transform 0.12s ease;
+    }
+
+    .plain-tote-btn:hover {
+      background: rgba(15, 61, 158, 0.08);
+    }
+
+    .plain-tote-btn:active {
+      transform: scale(0.92);
+    }
+
+    .qty-pip {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      min-width: 14px;
+      height: 14px;
+      padding: 0 3px;
+      border-radius: 999px;
+      background: #ffc82c;
+      color: #0d1f4f;
+      font-size: 9px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Cart Backdrop */
+    .app-topbar {
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--p-canvas);
+      border-bottom: 1px solid var(--p-card-border);
+      flex-shrink: 0;
+    }
+
+    .app-topbar-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .cart-branch-chip {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: var(--p-primary-soft);
+      color: var(--p-primary);
+    }
+
+    .cart-list {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-bottom: 120px;
+    }
+
+    .cart-item {
+      background: var(--p-card);
+      border: 1px solid var(--p-card-border);
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      box-shadow: var(--p-card-shadow);
+    }
+
+    .cart-item-thumb {
+      width: 52px;
+      height: 52px;
+      border-radius: 9px;
+      background: var(--p-card-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--p-primary);
+    }
+
+    .cart-item-mid {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .cart-item-name {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--p-ink);
+    }
+
+    .cart-item-sub {
+      font-size: 11px;
+      color: var(--p-muted);
+    }
+
+    .cart-item-price {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--p-primary);
+    }
+
+    .stepper {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--p-card-2);
+      border: 1px solid var(--p-card-border);
+      border-radius: 9px;
+      padding: 3px 6px;
+      font-size: 11.5px;
+      font-weight: 800;
+    }
+
+    .trash-btn {
+      width: 32px;
+      height: 32px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--p-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .trash-btn:hover {
+      background: var(--p-error-soft);
+      color: var(--p-error);
+    }
+
+    /* Sticky Cart Footer / Sticky Product CTA */
+    .sticky-footer {
+      background: var(--p-nav-bg);
+      border-top: 1px solid var(--p-nav-border);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 4;
+    }
+
+    .sticky-total-lbl {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--p-muted);
+    }
+
+    .sticky-total-val {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--p-ink);
+    }
+
+    .primary-cta-btn {
+      border: 0;
+      background: var(--p-primary);
+      color: var(--p-on-primary);
+      font-size: 12.5px;
+      font-weight: 800;
+      padding: 11px 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    /* Product Detail Backdrop */
+    .pdp-wrap {
+      padding: 12px 14px 120px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .pdp-hero {
+      height: 126px;
+      border-radius: 14px;
+      background: var(--p-card);
+      border: 1px solid var(--p-card-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      color: var(--p-primary);
+    }
+
+    .pdp-otc {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--p-teal-soft);
+      color: var(--p-teal);
+    }
+
+    .pdp-card {
+      background: var(--p-card);
+      border: 1px solid var(--p-card-border);
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* Bottom Navigation Bar (compact 56px shell so toast & nav fit above fold) */
+    .bottom-nav {
+      height: 56px;
+      background: var(--p-nav-bg);
+      border-top: 1px solid var(--p-nav-border);
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      align-items: center;
+      padding: 3px 6px;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 5;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--p-muted);
+      position: relative;
+    }
+
+    .nav-item.active {
+      color: var(--p-primary);
+      font-weight: 800;
+    }
+
+    .nav-ico-wrap {
+      width: 44px;
+      height: 24px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .nav-item.active .nav-ico-wrap {
+      background: var(--p-nav-pill);
+    }
+
+    .nav-badge {
+      position: absolute;
+      top: -3px;
+      right: 4px;
+      min-width: 15px;
+      height: 15px;
+      padding: 0 4px;
+      border-radius: 999px;
+      background: #dc2626;
+      color: #ffffff;
+      font-size: 9px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Overlay Toast / Snackbar Anchoring inside Phone */
+    .phone-toast-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 12;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .toast-anchor-bottom {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: 66px; /* clears 56dp nav bar + 10dp */
+      pointer-events: auto;
+      display: flex;
+      justify-content: center;
+    }
+
+    /* When Cart sticky bar or PDP sticky CTA is visible, footer is ~54dp higher */
+    .phone-screen[data-backdrop="cart"] .toast-anchor-bottom.respects-inset {
+      bottom: 122px;
+    }
+
+    .phone-screen[data-backdrop="product"] .toast-anchor-bottom.respects-inset {
+      bottom: 66px; /* PDP has no bottom NavigationBar, only sticky CTA */
+    }
+
+    /* BUG DEMONSTRATION: Current NoticeKind.success ignores bottomInset on Cart/PDP */
+    .phone-screen[data-backdrop="cart"] .toast-anchor-bottom.ignores-inset {
+      bottom: 62px; /* collides right over Checkout footer! */
+    }
+
+    .phone-screen[data-backdrop="product"] .toast-anchor-bottom.ignores-inset {
+      bottom: 10px; /* collides right over Add to cart CTA! */
+    }
+
+    .toast-anchor-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      pointer-events: none;
+    }
+
+    .toast-anchor-center > * {
+      pointer-events: auto;
+    }
+
+    /* ============================================================
+       NOTICE COMPONENT STYLES ACROSS ALL 4 DIRECTIONS
+       ============================================================ */
+    .notice-anim {
+      animation: toastSlideUp 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .phone-screen.reduced-motion .notice-anim {
+      animation: none;
+    }
+
+    @keyframes toastSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes progressDrain {
+      from { width: 100%; }
+      to { width: 0%; }
+    }
+
+    /* --- 1. BEFORE (Current Flutter App) --- */
+    .before-success-snack {
+      width: 100%;
+      background: var(--p-inverse);
+      color: var(--p-on-inverse);
+      border-radius: 12px;
+      padding: 13px 16px;
+      font-size: calc(14px * var(--p-font-scale));
+      font-weight: 600;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+    }
+
+    .before-status-card {
+      width: 100%;
+      background: var(--p-card);
+      border: 1px solid var(--p-card-border);
+      border-radius: 14px;
+      padding: 12px 4px 12px 12px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .before-card-icon {
+      margin-top: 6px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .before-card-icon.error {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .phone-screen[data-theme="dark"] .before-card-icon.error {
+      background: #450a0a;
+      color: #f87171;
+    }
+
+    .before-card-icon.info {
+      background: var(--p-primary-soft);
+      color: var(--p-primary);
+    }
+
+    .before-card-body {
+      flex: 1;
+      min-width: 0;
+      padding: 10px 0 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+
+    .before-card-msg {
+      font-size: calc(15.5px * var(--p-font-scale));
+      font-weight: 600;
+      line-height: 1.38;
+      color: var(--p-ink);
+    }
+
+    .before-card-action {
+      border: 0;
+      background: transparent;
+      color: var(--p-primary);
+      font-size: calc(14px * var(--p-font-scale));
+      font-weight: 700;
+      min-height: 44px;
+      padding: 0 4px;
+      cursor: pointer;
+    }
+
+    .before-dismiss {
+      width: 44px;
+      height: 44px;
+      border: 0;
+      background: transparent;
+      color: var(--p-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .before-added-toast {
+      background: rgba(0, 0, 0, 0.78);
+      color: #ffffff;
+      border-radius: 14px;
+      padding: 20px 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.34);
+    }
+
+    .before-added-toast span {
+      font-size: calc(15px * var(--p-font-scale));
+      font-weight: 600;
+    }
+
+    .before-offline-bar {
+      background: var(--p-inverse);
+      color: var(--p-on-inverse);
+      padding: 9px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: calc(12.5px * var(--p-font-scale));
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .before-offline-bar.back {
+      background: #1b7f4b;
+      color: #ffffff;
+    }
+
+    .before-material-banner {
+      background: var(--p-card);
+      border-bottom: 1px solid var(--p-card-border);
+      padding: 12px 14px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .before-material-banner-text {
+      font-size: calc(13.5px * var(--p-font-scale));
+      color: var(--p-ink);
+    }
+
+    .before-material-banner-actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .before-material-banner-actions button {
+      border: 0;
+      background: transparent;
+      color: var(--p-primary);
+      font-weight: 700;
+      font-size: 13px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+
+    /* --- 2. OPTION 1: Minimal Ink Pill (Calm Matte Navy, Bare Glyph, Plain Text CTA) --- */
+    .opt1-capsule {
+      width: 100%;
+      border-radius: 14px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 44px;
+      padding: 0 10px 0 16px;
+      background: #0d1f4f;
+      color: #ffffff;
+      box-shadow: 0 8px 24px rgba(13, 31, 79, 0.16);
+      border: 1px solid transparent;
+      transition: transform 0.14s ease, opacity 0.16s ease;
+    }
+
+    .opt1-capsule.no-actions {
+      padding: 10px 18px;
+    }
+
+    .opt1-capsule.is-compact {
+      width: fit-content;
+      max-width: 100%;
+      border-radius: 22px;
+    }
+
+    .opt1-capsule.has-long-wrap {
+      width: 100%;
+      border-radius: 14px;
+      padding: 11px 10px 11px 14px;
+    }
+
+    .opt1-capsule.dark-mode {
+      background: #16213b;
+      border-color: rgba(148, 163, 184, 0.22);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42);
+    }
+
+    .opt1-capsule.error.err-crimson {
+      background: #991b1b;
+      border-color: transparent;
+      box-shadow: 0 8px 24px rgba(153, 27, 27, 0.24);
+    }
+
+    .opt1-capsule.dark-mode.error.err-crimson {
+      background: #7f1d1d;
+      border-color: rgba(248, 113, 113, 0.28);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.46);
+    }
+
+    /* Bare 18px Leading Glyph (Zero Halos or Circles) */
+    .opt1-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+    }
+
+    .opt1-capsule.has-long-wrap .opt1-icon {
+      align-self: flex-start;
+      margin-top: 2px;
+    }
+
+    .opt1-capsule.success .opt1-icon { color: #5eead4; }
+    .opt1-capsule.info .opt1-icon { color: #ffc82c; }
+    .opt1-capsule.error .opt1-icon { color: #f87171; }
+    .opt1-capsule.error.err-crimson .opt1-icon { color: #ffffff; }
+
+    .opt1-msg {
+      flex: 1;
+      min-width: 0;
+      font-size: calc(13.5px * var(--p-font-scale));
+      font-weight: 600;
+      letter-spacing: -0.005em;
+      line-height: 1.38;
+      color: #ffffff;
+    }
+
+    .opt1-capsule.is-compact .opt1-msg {
+      flex: 0 1 auto;
+    }
+
+    .opt1-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 0;
+      flex-shrink: 0;
+    }
+
+    /* Invisible 48x44dp Target with Plain Text Label */
+    .hit48-pill-btn {
+      min-width: 48px;
+      min-height: 44px;
+      padding: 0 4px;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .opt1-text-cta {
+      padding: 4px 6px;
+      font-size: calc(13px * var(--p-font-scale));
+      font-weight: 700;
+      letter-spacing: 0.005em;
+      white-space: nowrap;
+      transition: opacity 0.14s ease, transform 0.12s ease;
+    }
+
+    .hit48-pill-btn:hover .opt1-text-cta {
+      opacity: 0.82;
+    }
+
+    .hit48-pill-btn:active .opt1-text-cta {
+      transform: scale(0.96);
+    }
+
+    .opt1-capsule.success .opt1-text-cta,
+    .opt1-capsule.info .opt1-text-cta {
+      color: #ffc82c;
+    }
+
+    .opt1-capsule.error .opt1-text-cta {
+      color: #fca5a5;
+    }
+
+    .opt1-capsule.error.err-crimson .opt1-text-cta {
+      color: #ffffff;
+    }
+
+    .opt1-close {
+      width: 36px;
+      height: 40px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.48);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .opt1-close:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+    }
+
+    /* Option 2 & 3 Progress Hairline (hidden on Option 1 Minimal Ink Pill) */
+    .progress-track {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 2.5px;
+      background: rgba(255, 255, 255, 0.12);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 100%;
+    }
+
+    .is-auto .progress-fill {
+      animation: progressDrain 3s linear forwards;
+    }
+
+    .reduced-motion .progress-track {
+      display: none;
+    }
+
+    /* Responsive long-text stacking for scaled 1.4x text */
+    .phone-screen.scale-lg .opt1-capsule.has-long-wrap,
+    .specimen-card.scale-lg .opt1-capsule.has-long-wrap {
+      flex-wrap: wrap;
+      padding: 10px 10px 6px 14px;
+    }
+
+    .phone-screen.scale-lg .opt1-capsule.has-long-wrap .opt1-actions,
+    .specimen-card.scale-lg .opt1-capsule.has-long-wrap .opt1-actions {
+      margin-left: auto;
+    }
+
+    /* Minimalist Offline Bar & Refresh Strip */
+    .polished-offline-bar {
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: calc(12.5px * var(--p-font-scale));
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .polished-offline-bar.offline {
+      background: #0d1f4f;
+      color: #ffffff;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .polished-offline-bar.back {
+      background: #0f766e;
+      color: #ffffff;
+    }
+
+    .refresh-strip {
+      margin: 8px 12px 2px;
+      border-radius: 12px;
+      padding: 6px 8px 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: calc(12.5px * var(--p-font-scale));
+      font-weight: 600;
+    }
+
+    .refresh-strip.opt1 {
+      background: #eff3fa;
+      border: 1px solid #dce4f3;
+      color: #0d1f4f;
+    }
+
+    .phone-screen[data-theme="dark"] .refresh-strip.opt1,
+    .dark-mode.refresh-strip.opt1 {
+      background: #15203b;
+      border-color: #243256;
+      color: #e8effd;
+    }
+
+    .refresh-strip.opt2 {
+      background: var(--p-card);
+      border: 1px solid var(--p-card-border);
+      border-left: 4px solid var(--p-primary);
+      color: var(--p-ink);
+      box-shadow: var(--p-card-shadow);
+    }
+
+    .refresh-strip.opt3 {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+    }
+
+    .phone-screen[data-theme="dark"] .refresh-strip.opt3,
+    .dark-mode.refresh-strip.opt3 {
+      background: #3b1519;
+      border-color: #7f2932;
+      color: #fee2e2;
+    }
+
+    .refresh-strip-btn {
+      margin-left: auto;
+      border: 0;
+      border-radius: 999px;
+      padding: 6px 11px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .refresh-strip.opt1 .refresh-strip-btn {
+      background: transparent;
+      color: #0f3d9e;
+    }
+
+    .phone-screen[data-theme="dark"] .refresh-strip.opt1 .refresh-strip-btn,
+    .dark-mode.refresh-strip.opt1 .refresh-strip-btn {
+      background: transparent;
+      color: #ffc82c;
+    }
+
+    .refresh-strip.opt2 .refresh-strip-btn {
+      background: var(--p-primary-soft);
+      color: var(--p-primary);
+    }
+
+    .refresh-strip.opt3 .refresh-strip-btn {
+      background: #991b1b;
+      color: #ffffff;
+    }
+
+    /* --- 3. OPTION 2: Daylight Care Card --- */
+    .opt2-card {
+      width: 100%;
+      background: #ffffff;
+      color: #0d1f4f;
+      border-radius: 14px;
+      border: 1px solid #e4e8f2;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 54px;
+      padding: 8px 6px 8px 14px;
+      box-shadow: 0 10px 28px rgba(13, 31, 79, 0.14);
+    }
+
+    .opt2-card.dark-mode {
+      background: #16213c;
+      color: #f1f5f9;
+      border-color: #293963;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.46);
+    }
+
+    .opt2-accent {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+    }
+
+    .opt2-card.success .opt2-accent { background: #0f766e; }
+    .opt2-card.info .opt2-accent { background: #0f3d9e; }
+    .opt2-card.error .opt2-accent { background: #dc2626; }
+    .opt2-card.dark-mode.success .opt2-accent { background: #5eead4; }
+    .opt2-card.dark-mode.info .opt2-accent { background: #7aa2ff; }
+    .opt2-card.dark-mode.error .opt2-accent { background: #f87171; }
+
+    .opt2-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .opt2-card.success .opt2-badge { background: #e6f6f4; color: #0f766e; }
+    .opt2-card.info .opt2-badge { background: #e8effd; color: #0f3d9e; }
+    .opt2-card.error .opt2-badge { background: #fef2f2; color: #dc2626; }
+
+    .opt2-card.dark-mode.success .opt2-badge { background: #123635; color: #5eead4; }
+    .opt2-card.dark-mode.info .opt2-badge { background: #1b2a52; color: #7aa2ff; }
+    .opt2-card.dark-mode.error .opt2-badge { background: #3b1519; color: #f87171; }
+
+    .opt2-msg {
+      flex: 1;
+      min-width: 0;
+      font-size: calc(13.5px * var(--p-font-scale));
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .opt2-pill-inner {
+      padding: 6px 11px;
+      border-radius: 999px;
+      font-size: calc(12px * var(--p-font-scale));
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .opt2-card.info .opt2-pill-inner,
+    .opt2-card.success .opt2-pill-inner {
+      background: #e8effd;
+      color: #0f3d9e;
+    }
+
+    .opt2-card.error .opt2-pill-inner {
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
+    .opt2-card.dark-mode.info .opt2-pill-inner,
+    .opt2-card.dark-mode.success .opt2-pill-inner {
+      background: #233668;
+      color: #dbeafe;
+    }
+
+    .opt2-card.dark-mode.error .opt2-pill-inner {
+      background: #4b181f;
+      color: #fecaca;
+    }
+
+    .opt2-close {
+      width: 38px;
+      height: 38px;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: #52607a;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .opt2-card.dark-mode .opt2-close {
+      color: #9aa9c7;
+    }
+
+    .opt2-card.success .progress-fill { background: #0f766e; }
+    .opt2-card.info .progress-fill { background: #0f3d9e; }
+    .opt2-card.error .progress-fill { background: #dc2626; }
+    .opt2-card .progress-track { background: rgba(13, 31, 79, 0.06); }
+
+    /* --- 4. OPTION 3: Tinted Soft Pill --- */
+    .opt3-pill {
+      width: 100%;
+      border-radius: 16px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 52px;
+      padding: 8px 6px 8px 14px;
+      box-shadow: 0 8px 22px rgba(13, 31, 79, 0.12);
+    }
+
+    .opt3-pill.success {
+      background: #e6f6f4;
+      border: 1px solid #99f6e4;
+      color: #0f514c;
+    }
+
+    .opt3-pill.info {
+      background: #e8effd;
+      border: 1px solid #bfdbfe;
+      color: #0f3d9e;
+    }
+
+    .opt3-pill.error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+    }
+
+    .opt3-pill.dark-mode.success {
+      background: #0f2e2c;
+      border-color: #1e5651;
+      color: #ccfbf1;
+    }
+
+    .opt3-pill.dark-mode.info {
+      background: #142347;
+      border-color: #28427d;
+      color: #dbeafe;
+    }
+
+    .opt3-pill.dark-mode.error {
+      background: #3b1519;
+      border-color: #7f2932;
+      color: #fee2e2;
+    }
+
+    .opt3-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .opt3-msg {
+      flex: 1;
+      min-width: 0;
+      font-size: calc(13.5px * var(--p-font-scale));
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .opt3-pill-inner {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: calc(12px * var(--p-font-scale));
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .opt3-pill.info .opt3-pill-inner,
+    .opt3-pill.success .opt3-pill-inner {
+      background: #0f3d9e;
+      color: #ffffff;
+    }
+
+    .opt3-pill.error .opt3-pill-inner {
+      background: #991b1b;
+      color: #ffffff;
+    }
+
+    .opt3-pill.dark-mode.info .opt3-pill-inner {
+      background: #ffc82c;
+      color: #0d1f4f;
+    }
+
+    .opt3-pill.dark-mode.error .opt3-pill-inner {
+      background: #fecaca;
+      color: #7f1d1d;
+    }
+
+    .opt3-close {
+      width: 38px;
+      height: 38px;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: inherit;
+      opacity: 0.78;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Option 3 Centered Frosted Navy Pill for Added-to-Cart */
+    .opt3-added-center {
+      background: rgba(13, 31, 79, 0.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #ffffff;
+      border-radius: 999px;
+      padding: 11px 18px;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      box-shadow: 0 14px 32px rgba(13, 31, 79, 0.34);
+    }
+
+    .opt3-added-center span {
+      font-size: calc(14px * var(--p-font-scale));
+      font-weight: 700;
+    }
+
+    .opt3-pill .progress-track { background: rgba(13, 31, 79, 0.08); }
+    .opt3-pill.success .progress-fill { background: #0f766e; }
+    .opt3-pill.info .progress-fill { background: #0f3d9e; }
+    .opt3-pill.error .progress-fill { background: #dc2626; }
+
+    /* ============================================================
+       RIGHT RAIL: LIVE SPOTLIGHT + SPECS (ABOVE FOLD)
+       ============================================================ */
+    .analysis-rail {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .panel-card {
+      background: rgba(17, 24, 39, 0.88);
+      border: 1px solid var(--studio-border);
+      border-radius: 14px;
+      padding: 13px 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .spotlight-stage {
+      background: #e9edf6;
+      border-radius: 12px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .spotlight-stage.dark-stage {
+      background: #0b1020;
+      border: 1px solid #1e293b;
+    }
+
+    .spotlight-row {
+      width: 100%;
+      border: 1.5px solid transparent;
+      border-radius: 12px;
+      padding: 6px 8px;
+      background: rgba(255, 255, 255, 0.45);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.14s ease;
+    }
+
+    .spotlight-stage.dark-stage .spotlight-row {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .spotlight-row:hover {
+      border-color: rgba(15, 61, 158, 0.35);
+    }
+
+    .spotlight-stage.dark-stage .spotlight-row:hover {
+      border-color: rgba(122, 162, 255, 0.4);
+    }
+
+    .spotlight-row.active {
+      border-color: #f59e0b;
+      background: rgba(255, 200, 44, 0.16);
+      box-shadow: 0 2px 10px rgba(245, 158, 11, 0.14);
+    }
+
+    .spotlight-stage.dark-stage .spotlight-row.active {
+      border-color: #ffc82c;
+      background: rgba(255, 200, 44, 0.09);
+    }
+
+    .spotlight-tag {
+      width: 58px;
+      flex-shrink: 0;
+      font-size: 10.5px;
+      font-weight: 800;
+      color: #0d1f4f;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .spotlight-stage.dark-stage .spotlight-tag {
+      color: #cbd5e1;
+    }
+
+    .spotlight-subtag {
+      font-size: 9px;
+      font-weight: 700;
+      color: #52607a;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .spotlight-stage.dark-stage .spotlight-subtag {
+      color: #94a3b8;
+    }
+
+    .spotlight-item-wrap {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .spotlight-item-wrap > * {
+      max-width: 366px;
+    }
+
+    .spotlight-stage .spotlight-row .opt1-capsule,
+    .spotlight-stage .spotlight-row .opt2-card,
+    .spotlight-stage .spotlight-row .opt3-pill,
+    .spotlight-stage .spotlight-row .before-success-snack,
+    .spotlight-stage .spotlight-row .before-status-card {
+      pointer-events: none;
+    }
+
+    .lower-band {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    @media (max-width: 1080px) {
+      .lower-band {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel-hdr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 14.5px;
+      font-weight: 800;
+      color: #ffffff;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-sub {
+      margin: 0;
+      font-size: 12px;
+      color: var(--studio-muted);
+      line-height: 1.45;
+    }
+
+    .audit-list {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .audit-item {
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid var(--studio-border);
+      border-radius: 11px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .audit-item-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+
+    .sev-tag {
+      font-size: 9.5px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 999px;
+      text-transform: uppercase;
+    }
+
+    .sev-bug {
+      background: rgba(239, 68, 68, 0.16);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.34);
+    }
+
+    .sev-gap {
+      background: rgba(245, 158, 11, 0.16);
+      color: #fcd34d;
+      border: 1px solid rgba(245, 158, 11, 0.32);
+    }
+
+    .audit-item p {
+      margin: 0;
+      font-size: 11.5px;
+      line-height: 1.42;
+      color: var(--studio-muted);
+    }
+
+    .audit-file {
+      font-size: 10.5px;
+      color: #93c5fd;
+    }
+
+    /* Spec Pills */
+    .spec-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .spec-box {
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid var(--studio-border);
+      border-radius: 10px;
+      padding: 9px 11px;
+    }
+
+    .spec-k {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--studio-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .spec-v {
+      margin-top: 2px;
+      font-size: 12.5px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    /* ============================================================
+       FULL SPECIMEN MATRIX SECTION
+       ============================================================ */
+    .matrix-section {
+      background: rgba(17, 24, 39, 0.9);
+      border: 1px solid var(--studio-border);
+      border-radius: 16px;
+      padding: 15px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .matrix-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 12px;
+    }
+
+    .specimen-stage .refresh-strip {
+      margin: 0;
+      width: 100%;
+    }
+
+    .specimen-card {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid var(--studio-border);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      --p-font-scale: 1;
+    }
+
+    .specimen-card.light-stage {
+      --p-canvas: #f5f6f9;
+      --p-card: #ffffff;
+      --p-card-border: #e4e8f2;
+      --p-ink: #0d1f4f;
+      --p-muted: #52607a;
+      --p-primary: #0f3d9e;
+      --p-primary-soft: #e8effd;
+      --p-teal: #0f766e;
+      --p-error: #dc2626;
+      --p-inverse: #2e3036;
+      --p-on-inverse: #f2f0f4;
+    }
+
+    .specimen-card.dark-stage {
+      --p-canvas: #0b1020;
+      --p-card: #131b30;
+      --p-card-border: #243052;
+      --p-ink: #f1f5f9;
+      --p-muted: #9aa9c7;
+      --p-primary: #7aa2ff;
+      --p-primary-soft: #112254;
+      --p-teal: #5eead4;
+      --p-error: #f87171;
+      --p-inverse: #e3e2e6;
+      --p-on-inverse: #1b1b1f;
+    }
+
+    .specimen-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .specimen-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .specimen-badge {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: rgba(94, 234, 212, 0.14);
+      color: #5eead4;
+      border: 1px solid rgba(94, 234, 212, 0.28);
+    }
+
+    .specimen-stage {
+      background: #e9edf6;
+      border-radius: 12px;
+      padding: 13px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 82px;
+    }
+
+    .specimen-card.dark-stage .specimen-stage {
+      background: #0b1020;
+      border: 1px solid #1e293b;
+    }
+
+    .specimen-card.dark-stage .opt3-added-center {
+      background: rgba(17, 34, 84, 0.94);
+      border-color: rgba(122, 162, 255, 0.36);
+    }
+
+    .specimen-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+      font-size: 11px;
+      color: var(--studio-muted);
+    }
+
+    .specimen-meta strong {
+      color: #cbd5e1;
+    }
+  </style>
+</head>
+<body>
+  <div class="studio-shell">
+    <!-- COMPACT ABOVE-THE-FOLD CONTROL BAR -->
+    <header class="control-deck">
+      <div class="deck-row">
+        <div class="deck-brand-cluster">
+          <span class="deck-badge">Option A</span>
+          <h1 class="deck-title">Snackbar &amp; Notice Studio</h1>
+          <div class="segmented" role="tablist" aria-label="Snackbar directions">
+            <button class="seg-btn" data-dir="before" type="button">Before</button>
+            <button class="seg-btn rec active" data-dir="opt1" type="button">1 · Minimal Ink ★</button>
+            <button class="seg-btn" data-dir="opt2" type="button">2 · Daylight Card</button>
+            <button class="seg-btn" data-dir="opt3" type="button">3 · Soft Pill</button>
+            <button class="seg-btn" data-dir="compare" type="button">Compare 3</button>
+          </div>
+        </div>
+
+        <div class="quick-toggles">
+          <div class="segmented" role="group" aria-label="Theme brightness">
+            <button class="seg-btn active" data-theme-btn="light" type="button">Light</button>
+            <button class="seg-btn" data-theme-btn="dark" type="button">Dark</button>
+          </div>
+
+          <div class="segmented" role="group" aria-label="Backdrop screen">
+            <button class="seg-btn active" data-backdrop-btn="home" type="button">Shop</button>
+            <button class="seg-btn" data-backdrop-btn="cart" type="button">Cart</button>
+            <button class="seg-btn" data-backdrop-btn="product" type="button">PDP</button>
+          </div>
+
+          <button class="ctrl-pill active" id="btnPinToggle" type="button">Pinned</button>
+          <button class="ctrl-pill gold-btn" id="btnReplay" type="button">
+            <span data-icon="arrow-clockwise"></span>
+            3s
+          </button>
+          <button class="ctrl-pill" id="btnScaleToggle" type="button">1.0x</button>
+          <button class="ctrl-pill" id="btnMotionToggle" type="button">Motion</button>
+        </div>
+      </div>
+
+      <!-- Scenario Trigger Row + Inline Minimalist Tuning -->
+      <div class="scenario-bar">
+        <span class="scenario-label">Trigger:</span>
+        <div class="sc-pills">
+          <button class="sc-btn active" data-scenario="added" type="button"><span class="sc-dot" style="background:#5eead4;"></span>Added to cart</button>
+          <button class="sc-btn" data-scenario="success" type="button"><span class="sc-dot" style="background:#10b981;"></span>Success</button>
+          <button class="sc-btn" data-scenario="undo" type="button"><span class="sc-dot" style="background:#ffc82c;"></span>Undo</button>
+          <button class="sc-btn" data-scenario="info" type="button"><span class="sc-dot" style="background:#60a5fa;"></span>Info</button>
+          <button class="sc-btn" data-scenario="error" type="button"><span class="sc-dot" style="background:#ef4444;"></span>Error</button>
+          <button class="sc-btn" data-scenario="long" type="button"><span class="sc-dot" style="background:#f97316;"></span>Long</button>
+          <button class="sc-btn" data-scenario="offline" type="button"><span class="sc-dot" style="background:#94a3b8;"></span>Offline</button>
+          <button class="sc-btn" data-scenario="online" type="button"><span class="sc-dot" style="background:#14b8a6;"></span>Online</button>
+          <button class="sc-btn" data-scenario="refresh" type="button"><span class="sc-dot" style="background:#3b82f6;"></span>Refresh</button>
+        </div>
+
+        <div class="tuning-inline" id="opt1TuningBar">
+          <div class="tuning-group">
+            <span class="tuning-lbl">Err:</span>
+            <div class="segmented" role="group" aria-label="Option 1 error surface style">
+              <button class="seg-btn active" data-error-surface="calm" type="button">Calm Ink</button>
+              <button class="seg-btn" data-error-surface="crimson" type="button">Crimson</button>
+            </div>
+          </div>
+          <div class="tuning-group">
+            <span class="tuning-lbl">Size:</span>
+            <div class="segmented" role="group" aria-label="Option 1 width style">
+              <button class="seg-btn active" data-autopill="true" type="button">Pill</button>
+              <button class="seg-btn" data-autopill="false" type="button">Full</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN ABOVE-THE-FOLD WORKSPACE: PHONE + LIVE 5-SNACKBAR SPOTLIGHT -->
+    <main class="stage-workspace" id="stageWorkspace">
+      <div class="phones-cluster" id="phonesCluster"></div>
+
+      <!-- Right Rail (visible immediately beside the phone above the fold) -->
+      <aside class="analysis-rail" id="analysisRail">
+        <section class="panel-card" id="spotlightCard">
+          <div class="panel-hdr">
+            <h2 class="panel-title">All Snackbars Live — Tap Any Row to Preview</h2>
+            <span class="specimen-badge" id="spotlightBadge">Option 1 · Minimal Ink</span>
+          </div>
+          <div class="spotlight-stage" id="spotlightStage"></div>
+        </section>
+
+        <section class="panel-card">
+          <div class="panel-hdr">
+            <h2 class="panel-title">Selected Direction Specs</h2>
+            <span class="specimen-badge" id="specBadge">Option 1 · Minimal Ink Pill</span>
+          </div>
+          <p class="panel-sub" id="specSummary">
+            Zero-chrome matte Everyday Ink (#0D1F4F light · #16213B dark) with bare 18px Phosphor glyphs, plain high-contrast text actions, and compact hug-content pill proportions.
+          </p>
+          <div class="spec-grid" id="specGrid"></div>
+        </section>
+      </aside>
+    </main>
+
+    <!-- LOWER BAND: EDGE CASES / BARS + CODEBASE AUDIT -->
+    <div class="lower-band">
+      <section class="matrix-section" aria-label="Edge cases and system bars">
+        <div class="panel-hdr">
+          <div>
+            <h2 class="panel-title"><span id="matrixSectionPrefix">Edge Cases &amp; System Bars</span> — <span id="matrixModeTitle">Option 1 · Minimal Ink Pill</span></h2>
+            <p class="panel-sub" id="matrixSubtitle">Long multi-line wrapping, Offline / Back online dock, and Refresh failure strip.</p>
+          </div>
+          <span class="caption-chip rec" id="matrixHint">Tap any product tote icon in the phone to trigger "Added to cart"</span>
+        </div>
+        <div class="matrix-grid" id="matrixGrid"></div>
+      </section>
+
+      <section class="panel-card">
+        <div class="panel-hdr">
+          <h2 class="panel-title">Codebase Audit: 5 Current Issues</h2>
+          <span class="sev-tag sev-bug">Found in mobile/lib</span>
+        </div>
+        <ul class="audit-list">
+          <li class="audit-item">
+            <div class="audit-item-head">
+              <span>1. Success snackbar ignores <span class="mono">bottomInset</span></span>
+              <span class="sev-tag sev-bug">Layout Bug</span>
+            </div>
+            <p>
+              <span class="mono">AppNotice.show</span> passes <span class="mono">margin: bottomInset</span> only to the error/info branch; <span class="mono">NoticeKind.success</span> drops it, overlapping chat composers and sticky checkout footers.
+            </p>
+            <span class="audit-file mono">mobile/lib/src/widgets/status_notice.dart:37-49 · theme.dart:267-278</span>
+          </li>
+          <li class="audit-item">
+            <div class="audit-item-head">
+              <span>2. Tall 2-row <span class="mono">StatusNoticeCard</span> + stale green</span>
+              <span class="sev-tag sev-gap">Visual Whiplash</span>
+            </div>
+            <p>
+              Action buttons stack below the text in a full second 48dp row (~108dp tall card), <span class="mono">36×36</span> icon circle uses <span class="mono">top: 6</span> offset, and success tint uses old <span class="mono">#16733D</span> instead of Care Teal <span class="mono">#0F766E</span>.
+            </p>
+            <span class="audit-file mono">mobile/lib/src/widgets/status_notice.dart:129-221</span>
+          </li>
+          <li class="audit-item">
+            <div class="audit-item-head">
+              <span>3. Black center square <span class="mono">_AddedToast</span></span>
+              <span class="sev-tag sev-gap">Mismatch</span>
+            </div>
+            <p>
+              Covers center product photos/prices with raw <span class="mono">black@78%</span> and Material <span class="mono">Icons.check_circle_rounded</span> instead of Phosphor icons and Option A brand ink. No quick <span class="mono">View cart</span> shortcut.
+            </p>
+            <span class="audit-file mono">mobile/lib/src/widgets/fly_to_cart.dart:137-232</span>
+          </li>
+          <li class="audit-item">
+            <div class="audit-item-head">
+              <span>4. Generic <span class="mono">OfflineBar</span> colors &amp; hard snap</span>
+              <span class="sev-tag sev-gap">Palette Drift</span>
+            </div>
+            <p>
+              Uses seeded M3 <span class="mono">inverseSurface</span> grey offline and hardcoded <span class="mono">#1B7F4B</span> green online instead of Everyday Navy <span class="mono">#0D1F4F</span> + Care Teal <span class="mono">#0F766E</span>, with no smooth entry transition.
+            </p>
+            <span class="audit-file mono">mobile/lib/src/widgets/offline_bar.dart:69-122</span>
+          </li>
+          <li class="audit-item">
+            <div class="audit-item-head">
+              <span>5. Unstyled stock <span class="mono">MaterialBanner</span></span>
+              <span class="sev-tag sev-gap">Heavy Chrome</span>
+            </div>
+            <p>
+              Refresh failures on Shop &amp; Order Detail render raw Material banners lacking status icons, compact spacing, or Option A styling.
+            </p>
+            <span class="audit-file mono">catalog_screen.dart:519 · order_detail_screen.dart:153</span>
+          </li>
+        </ul>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================
+    // INLINE PHOSPHOR-STYLE & MATERIAL SVGS (Zero external deps)
+    // =========================================================
+    const ICONS = {
+      'check-circle': (sz = 20) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><circle cx="128" cy="128" r="96"/><polyline points="88 136 112 160 168 104"/></svg>`,
+      'check-circle-fill': (sz = 20) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>`,
+      'warning-circle': (sz = 20) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><circle cx="128" cy="128" r="96"/><line x1="128" y1="80" x2="128" y2="136"/><circle cx="128" cy="172" r="10" fill="currentColor" stroke="none"/></svg>`,
+      'info': (sz = 20) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><circle cx="128" cy="128" r="96"/><polyline points="120 120 128 120 128 176 136 176"/><circle cx="126" cy="84" r="10" fill="currentColor" stroke="none"/></svg>`,
+      'undo': (sz = 20) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><polyline points="79.8 99.7 31.8 99.7 31.8 51.7"/><path d="M65.8,190.2a88,88,0,1,0,0-124.4l-34,33.9"/></svg>`,
+      'x': (sz = 18) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"><line x1="200" y1="56" x2="56" y2="200"/><line x1="200" y1="200" x2="56" y2="56"/></svg>`,
+      'wifi-slash': (sz = 18) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><line x1="48" y1="40" x2="208" y2="216"/><path d="M163,61.2A148,148,0,0,1,232,96"/><path d="M24,96a147.8,147.8,0,0,1,71.2-38.4"/><path d="M128,136a68,68,0,0,1,39.4,12.5"/><path d="M88.6,148.5A68.1,68.1,0,0,1,128,136"/><circle cx="128" cy="200" r="10" fill="currentColor" stroke="none"/></svg>`,
+      'wifi-high': (sz = 18) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M92.9,166.1a50.7,50.7,0,0,1,70.2,0"/><path d="M59,132.1a98.8,98.8,0,0,1,138,0"/><path d="M25.1,98.2a146.9,146.9,0,0,1,205.8,0"/><circle cx="128" cy="200" r="10" fill="currentColor" stroke="none"/></svg>`,
+      'tote': (sz = 22) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"><rect x="32" y="72" width="192" height="144" rx="12"/><path d="M88,72V64a40,40,0,0,1,80,0v8"/></svg>`,
+      'house': (sz = 20) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="currentColor"><path d="M219.3,108.4l-80-75.5a16,16,0,0,0-22.6,0l-80,75.5A15.9,15.9,0,0,0,32,120v96a16,16,0,0,0,16,16H96a16,16,0,0,0,16-16V168h32v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V120A15.9,15.9,0,0,0,219.3,108.4Z"/></svg>`,
+      'receipt': (sz = 20) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"><path d="M40,208V56a8,8,0,0,1,8-8H208a8,8,0,0,1,8,8V208l-29.3-16L157.3,208,128,192,98.7,208,69.3,192Z"/><line x1="80" y1="104" x2="176" y2="104"/><line x1="80" y1="140" x2="176" y2="140"/></svg>`,
+      'chat': (sz = 20) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"><path d="M45.4,177A95.9,95.9,0,1,1,79,210.6L45.8,220a7.9,7.9,0,0,1-9.8-9.8Z"/></svg>`,
+      'user': (sz = 20) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"><circle cx="128" cy="96" r="52"/><path d="M40,216a104,104,0,0,1,176,0"/></svg>`,
+      'search': (sz = 16) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round"><circle cx="116" cy="116" r="80"/><line x1="173" y1="173" x2="224" y2="224"/></svg>`,
+      'map-pin': (sz = 13) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="currentColor"><path d="M128,16a88.1,88.1,0,0,0-88,88c0,75.3,80,132.2,83.4,134.6a8.2,8.2,0,0,0,9.2,0C136,236.2,216,179.3,216,104A88.1,88.1,0,0,0,128,16Zm0,112a24,24,0,1,1,24-24A24,24,0,0,1,128,128Z"/></svg>`,
+      'arrow-clockwise': (sz = 14) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"><polyline points="176.2 99.7 224.2 99.7 224.2 51.7"/><path d="M190.2,65.8A88,88,0,1,0,212,152"/></svg>`,
+      'trash': (sz = 16) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"><line x1="40" y1="64" x2="216" y2="64"/><path d="M88,64V40a16,16,0,0,1,16-16h48a16,16,0,0,1,16,16V64"/><path d="M64,64V208a16,16,0,0,0,16,16h96a16,16,0,0,0,16-16V64"/></svg>`,
+      'pill': (sz = 28) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"><rect x="34" y="84" width="188" height="88" rx="44" transform="rotate(-45 128 128)"/><line x1="96" y1="96" x2="160" y2="160"/></svg>`,
+      'cross': (sz = 16) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="currentColor"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6V3z"/></svg>`,
+      'tag': (sz = 14) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M40,128V48a8,8,0,0,1,8-8h80l88,88-80,80Z"/><circle cx="88" cy="88" r="10" fill="currentColor" stroke="none"/></svg>`,
+      'heart': (sz = 14) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M128,216S28,160,28,92A52,52,0,0,1,128,72h0A52,52,0,0,1,228,92C228,160,128,216,128,216Z"/></svg>`,
+      'caret-right': (sz = 11) => `<svg width="${sz}" height="${sz}" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"><polyline points="96 48 176 128 96 208"/></svg>`
+    };
+
+    // Mount static icons
+    document.querySelectorAll('[data-icon]').forEach((el) => {
+      const name = el.getAttribute('data-icon');
+      if (ICONS[name]) el.innerHTML = ICONS[name](15);
+    });
+
+    // =========================================================
+    // STATE & SCENARIO DEFINITIONS
+    // =========================================================
+    const state = {
+      dir: 'opt1',          // 'before' | 'opt1' | 'opt2' | 'opt3' | 'compare'
+      theme: 'light',       // 'light' | 'dark'
+      backdrop: 'home',     // 'home' | 'cart' | 'product'
+      scenario: 'added',    // 'added' | 'success' | 'undo' | 'info' | 'error' | 'long' | 'offline' | 'online' | 'refresh'
+      pinned: true,         // true (pinned) | false (auto-dismiss 3s)
+      largeText: false,
+      reducedMotion: false,
+      errorSurface: 'calm', // 'calm' (single #0D1F4F ink + coral) | 'crimson' (#991B1B matte red)
+      autoPill: true,       // true (hug content pill on short single-line notices) | false (full-width)
+      cartCount: 3,
+      animSeed: 1,
+      visibleToast: true,
+    };
+
+    let autoDismissTimer = null;
+
+    const SCENARIOS = {
+      added: {
+        id: 'added',
+        kind: 'added',
+        message: 'Added to cart',
+        subtext: 'Biogesic 500mg Tablet',
+        actionLabel: 'View cart',
+      },
+      success: {
+        id: 'success',
+        kind: 'success',
+        message: 'Profile saved.',
+        actionLabel: null,
+      },
+      undo: {
+        id: 'undo',
+        kind: 'info',
+        iconKey: 'undo',
+        message: 'Removed Biogesic 500mg Tablet',
+        actionLabel: 'Undo',
+      },
+      info: {
+        id: 'info',
+        kind: 'info',
+        iconKey: 'info',
+        message: 'Only 2 left at this branch.',
+        actionLabel: null,
+      },
+      error: {
+        id: 'error',
+        kind: 'error',
+        message: 'Could not send your message.',
+        actionLabel: 'Retry',
+      },
+      long: {
+        id: 'long',
+        kind: 'error',
+        long: true,
+        message: "Couldn't upload prescription photo.",
+        actionLabel: 'Retry',
+      },
+      offline: {
+        id: 'offline',
+        kind: 'offline',
+        message: "No internet connection. We'll reload when you're back.",
+      },
+      online: {
+        id: 'online',
+        kind: 'online',
+        message: 'Back online',
+      },
+      refresh: {
+        id: 'refresh',
+        kind: 'refresh',
+        message: 'Could not refresh products.',
+        actionLabel: 'Try again',
+      },
+    };
+
+    const DIR_SPECS = {
+      before: {
+        badge: 'Current Baseline',
+        summary: '4 mismatched widgets across Flutter: plain grey M3 snackbar (ignores bottomInset), tall 2-row StatusNoticeCard, centered black square, and generic green/grey OfflineBar.',
+        specs: [
+          { k: 'Success Height', v: '46dp · No icon / no inset' },
+          { k: 'Info/Error Height', v: '~96–112dp (stacked CTA)' },
+          { k: 'Add-to-Cart', v: 'Center black@78% box' },
+          { k: 'Bottom Clearance', v: 'Broken on NoticeKind.success' },
+        ],
+      },
+      opt1: {
+        badge: 'Option 1 · Minimal Ink Pill',
+        summary: 'Zero-chrome matte Everyday Ink (#0D1F4F light · #16213B dark) with bare 18px Phosphor glyphs, plain high-contrast text actions, and compact hug-content pill proportions.',
+        specs: [
+          { k: 'Pill Height', v: '44–48dp ultra-slim profile' },
+          { k: 'Text Contrast', v: '16.1:1 ink · 10.2:1 Gold · 8.9:1 Coral' },
+          { k: 'Chrome Removed', v: 'No halos, dividers, pill boxes, or bars' },
+          { k: 'Touch Targets', v: 'Invisible 48×44dp CTA · Quiet 36dp X' },
+        ],
+      },
+      opt2: {
+        badge: 'Option 2 · Daylight Care',
+        summary: 'Elevated crisp white card (#FFFFFF / #16213C dark) with a 4px semantic left accent stripe, compact 28dp soft circle glyph, and single-row tinted action pill.',
+        specs: [
+          { k: 'Card Height', v: '54dp compact + 4px left bar' },
+          { k: 'Text Contrast', v: '16.1:1 Ink · 11.4:1 Dark' },
+          { k: 'Action Hit Target', v: '48×48dp inline tinted pill' },
+          { k: 'Add-to-Cart', v: 'White bottom pill + View cart' },
+        ],
+      },
+      opt3: {
+        badge: 'Option 3 · Tinted Soft Pill',
+        summary: 'Soft tonal pastel containers (Care Teal Mint, Cobalt Ice, Alert Rose) with crisp 1px border, high-contrast ink, plus a sleek centered frosted-navy Add-to-Cart pill.',
+        specs: [
+          { k: 'Pill Style', v: 'Pastel surface + 1px tint edge' },
+          { k: 'Text Contrast', v: '8.3:1 Mint · 8.6:1 Cobalt · 7.7:1 Rose' },
+          { k: 'Action Hit Target', v: '48×48dp solid Cobalt/Crimson' },
+          { k: 'Add-to-Cart', v: 'Centered frosted-navy 999px pill' },
+        ],
+      },
+    };
+
+    // =========================================================
+    // NOTICE RENDERERS (SHARED BY PHONES & SPECIMEN MATRIX)
+    // =========================================================
+    function renderFloatingNotice(dir, sc, isDark, isAuto, isLg) {
+      if (!sc || sc.kind === 'offline' || sc.kind === 'online' || sc.kind === 'refresh') {
+        return '';
+      }
+
+      const darkCls = isDark ? 'dark-mode' : '';
+      const autoCls = isAuto ? 'is-auto' : '';
+      const longWrapCls = sc.long || isLg ? 'has-long-wrap' : '';
+      const errCls = state.errorSurface === 'crimson' ? 'err-crimson' : '';
+      const canCompact = state.autoPill && !sc.long && !isLg && (sc.kind === 'added' || sc.kind === 'success' || sc.id === 'info');
+      const compactCls = canCompact ? 'is-compact' : '';
+      const animCls = 'notice-anim';
+
+      // Added to Cart Toast
+      if (sc.kind === 'added') {
+        if (dir === 'before') {
+          return `
+            <div class="before-added-toast ${animCls}">
+              ${ICONS['check-circle-fill'](40)}
+              <span>Added to cart</span>
+            </div>
+          `;
+        }
+        if (dir === 'opt3') {
+          return `
+            <div class="opt3-added-center ${animCls}">
+              <span style="color:#5eead4; display:inline-flex;">${ICONS['check-circle'](20)}</span>
+              <span>Added to cart</span>
+            </div>
+          `;
+        }
+        if (dir === 'opt2') {
+          return `
+            <div class="opt2-card success ${darkCls} ${autoCls} ${animCls}" style="width:100%;">
+              <span class="opt2-accent"></span>
+              <span class="opt2-badge">${ICONS['check-circle'](18)}</span>
+              <span class="opt2-msg">Added to cart <span style="opacity:.7;font-weight:500;">· ${sc.subtext}</span></span>
+              <div class="opt1-actions">
+                <button class="hit48-pill-btn" data-action="view-cart" type="button" aria-label="View cart">
+                  <span class="opt2-pill-inner">${sc.actionLabel}</span>
+                </button>
+              </div>
+              <div class="progress-track"><div class="progress-fill"></div></div>
+            </div>
+          `;
+        }
+        // opt1: minimalist bare glyph + single calm line + plain Sun Gold text action
+        return `
+          <div class="opt1-capsule success ${darkCls} ${autoCls} ${compactCls} ${longWrapCls} ${animCls}">
+            <span class="opt1-icon">${ICONS['check-circle'](18)}</span>
+            <div class="opt1-msg">Added to cart</div>
+            <div class="opt1-actions">
+              <button class="hit48-pill-btn" data-action="view-cart" type="button" aria-label="View cart">
+                <span class="opt1-text-cta">${sc.actionLabel}</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      // BEFORE: StatusNoticeCard vs raw SnackBar
+      if (dir === 'before') {
+        if (sc.kind === 'success') {
+          return `<div class="before-success-snack ${animCls}">${sc.message}</div>`;
+        }
+        const iconName = sc.kind === 'error' ? 'warning-circle' : 'info';
+        return `
+          <div class="before-status-card ${animCls}">
+            <div class="before-card-icon ${sc.kind}">${ICONS[iconName](22)}</div>
+            <div class="before-card-body">
+              <div class="before-card-msg">${sc.message}</div>
+              ${sc.actionLabel ? `<button class="before-card-action" data-action="trigger" type="button">${sc.actionLabel}</button>` : ''}
+            </div>
+            <button class="before-dismiss" data-action="dismiss" type="button" aria-label="Dismiss message">
+              ${ICONS['x'](18)}
+            </button>
+          </div>
+        `;
+      }
+
+      const kindCls = sc.kind; // 'success' | 'info' | 'error'
+      const iconKey = sc.iconKey || (sc.kind === 'success' ? 'check-circle' : sc.kind === 'error' ? 'warning-circle' : 'info');
+
+      if (dir === 'opt1') {
+        const showClose = kindCls !== 'success';
+        const noActionsCls = !sc.actionLabel && !showClose ? 'no-actions' : '';
+        return `
+          <div class="opt1-capsule ${kindCls} ${errCls} ${darkCls} ${autoCls} ${noActionsCls} ${compactCls} ${longWrapCls} ${animCls}">
+            <span class="opt1-icon">${ICONS[iconKey](18)}</span>
+            <div class="opt1-msg">${sc.message}</div>
+            ${sc.actionLabel || showClose ? `
+              <div class="opt1-actions">
+                ${sc.actionLabel ? `
+                  <button class="hit48-pill-btn" data-action="trigger" type="button" aria-label="${sc.actionLabel}">
+                    <span class="opt1-text-cta">${sc.actionLabel}</span>
+                  </button>` : ''}
+                ${showClose ? `
+                  <button class="opt1-close" data-action="dismiss" type="button" aria-label="Dismiss notice">
+                    ${ICONS['x'](14)}
+                  </button>` : ''}
+              </div>` : ''}
+          </div>
+        `;
+      }
+
+      if (dir === 'opt2') {
+        return `
+          <div class="opt2-card ${kindCls} ${darkCls} ${autoCls} ${longWrapCls} ${animCls}">
+            <span class="opt2-accent"></span>
+            <span class="opt2-badge">${ICONS[iconKey](17)}</span>
+            <div class="opt2-msg">${sc.message}</div>
+            <div class="opt1-actions">
+              ${sc.actionLabel ? `
+                <button class="hit48-pill-btn" data-action="trigger" type="button" aria-label="${sc.actionLabel}">
+                  <span class="opt2-pill-inner">${sc.actionLabel}</span>
+                </button>` : ''}
+              <button class="opt2-close" data-action="dismiss" type="button" aria-label="Dismiss notice">
+                ${ICONS['x'](16)}
+              </button>
+            </div>
+            <div class="progress-track"><div class="progress-fill"></div></div>
+          </div>
+        `;
+      }
+
+      // opt3
+      return `
+        <div class="opt3-pill ${kindCls} ${darkCls} ${autoCls} ${longWrapCls} ${animCls}">
+          <span class="opt3-icon">${ICONS[iconKey](20)}</span>
+          <div class="opt3-msg">${sc.message}</div>
+          <div class="opt1-actions">
+            ${sc.actionLabel ? `
+              <button class="hit48-pill-btn" data-action="trigger" type="button" aria-label="${sc.actionLabel}">
+                <span class="opt3-pill-inner">${sc.actionLabel}</span>
+              </button>` : ''}
+            <button class="opt3-close" data-action="dismiss" type="button" aria-label="Dismiss notice">
+              ${ICONS['x'](16)}
+            </button>
+          </div>
+          <div class="progress-track"><div class="progress-fill"></div></div>
+        </div>
+      `;
+    }
+
+    function renderOfflineDock(dir, mode) {
+      if (mode !== 'offline' && mode !== 'online') return '';
+      const isBack = mode === 'online';
+      const icon = isBack ? ICONS['wifi-high'](16) : ICONS['wifi-slash'](16);
+      const text = isBack ? 'Back online' : "No internet connection. We'll reload when you're back.";
+      if (dir === 'before') {
+        return `<div class="before-offline-bar ${isBack ? 'back' : ''}">${isBack ? ICONS['wifi-high'](17) : ICONS['wifi-slash'](17)}<span>${text}</span></div>`;
+      }
+      return `<div class="polished-offline-bar ${isBack ? 'back' : 'offline'} notice-anim">${icon}<span>${text}</span></div>`;
+    }
+
+    function renderRefreshBanner(dir, show, isDark) {
+      if (!show) return '';
+      const darkCls = isDark ? 'dark-mode' : '';
+      if (dir === 'before') {
+        return `
+          <div class="before-material-banner">
+            <div class="before-material-banner-text">Could not refresh products.</div>
+            <div class="before-material-banner-actions">
+              <button type="button" data-action="dismiss">Try again</button>
+            </div>
+          </div>
+        `;
+      }
+      if (dir === 'opt1') {
+        return `
+          <div class="refresh-strip opt1 ${darkCls} notice-anim">
+            <span style="display:inline-flex;flex-shrink:0;color:${isDark ? '#7aa2ff' : '#0f3d9e'};">${ICONS['warning-circle'](16)}</span>
+            <span>Could not refresh products.</span>
+            <button class="refresh-strip-btn" type="button" data-action="dismiss">Try again</button>
+          </div>
+        `;
+      }
+      return `
+        <div class="refresh-strip ${dir} ${darkCls} notice-anim">
+          <span style="display:inline-flex;flex-shrink:0;">${ICONS['warning-circle'](17)}</span>
+          <span>Could not refresh products.</span>
+          <button class="refresh-strip-btn" type="button" data-action="dismiss">Try again</button>
+        </div>
+      `;
+    }
+
+    // =========================================================
+    // PHONE BACKDROP + FRAME RENDERER
+    // =========================================================
+    function renderBackdropContent(dir, sc) {
+      const showRefresh = sc.kind === 'refresh';
+      if (state.backdrop === 'cart') {
+        return `
+          <div class="app-topbar">
+            <span class="app-topbar-title">Your cart (${state.cartCount})</span>
+            <span class="cart-branch-chip">San Mateo Branch</span>
+          </div>
+          ${renderRefreshBanner(dir, showRefresh, state.theme === 'dark')}
+          <div class="screen-scroll">
+            <div class="cart-list">
+              <div class="cart-item">
+                <div class="cart-item-thumb">${ICONS['pill'](24)}</div>
+                <div class="cart-item-mid">
+                  <div class="cart-item-name">Biogesic 500mg Tablet</div>
+                  <div class="cart-item-sub">10s blister · OTC</div>
+                  <div class="cart-item-price tabular">₱55.00</div>
+                </div>
+                <div class="stepper"><span>−</span><span>2</span><span>+</span></div>
+                <button class="trash-btn" data-trigger-scenario="undo" type="button" title="Remove item (triggers Undo notice)">
+                  ${ICONS['trash'](16)}
+                </button>
+              </div>
+              <div class="cart-item">
+                <div class="cart-item-thumb">${ICONS['pill'](24)}</div>
+                <div class="cart-item-mid">
+                  <div class="cart-item-name">Ceelin Plus Syrup 120ml</div>
+                  <div class="cart-item-sub">Vitamins · Childrens</div>
+                  <div class="cart-item-price tabular">₱215.00</div>
+                </div>
+                <div class="stepper"><span>−</span><span>1</span><span>+</span></div>
+                <button class="trash-btn" data-trigger-scenario="undo" type="button" title="Remove item (triggers Undo notice)">
+                  ${ICONS['trash'](16)}
+                </button>
+              </div>
+              <div class="cart-item">
+                <div class="cart-item-thumb">${ICONS['pill'](24)}</div>
+                <div class="cart-item-mid">
+                  <div class="cart-item-name">Betadine Wound Solution 60ml</div>
+                  <div class="cart-item-sub">First Aid · Antiseptic</div>
+                  <div class="cart-item-price tabular">₱160.00</div>
+                </div>
+                <div class="stepper"><span>−</span><span>1</span><span>+</span></div>
+                <button class="trash-btn" data-trigger-scenario="undo" type="button" title="Remove item (triggers Undo notice)">
+                  ${ICONS['trash'](16)}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="sticky-footer">
+            <div>
+              <div class="sticky-total-lbl">Subtotal (4 items)</div>
+              <div class="sticky-total-val tabular">₱485.00</div>
+            </div>
+            <button class="primary-cta-btn" data-trigger-scenario="error" type="button">Proceed to checkout</button>
+          </div>
+          ${renderBottomNav(3)}
+        `;
+      }
+
+      if (state.backdrop === 'product') {
+        return `
+          <div class="app-topbar">
+            <span class="app-topbar-title">Product details</span>
+            <button class="plain-tote-btn" data-trigger-scenario="added" type="button" aria-label="Cart">
+              ${ICONS['tote'](20)}
+              <span class="qty-pip tabular">${state.cartCount}</span>
+            </button>
+          </div>
+          ${renderRefreshBanner(dir, showRefresh, state.theme === 'dark')}
+          <div class="screen-scroll">
+            <div class="pdp-wrap">
+              <div class="pdp-hero">
+                <span class="pdp-otc">OTC · Safe without Rx</span>
+                ${ICONS['pill'](62)}
+              </div>
+              <div class="pdp-card">
+                <div style="font-size:11px;font-weight:700;color:var(--p-muted);">UNILAB · Pain &amp; Fever</div>
+                <div style="font-size:16px;font-weight:800;">Biogesic 500mg Tablet (10s)</div>
+                <div class="tabular" style="font-size:20px;font-weight:800;color:var(--p-primary);">₱55.00</div>
+                <div style="font-size:11.5px;font-weight:700;color:var(--p-teal);">In stock · 24 available at San Mateo Branch</div>
+              </div>
+              <div class="pdp-card">
+                <div style="font-size:12.5px;font-weight:800;">Dosage &amp; Care Notes</div>
+                <div style="font-size:11.5px;line-height:1.45;color:var(--p-muted);">
+                  For relief of minor aches, headache, and fever. Adults and children 12+ years: 1–2 tablets every 4–6 hours.
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="sticky-footer">
+            <div>
+              <div class="sticky-total-lbl">San Mateo Branch</div>
+              <div class="sticky-total-val tabular">₱55.00</div>
+            </div>
+            <button class="primary-cta-btn" data-trigger-scenario="added" type="button">Add to cart</button>
+          </div>
+        `;
+      }
+
+      // Default: Shop Home (Option A live screenshot aesthetic)
+      return `
+        <header class="home-header-band">
+          <div class="header-top-row">
+            <div class="brand-emblem">
+              <span class="brand-sun"></span>
+              <span class="brand-cross">${ICONS['cross'](15)}</span>
+            </div>
+            <div class="header-wordmark">
+              <span class="wm-top">EVERYDAY</span>
+              <span class="wm-main">Pharmacy</span>
+            </div>
+            <div class="branch-pill">
+              ${ICONS['map-pin'](12)}
+              <span>San Mateo</span>
+              <span class="branch-open">· Open</span>
+            </div>
+          </div>
+          <div class="search-field">
+            ${ICONS['search'](15)}
+            <span>Search medicines, vitamins...</span>
+            <span class="search-tag">OTC &amp; Rx</span>
+          </div>
+        </header>
+        ${renderRefreshBanner(dir, showRefresh, state.theme === 'dark')}
+        <div class="screen-scroll">
+          <div class="home-pad">
+            <div class="quick-actions">
+              <div class="qa-btn"><span class="qa-ico">${ICONS['tag'](14)}</span><span>Deals</span></div>
+              <div class="qa-btn"><span class="qa-ico">${ICONS['map-pin'](13)}</span><span>Branches</span></div>
+              <div class="qa-btn"><span class="qa-ico">${ICONS['heart'](13)}</span><span>Saved</span></div>
+              <div class="qa-btn"><span class="qa-ico">${ICONS['undo'](13)}</span><span>Reorder</span></div>
+            </div>
+
+            <div class="hero-split">
+              <div class="hero-copy">
+                <span class="hero-eyebrow">Family Everyday Care</span>
+                <h3 class="hero-title">Trusted meds, close to home</h3>
+                <button class="hero-cta" data-trigger-scenario="success" type="button">Shop relief</button>
+              </div>
+              <div class="hero-photo">
+                <img src="../mobile/assets/home/family-everyday-care.webp" alt="Family Everyday Care" />
+              </div>
+            </div>
+
+            <section class="deals-band">
+              <div class="section-hdr">
+                <h3 class="section-title">Top Deals</h3>
+                <span class="deals-pill">Up to 20% off</span>
+              </div>
+              <div class="products-row">
+                <article class="prod-card">
+                  <div class="prod-thumb">
+                    <span class="prod-off">15% OFF</span>
+                    ${ICONS['pill'](30)}
+                  </div>
+                  <div class="prod-name">Biogesic 500mg Tablet</div>
+                  <div class="prod-meta">In stock</div>
+                  <div class="prod-foot">
+                    <div><span class="prod-price tabular">₱55</span><span class="prod-old tabular">₱65</span></div>
+                    <button class="plain-tote-btn" data-trigger-add="Biogesic 500mg Tablet" type="button" aria-label="Add Biogesic to cart">
+                      ${ICONS['tote'](19)}
+                      <span class="qty-pip tabular">2</span>
+                    </button>
+                  </div>
+                </article>
+                <article class="prod-card">
+                  <div class="prod-thumb">
+                    <span class="prod-rx">Rx</span>
+                    ${ICONS['pill'](30)}
+                  </div>
+                  <div class="prod-name">Amoxicillin 500mg Capsule</div>
+                  <div class="prod-meta">In stock</div>
+                  <div class="prod-foot">
+                    <div><span class="prod-price tabular">₱120</span></div>
+                    <button class="plain-tote-btn" data-trigger-add="Amoxicillin 500mg" type="button" aria-label="Add Amoxicillin to cart">
+                      ${ICONS['tote'](19)}
+                    </button>
+                  </div>
+                </article>
+              </div>
+            </section>
+          </div>
+        </div>
+        ${renderBottomNav(0)}
+      `;
+    }
+
+    function renderBottomNav(activeIdx) {
+      const items = [
+        { label: 'Shop', icon: 'house', badge: 0 },
+        { label: 'Orders', icon: 'receipt', badge: 0 },
+        { label: 'Messages', icon: 'chat', badge: 1 },
+        { label: 'Cart', icon: 'tote', badge: state.cartCount },
+        { label: 'Account', icon: 'user', badge: 0 },
+      ];
+      return `
+        <nav class="bottom-nav" aria-label="Main navigation">
+          ${items.map((it, idx) => `
+            <div class="nav-item ${idx === activeIdx ? 'active' : ''}">
+              <span class="nav-ico-wrap">
+                ${ICONS[it.icon](19)}
+                ${it.badge > 0 ? `<span class="nav-badge tabular">${it.badge}</span>` : ''}
+              </span>
+              <span>${it.label}</span>
+            </div>
+          `).join('')}
+        </nav>
+      `;
+    }
+
+    function renderPhoneColumn(dir, captionLabel, chipText, chipClass) {
+      const sc = SCENARIOS[state.scenario];
+      const isDark = state.theme === 'dark';
+      const isAuto = !state.pinned;
+      const isBeforeCenteredAdded = dir === 'before' && sc.kind === 'added';
+      const isOpt3CenteredAdded = dir === 'opt3' && sc.kind === 'added';
+      const centered = isBeforeCenteredAdded || isOpt3CenteredAdded;
+
+      // Determine bottom inset bug vs fix
+      let anchorClass = 'toast-anchor-bottom';
+      if (centered) {
+        anchorClass = 'toast-anchor-center';
+      } else if (dir === 'before' && sc.kind === 'success') {
+        anchorClass += ' ignores-inset';
+      } else {
+        anchorClass += ' respects-inset';
+      }
+
+      const noticeHtml = state.visibleToast
+        ? renderFloatingNotice(dir, sc, isDark, isAuto, state.largeText)
+        : '';
+
+      const offlineHtml = state.visibleToast
+        ? renderOfflineDock(dir, sc.kind)
+        : '';
+
+      const screenClasses = [
+        'phone-screen',
+        state.largeText ? 'scale-lg' : '',
+        state.reducedMotion ? 'reduced-motion' : '',
+      ].filter(Boolean).join(' ');
+
+      return `
+        <div class="phone-column">
+          <div class="phone-caption">
+            <span>${captionLabel}</span>
+            <span class="caption-chip ${chipClass}">${chipText}</span>
+          </div>
+          <div class="phone-bezel">
+            <div class="${screenClasses}" data-theme="${state.theme}" data-backdrop="${state.backdrop}" data-seed="${state.animSeed}">
+              <div class="android-statusbar">
+                <span>9:41</span>
+                <span class="tabular">5G · 94%</span>
+              </div>
+              <div class="phone-app-body">
+                ${renderBackdropContent(dir, sc)}
+                ${noticeHtml ? `
+                  <div class="phone-toast-layer">
+                    <div class="${anchorClass}">
+                      ${noticeHtml}
+                    </div>
+                  </div>` : ''}
+              </div>
+              ${offlineHtml}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================
+    // ABOVE-THE-FOLD LIVE SPOTLIGHT + LOWER SPECIMEN MATRIX
+    // =========================================================
+    function renderSpotlight() {
+      const stage = document.getElementById('spotlightStage');
+      const badge = document.getElementById('spotlightBadge');
+      if (!stage) return;
+
+      const activeDir = state.dir === 'compare' ? 'opt1' : state.dir;
+      const isDark = state.theme === 'dark';
+      const badgeMap = {
+        before: 'Current (Before)',
+        opt1: 'Option 1 · Minimal Ink',
+        opt2: 'Option 2 · Daylight Care',
+        opt3: 'Option 3 · Tinted Soft',
+      };
+      badge.textContent = badgeMap[activeDir];
+      stage.classList.toggle('dark-stage', isDark);
+
+      const items = [
+        { id: 'added', title: 'Added', tag: 'Cart' },
+        { id: 'success', title: 'Success', tag: 'Status' },
+        { id: 'undo', title: 'Undo', tag: 'Remove' },
+        { id: 'info', title: 'Info', tag: 'Stock' },
+        { id: 'error', title: 'Error', tag: 'Retry' },
+      ];
+
+      stage.innerHTML = items.map((it) => `
+        <div
+          class="spotlight-row ${state.scenario === it.id ? 'active' : ''}"
+          data-spotlight="${it.id}"
+          role="button"
+          tabindex="0"
+          aria-label="Preview ${it.title} snackbar in phone"
+        >
+          <span class="spotlight-tag">
+            <span>${it.title}</span>
+            <span class="spotlight-subtag">${it.tag}</span>
+          </span>
+          <span class="spotlight-item-wrap">
+            ${renderFloatingNotice(activeDir, SCENARIOS[it.id], isDark, false, state.largeText)}
+          </span>
+        </div>
+      `).join('');
+
+      stage.querySelectorAll('[data-spotlight]').forEach((row) => {
+        const activate = () => {
+          state.scenario = row.dataset.spotlight;
+          if (state.scenario === 'success') SCENARIOS.success.message = 'Profile saved.';
+          triggerAutoTimer();
+          render();
+        };
+        row.addEventListener('click', activate);
+        row.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            activate();
+          }
+        });
+      });
+    }
+
+    function renderSpecimenMatrix() {
+      const activeDir = state.dir === 'compare' ? 'opt1' : state.dir;
+      const dirTitleMap = {
+        before: 'Current (Before) Baseline',
+        opt1: 'Option 1 · Minimal Ink Pill',
+        opt2: 'Option 2 · Daylight Care Card',
+        opt3: 'Option 3 · Tinted Soft Pill',
+      };
+      document.getElementById('matrixModeTitle').textContent = dirTitleMap[activeDir];
+      document.getElementById('matrixSectionPrefix').textContent =
+        state.dir === 'compare' ? 'Complete Component Matrix' : 'Edge Cases & System Bars';
+      document.getElementById('matrixSubtitle').textContent =
+        state.dir === 'compare'
+          ? 'All 8 feedback states rendered side-by-side in the active Light/Dark theme.'
+          : 'Long multi-line wrapping safety, Offline / Back online dock, and Refresh failure strip (primary 5 states live in Spotlight above).';
+
+      const isDark = state.theme === 'dark';
+      const stageCls = isDark ? 'dark-stage' : 'light-stage';
+      const scaleCls = state.largeText ? 'scale-lg' : '';
+      const motionCls = state.reducedMotion ? 'reduced-motion' : '';
+
+      const primaryCards = [
+        {
+          title: '1. Added to Cart Toast',
+          badge: 'showAddedToCartToast',
+          html: renderFloatingNotice(activeDir, SCENARIOS.added, isDark, false, state.largeText),
+          meta: activeDir === 'before'
+            ? '<strong>Placement:</strong> Center screen (blocks photo) · <strong>Surface:</strong> black@78%'
+            : activeDir === 'opt3'
+            ? '<strong>Placement:</strong> Center frosted pill · <strong>Contrast:</strong> 16.1:1 ink'
+            : activeDir === 'opt1'
+            ? '<strong>Height:</strong> 44–46dp stadium pill · <strong>CTA:</strong> Plain Gold View cart (48dp)'
+            : '<strong>Placement:</strong> Bottom above Cart tab · <strong>CTA:</strong> View cart (48dp)',
+        },
+        {
+          title: '2. Success Feedback',
+          badge: 'NoticeKind.success',
+          html: renderFloatingNotice(activeDir, SCENARIOS.success, isDark, false, state.largeText),
+          meta: activeDir === 'before'
+            ? '<strong>Issue:</strong> Ignores bottomInset, no icon, raw grey #2E3036'
+            : activeDir === 'opt1'
+            ? `<strong>Style:</strong> Bare Mint ✓ + ${state.autoPill ? 'compact hug-content pill' : 'full bar'} (no X)`
+            : '<strong>Fix:</strong> Respects bottomInset · Unified icon + dismiss + 3s hairline',
+        },
+        {
+          title: '3. Info + Undo Removal',
+          badge: 'NoticeKind.info + Action',
+          html: renderFloatingNotice(activeDir, SCENARIOS.undo, isDark, false, state.largeText),
+          meta: activeDir === 'before'
+            ? '<strong>Issue:</strong> Stacked 2nd row pushes height to ~108dp'
+            : activeDir === 'opt1'
+            ? '<strong>Minimal:</strong> 44–48dp height · Plain Sun Gold Undo · Quiet X'
+            : '<strong>Improvement:</strong> Compact 52–54dp single-row inline Undo pill',
+        },
+        {
+          title: '4. Info / Stock Limit Notice',
+          badge: 'NoticeKind.info',
+          html: renderFloatingNotice(activeDir, SCENARIOS.info, isDark, false, state.largeText),
+          meta: activeDir === 'opt1'
+            ? `<strong>Style:</strong> Bare Sun Gold i + ${state.autoPill ? 'compact pill' : 'full bar'} · <strong>Quiet X</strong>`
+            : '<strong>Trigger:</strong> Cart / card stock cap check · <strong>Dismiss:</strong> 3s + swipe/X',
+        },
+        {
+          title: '5. Error + Retry Action',
+          badge: 'NoticeKind.error + Action',
+          html: renderFloatingNotice(activeDir, SCENARIOS.error, isDark, false, state.largeText),
+          meta: activeDir === 'opt1'
+            ? (state.errorSurface === 'crimson'
+                ? '<strong>Surface:</strong> Matte Crimson #991B1B · <strong>CTA:</strong> White Retry (8.3:1)'
+                : '<strong>Surface:</strong> Calm Ink #0D1F4F · <strong>CTA:</strong> Soft Coral Retry (8.9:1)')
+            : '<strong>Action:</strong> 48×48dp Retry target · Auto-dismisses after 3s',
+        },
+      ];
+
+      const edgeCards = [
+        {
+          title: 'Long Wrapping Text + Retry',
+          badge: 'Multi-line Safety',
+          html: renderFloatingNotice(activeDir, SCENARIOS.long, isDark, false, state.largeText),
+          meta: '<strong>Layout:</strong> 14dp capsule · Bare 18px icon aligns to line 1 cleanly',
+        },
+        {
+          title: 'Offline & Back Online Dock',
+          badge: 'OfflineBar',
+          html: `
+            <div style="width:100%;display:flex;flex-direction:column;gap:8px;">
+              <div style="border-radius:10px;overflow:hidden;">${renderOfflineDock(activeDir, 'offline')}</div>
+              <div style="border-radius:10px;overflow:hidden;">${renderOfflineDock(activeDir, 'online')}</div>
+            </div>
+          `,
+          meta: activeDir === 'before'
+            ? '<strong>Issue:</strong> Generic grey #2E3036 + hardcoded #1B7F4B green, hard snap'
+            : '<strong>Tokens:</strong> Flat Navy #0D1F4F offline · Care Teal #0F766E Back online',
+        },
+        {
+          title: 'Refresh Failure Strip',
+          badge: 'Replaces MaterialBanner',
+          html: renderRefreshBanner(activeDir, true, isDark),
+          meta: activeDir === 'before'
+            ? '<strong>Issue:</strong> Raw stock MaterialBanner with heavy chrome and no icon'
+            : activeDir === 'opt1'
+            ? '<strong>Minimal:</strong> Flat #EFF3FA tint · Bare icon · Plain Try again text CTA'
+            : '<strong>Improvement:</strong> Branded strip with semantic glyph &amp; Try again pill',
+        },
+      ];
+
+      const shownCards = state.dir === 'compare' ? [...primaryCards, ...edgeCards] : edgeCards;
+
+      document.getElementById('matrixGrid').innerHTML = shownCards.map((c) => `
+        <article class="specimen-card ${stageCls} ${scaleCls} ${motionCls}">
+          <div class="specimen-head">
+            <span class="specimen-title">${c.title}</span>
+            <span class="specimen-badge mono">${c.badge}</span>
+          </div>
+          <div class="specimen-stage">${c.html}</div>
+          <div class="specimen-meta">${c.meta}</div>
+        </article>
+      `).join('');
+    }
+
+    // =========================================================
+    // FULL SYNC / RENDER LOOP
+    // =========================================================
+    function triggerAutoTimer() {
+      if (autoDismissTimer) {
+        clearTimeout(autoDismissTimer);
+        autoDismissTimer = null;
+      }
+      state.visibleToast = true;
+      state.animSeed += 1;
+      if (!state.pinned) {
+        autoDismissTimer = setTimeout(() => {
+          state.visibleToast = false;
+          render();
+        }, 3050);
+      }
+    }
+
+    function render() {
+      // Update top buttons active state
+      document.querySelectorAll('[data-dir]').forEach((b) => {
+        b.classList.toggle('active', b.dataset.dir === state.dir);
+      });
+      document.querySelectorAll('[data-theme-btn]').forEach((b) => {
+        b.classList.toggle('active', b.dataset.themeBtn === state.theme);
+      });
+      document.querySelectorAll('[data-backdrop-btn]').forEach((b) => {
+        b.classList.toggle('active', b.dataset.backdropBtn === state.backdrop);
+      });
+      document.querySelectorAll('[data-scenario]').forEach((b) => {
+        b.classList.toggle('active', b.dataset.scenario === state.scenario);
+      });
+      document.querySelectorAll('[data-error-surface]').forEach((b) => {
+        b.classList.toggle('active', b.dataset.errorSurface === state.errorSurface);
+      });
+      document.querySelectorAll('[data-autopill]').forEach((b) => {
+        b.classList.toggle('active', b.dataset.autopill === String(state.autoPill));
+      });
+      document.getElementById('opt1TuningBar').classList.toggle(
+        'hidden',
+        state.dir !== 'opt1' && state.dir !== 'compare',
+      );
+
+      const pinBtn = document.getElementById('btnPinToggle');
+      pinBtn.classList.toggle('active', state.pinned);
+      pinBtn.textContent = state.pinned ? 'Pinned' : '3s Auto';
+
+      const scaleBtn = document.getElementById('btnScaleToggle');
+      scaleBtn.classList.toggle('active', state.largeText);
+      scaleBtn.textContent = state.largeText ? '1.4x' : '1.0x';
+
+      const motionBtn = document.getElementById('btnMotionToggle');
+      motionBtn.classList.toggle('active', state.reducedMotion);
+      motionBtn.textContent = state.reducedMotion ? 'Reduced' : 'Motion';
+
+      const workspace = document.getElementById('stageWorkspace');
+      const rail = document.getElementById('analysisRail');
+      const cluster = document.getElementById('phonesCluster');
+
+      if (state.dir === 'compare') {
+        workspace.classList.add('compare-mode');
+        rail.style.display = 'none';
+        cluster.innerHTML = [
+          renderPhoneColumn('opt1', 'Option 1 · Minimal Ink Pill', 'Recommended', 'rec'),
+          renderPhoneColumn('opt2', 'Option 2 · Daylight Care Card', 'Editorial White', ''),
+          renderPhoneColumn('opt3', 'Option 3 · Tinted Soft Pill', 'Warm Tonal', ''),
+        ].join('');
+      } else {
+        workspace.classList.remove('compare-mode');
+        rail.style.display = 'flex';
+        const cap = {
+          before: ['Current Flutter Implementation', 'Baseline Audit', 'before'],
+          opt1: ['Option 1 · Minimal Ink Pill', 'Recommended', 'rec'],
+          opt2: ['Option 2 · Daylight Care Card', 'Editorial White', ''],
+          opt3: ['Option 3 · Tinted Soft Pill', 'Warm Tonal', ''],
+        }[state.dir];
+        cluster.innerHTML = renderPhoneColumn(state.dir, cap[0], cap[1], cap[2]);
+
+        renderSpotlight();
+
+        // Update Right Rail Specs
+        const spec = DIR_SPECS[state.dir];
+        document.getElementById('specBadge').textContent = spec.badge;
+        document.getElementById('specSummary').textContent = spec.summary;
+        document.getElementById('specGrid').innerHTML = spec.specs.map((s) => `
+          <div class="spec-box">
+            <div class="spec-k">${s.k}</div>
+            <div class="spec-v">${s.v}</div>
+          </div>
+        `).join('');
+      }
+
+      renderSpecimenMatrix();
+      bindPhoneInteractions();
+    }
+
+    function bindPhoneInteractions() {
+      document.querySelectorAll('[data-trigger-add]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.cartCount += 1;
+          SCENARIOS.added.subtext = btn.getAttribute('data-trigger-add');
+          state.scenario = 'added';
+          triggerAutoTimer();
+          render();
+        });
+      });
+
+      document.querySelectorAll('[data-trigger-scenario]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const target = btn.getAttribute('data-trigger-scenario');
+          if (target === 'added') state.cartCount += 1;
+          state.scenario = target;
+          triggerAutoTimer();
+          render();
+        });
+      });
+
+      document.querySelectorAll('[data-action="dismiss"]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.visibleToast = false;
+          render();
+        });
+      });
+
+      document.querySelectorAll('[data-action="view-cart"]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.backdrop = 'cart';
+          state.visibleToast = false;
+          render();
+        });
+      });
+
+      document.querySelectorAll('[data-action="trigger"]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const wasUndo = state.scenario === 'undo';
+          state.scenario = 'success';
+          SCENARIOS.success.message = wasUndo ? 'Item restored to cart.' : 'Action completed.';
+          triggerAutoTimer();
+          render();
+        });
+      });
+    }
+
+    // Bind Top Control Events
+    document.querySelectorAll('[data-dir]').forEach((b) => {
+      b.addEventListener('click', () => {
+        state.dir = b.dataset.dir;
+        state.visibleToast = true;
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-theme-btn]').forEach((b) => {
+      b.addEventListener('click', () => {
+        state.theme = b.dataset.themeBtn;
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-backdrop-btn]').forEach((b) => {
+      b.addEventListener('click', () => {
+        state.backdrop = b.dataset.backdropBtn;
+        state.visibleToast = true;
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-scenario]').forEach((b) => {
+      b.addEventListener('click', () => {
+        state.scenario = b.dataset.scenario;
+        if (state.scenario === 'success') SCENARIOS.success.message = 'Profile saved.';
+        triggerAutoTimer();
+        render();
+      });
+    });
+
+    document.getElementById('btnPinToggle').addEventListener('click', () => {
+      state.pinned = !state.pinned;
+      triggerAutoTimer();
+      render();
+    });
+
+    document.getElementById('btnReplay').addEventListener('click', () => {
+      state.pinned = false;
+      triggerAutoTimer();
+      render();
+    });
+
+    document.getElementById('btnScaleToggle').addEventListener('click', () => {
+      state.largeText = !state.largeText;
+      render();
+    });
+
+    document.getElementById('btnMotionToggle').addEventListener('click', () => {
+      state.reducedMotion = !state.reducedMotion;
+      render();
+    });
+
+    document.querySelectorAll('[data-error-surface]').forEach((b) => {
+      b.addEventListener('click', () => {
+        state.errorSurface = b.dataset.errorSurface;
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-autopill]').forEach((b) => {
+      b.addEventListener('click', () => {
+        state.autoPill = b.dataset.autopill === 'true';
+        render();
+      });
+    });
+
+    // Initial render
+    render();
+  </script>
+</body>
+</html>

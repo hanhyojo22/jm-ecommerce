@@ -10,19 +10,19 @@ void main() {
     tester,
   ) async {
     await _pump(tester);
-    expect(_selected('Show banner 1: Family care'), findsOneWidget);
+    expect(_selected('Show banner 1: Everyday care'), findsOneWidget);
 
     await tester.drag(find.byType(PageView), const Offset(-350, 0));
     await tester.pumpAndSettle();
-    expect(_selected('Show banner 2: Morning joy'), findsOneWidget);
+    expect(_selected('Show banner 2: Free delivery'), findsOneWidget);
 
-    await tester.tap(find.bySemanticsLabel('Show banner 4: Bedtime comfort'));
+    await tester.tap(find.bySemanticsLabel('Show banner 4: Prescription care'));
     await tester.pumpAndSettle();
-    expect(_selected('Show banner 4: Bedtime comfort'), findsOneWidget);
+    expect(_selected('Show banner 4: Prescription care'), findsOneWidget);
 
     await tester.drag(find.byType(PageView), const Offset(350, 0));
     await tester.pumpAndSettle();
-    expect(_selected('Show banner 3: Family moments'), findsOneWidget);
+    expect(_selected('Show banner 3: 24/7 branches'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -35,7 +35,7 @@ void main() {
       await _pump(tester, onShop: () => shops++);
 
       final banner = find.bySemanticsLabel(
-        'Care for the whole family. Shop essentials. Banner 1 of 4.',
+        'Care for the whole family. Browse vitamins. Banner 1 of 4.',
       );
       expect(
         tester
@@ -53,12 +53,56 @@ void main() {
     }
   });
 
+  testWidgets('each slide invokes its dedicated action callback when set', (
+    tester,
+  ) async {
+    final browsedCategories = <String>[];
+    var dealsShown = 0;
+    var branchesOpened = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.all(16),
+            child: FamilyBannerCarousel(
+              onShop: () {},
+              onBrowseCategory: browsedCategories.add,
+              onShowDeals: () => dealsShown++,
+              onOpenBranches: () => branchesOpened++,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Browse vitamins').hitTestable());
+    expect(browsedCategories, ['vitamins-supplements']);
+
+    await tester.tap(find.bySemanticsLabel('Show banner 2: Free delivery'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('See top deals').hitTestable());
+    expect(dealsShown, 1);
+
+    await tester.tap(find.bySemanticsLabel('Show banner 3: 24/7 branches'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Find a branch').hitTestable());
+    expect(branchesOpened, 1);
+
+    await tester.tap(find.bySemanticsLabel('Show banner 4: Prescription care'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Browse Rx meds').hitTestable());
+    expect(browsedCategories, ['vitamins-supplements', 'prescription-medicines']);
+  });
+
   testWidgets('reduced motion navigates without an animation', (tester) async {
     await _pump(tester, reducedMotion: true);
-    await tester.tap(find.bySemanticsLabel('Show banner 4: Bedtime comfort'));
+    await tester.tap(find.bySemanticsLabel('Show banner 4: Prescription care'));
     await tester.pump();
 
-    expect(_selected('Show banner 4: Bedtime comfort'), findsOneWidget);
+    expect(_selected('Show banner 4: Prescription care'), findsOneWidget);
     expect(tester.widget<PageView>(find.byType(PageView)).controller!.page, 3);
     expect(tester.takeException(), isNull);
   });
@@ -76,6 +120,12 @@ void main() {
               brightness: brightness,
             );
 
+            const ctas = [
+              'Browse vitamins',
+              'See top deals',
+              'Find a branch',
+              'Browse Rx meds',
+            ];
             for (var index = 0; index < 4; index++) {
               tester
                   .widget<PageView>(find.byType(PageView))
@@ -84,7 +134,7 @@ void main() {
               await tester.pumpAndSettle();
 
               expect(
-                find.text('Shop essentials').hitTestable(),
+                find.text(ctas[index]).hitTestable(),
                 findsOneWidget,
               );
               expect(tester.takeException(), isNull);

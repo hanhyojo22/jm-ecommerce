@@ -277,6 +277,7 @@ class _AppShellState extends ConsumerState<AppShell>
       },
       child: CartFlightTarget(
         targetKey: _cartIconKey,
+        onOpenCart: () => _select(3),
         child: Scaffold(
           // Shopping tabs draw their own marketplace headers.
           appBar:
@@ -458,8 +459,8 @@ class _NavBadge extends StatelessWidget {
 
     return Badge(
       isLabelVisible: count > 0,
-      backgroundColor: scheme.primary,
-      textColor: scheme.onPrimary,
+      backgroundColor: scheme.error,
+      textColor: scheme.onError,
       // Nudge the bubble off the glyph so it reads as a separate shape.
       offset: const Offset(8, -6),
       label: Text(count > 99 ? '99+' : '$count'),

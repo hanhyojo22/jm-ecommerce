@@ -640,7 +640,18 @@ class ProductCard extends StatelessWidget {
                     ),
                     if (discovery) ...[
                       const SizedBox(height: 6),
-                      _StarRating(product: product),
+                      if (product.ratingCount > 0)
+                        _StarRating(product: product)
+                      else
+                        Text(
+                          product.inStock ? 'In stock' : 'Out of stock',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: product.inStock
+                                ? AppBrandColors.of(context).careTeal
+                                : theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       if (fillHeight) const Spacer(),
                       const SizedBox(height: 8),
                       if (stackCartControls)
@@ -791,10 +802,29 @@ class _RxBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return _FeedBadge(
-      label: 'Rx',
-      background: scheme.tertiary,
-      foreground: scheme.onTertiary,
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.3,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.tertiaryContainer,
+          borderRadius: BorderRadius.circular(appDetailRadius),
+          border: Border.all(
+            color: scheme.onTertiaryContainer.withValues(alpha: 0.18),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+          child: Text(
+            'Rx',
+            maxLines: 1,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: scheme.onTertiaryContainer,
+              fontWeight: FontWeight.w800,
+              height: 1.2,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -951,7 +981,12 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
           // Confirm only once the server agreed and the thumbnail has landed.
           await landed;
           if (mounted) {
-            showAddedToCartToast(context);
+            final onOpenCart = CartFlightTarget.maybeOpenCartOf(context);
+            final router = GoRouter.maybeOf(context);
+            showAddedToCartToast(
+              context,
+              onViewCart: onOpenCart ?? (router != null ? () => router.push('/cart') : null),
+            );
           }
         },
         onError: (Object error) {
@@ -991,8 +1026,8 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
       return TextButton(
         style: TextButton.styleFrom(
           foregroundColor: scheme.primary,
-          minimumSize: const Size(0, 40),
-          padding: const EdgeInsets.symmetric(horizontal: 4),
+          minimumSize: const Size(48, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           textStyle: theme.textTheme.labelMedium?.copyWith(
             fontWeight: FontWeight.w800,
           ),
@@ -1005,16 +1040,23 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
       );
     }
 
-    // One button for every tap: each adds one more; the Cart tab's badge shows the total.
+    final hasQty = (inCart.quantity ?? 0) > 0;
+    final brandColors = AppBrandColors.of(context);
+
+    // Plain 48×48dp tote button without a filled background; subtle Sun Gold
+    // quantity pip appears when the product is already in the cart.
     final control = Semantics(
       value: inCart.quantity == null ? null : '${inCart.quantity} in cart',
       child: IconButton(
         tooltip: 'Add to cart',
-        color: scheme.primary,
-        constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+        style: IconButton.styleFrom(
+          foregroundColor: scheme.primary,
+          fixedSize: const Size(48, 48),
+          padding: EdgeInsets.zero,
+        ),
+        constraints: const BoxConstraints.tightFor(width: 48, height: 48),
         padding: EdgeInsets.zero,
         onPressed: _add,
-        // The Cart tab's tote, so the icon says where the item goes.
         icon: inCart.adding
             ? SizedBox.square(
                 dimension: 18,
@@ -1024,7 +1066,56 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
                   semanticsLabel: 'Adding ${product.name} to cart',
                 ),
               )
-            : const Icon(PhosphorIconsRegular.tote, size: 24),
+            : SizedBox.square(
+                dimension: 48,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(
+                      PhosphorIconsRegular.tote,
+                      size: 24,
+                      color: scheme.primary,
+                    ),
+                    if (hasQty)
+                      PositionedDirectional(
+                        top: 5,
+                        end: 5,
+                        child: ExcludeSemantics(
+                          child: MediaQuery.withClampedTextScaling(
+                            maxScaleFactor: 1.2,
+                            child: Container(
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
+                              alignment: Alignment.center,
+                              decoration: ShapeDecoration(
+                                color: brandColors.sunGold,
+                                shape: const StadiumBorder(),
+                              ),
+                              child: Text(
+                                '${inCart.quantity}',
+                                style: TextStyle(
+                                  fontFamily: appFontFamily,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1.1,
+                                  color: brandColors.onSunGold,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
       ),
     );
 

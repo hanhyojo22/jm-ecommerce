@@ -59,8 +59,9 @@ class SliverShopHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.searchBar,
     required this.reducedMotion,
     required this.refreshing,
-    required this.dockCategoryRail,
+    required this.dockBottomRail,
     required this.forceFlatBottom,
+    this.compactOnly = false,
     required this.onTapBranch,
     required this.onRetryBranches,
   });
@@ -76,11 +77,12 @@ class SliverShopHeaderDelegate extends SliverPersistentHeaderDelegate {
   final bool reducedMotion;
   final bool refreshing;
 
-  /// True when a pinned category rail sits below and will fuse with this band.
-  final bool dockCategoryRail;
+  /// True when a pinned quick-actions bar sits below and will fuse with this band.
+  final bool dockBottomRail;
 
-  /// True when the category rail is already compact directly below at offset 0.
+  /// True when the docked quick-actions bar is already compact directly below at offset 0.
   final bool forceFlatBottom;
+  final bool compactOnly;
   final VoidCallback onTapBranch;
   final VoidCallback onRetryBranches;
 
@@ -95,7 +97,7 @@ class SliverShopHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   double get _branchRowHeight => _clampedScaler.scale(48).clamp(48.0, 72.0);
 
-  double get _stripHeight => _clampedScaler.scale(56).clamp(56.0, 90.0);
+  double get _stripHeight => _clampedScaler.scale(48).clamp(48.0, 84.0);
 
   double get _wordmarkHeight => _clampedScaler.scale(36).clamp(36.0, 52.0);
 
@@ -109,14 +111,18 @@ class SliverShopHeaderDelegate extends SliverPersistentHeaderDelegate {
     return _branchRowHeight;
   }
 
-  double get _collapsedBottomInset => dockCategoryRail ? 6.0 : 10.0;
+  double get _collapsedBottomInset => dockBottomRail ? 8.0 : 10.0;
+
+  double get collapseRange =>
+      (maxExtent - minExtent).clamp(0.0, double.infinity);
 
   @override
   double get minExtent => topPadding + 8.0 + barHeight + _collapsedBottomInset;
 
   @override
-  double get maxExtent =>
-      topPadding + 10.0 + _topSectionHeight + 10.0 + barHeight + 12.0;
+  double get maxExtent => compactOnly
+      ? minExtent
+      : topPadding + 10.0 + _topSectionHeight + 10.0 + barHeight + 12.0;
 
   @override
   Widget build(
@@ -126,9 +132,6 @@ class SliverShopHeaderDelegate extends SliverPersistentHeaderDelegate {
   ) {
     final delta = maxExtent - minExtent;
     final rawT = delta <= 0 ? 1.0 : (shrinkOffset / delta).clamp(0.0, 1.0);
-    final visualT = reducedMotion
-        ? (rawT >= 0.5 ? 1.0 : 0.0)
-        : Curves.easeOutCubic.transform(rawT);
 
     final state = locator.value;
     final active = state?.activeBranch;
@@ -154,118 +157,155 @@ class SliverShopHeaderDelegate extends SliverPersistentHeaderDelegate {
 
     final scheme = theme.colorScheme;
     final dark = scheme.brightness == Brightness.dark;
-    final tileInk = dark ? scheme.onSurface : scheme.primary;
+    final onDarkSlab =
+        ThemeData.estimateBrightnessForColor(slab.fill) == Brightness.dark;
+    final tileInk = onDarkSlab
+        ? slab.ink
+        : (dark ? scheme.onSurface : scheme.primary);
     final tiles = active == null
         ? null
-        : _forecast(theme, active, state!.selectedBranchId != null);
+        : _forecast(
+            context,
+            theme,
+            active,
+            state!.selectedBranchId != null,
+            onDarkSlab: onDarkSlab,
+          );
 
     final bottomPad = lerpDouble(12.0, _collapsedBottomInset, rawT)!;
     final double bottomRadius;
     if (forceFlatBottom) {
       bottomRadius = 0;
-    } else if (dockCategoryRail) {
-      bottomRadius = lerpDouble(22.0, 0.0, visualT)!;
+    } else if (dockBottomRail) {
+      bottomRadius = lerpDouble(
+        22.0,
+        0.0,
+        ((rawT - 0.50) / 0.50).clamp(0.0, 1.0),
+      )!;
     } else {
-      bottomRadius = lerpDouble(22.0, 14.0, visualT)!;
+      bottomRadius = lerpDouble(22.0, 14.0, rawT)!;
     }
 
     final topOpacity = reducedMotion
         ? (rawT >= 0.5 ? 0.0 : 1.0)
-        : (1.0 - rawT * 1.45).clamp(0.0, 1.0);
-    final topSlide = reducedMotion ? 0.0 : -18.0 * rawT;
+        : (1.0 - rawT * 1.75).clamp(0.0, 1.0);
+    final topSlide = reducedMotion ? 0.0 : -14.0 * rawT;
+    final topScale = reducedMotion ? 1.0 : lerpDouble(1.0, 0.97, rawT)!;
 
-    final showDivider =
-        !dockCategoryRail && !forceFlatBottom && (overlapsContent || rawT > 0.85);
+    final double shadowT = (dockBottomRail || forceFlatBottom)
+        ? 0.0
+        : (overlapsContent ? 1.0 : ((rawT - 0.75) / 0.25).clamp(0.0, 1.0));
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value:
-          (ThemeData.estimateBrightnessForColor(slab.fill) == Brightness.dark
-                  ? SystemUiOverlayStyle.light
-                  : SystemUiOverlayStyle.dark)
+          (onDarkSlab ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
               .copyWith(statusBarColor: Colors.transparent),
-      child: ColoredBox(
-        color: bottomRadius > 0 ? theme.scaffoldBackgroundColor : slab.fill,
-        child: Material(
-          color: slab.fill,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(
-              bottom: Radius.circular(bottomRadius),
-            ),
-            side: showDivider
-                ? BorderSide(color: scheme.outlineVariant, width: 0.8)
-                : BorderSide.none,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(bottomRadius),
           ),
-          clipBehavior: Clip.antiAlias,
-          child: MediaQuery(
-            data: MediaQuery.of(context).copyWith(textScaler: _clampedScaler),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (topOpacity > 0.02)
-                  Positioned(
-                    left: 16,
-                    right: 16,
-                    top: topPadding + 10,
-                    bottom: bottomPad + barHeight + 6,
-                    child: IgnorePointer(
-                      ignoring: rawT > 0.45,
-                      child: ExcludeSemantics(
-                        excluding: rawT > 0.45,
-                        child: ClipRect(
-                          child: OverflowBox(
-                            alignment: Alignment.topCenter,
-                            minHeight: 0,
-                            maxHeight: _topSectionHeight,
-                            child: Opacity(
-                              opacity: topOpacity,
-                              child: Transform.translate(
-                                offset: Offset(0, topSlide),
-                                child: _noBranches
-                                    ? Align(
-                                        alignment:
-                                            AlignmentDirectional.centerStart,
-                                        child: _Wordmark(ink: slab.ink),
-                                      )
-                                    : _ExpandedBranchSection(
-                                        ink: slab.ink,
-                                        tileInk: tileInk,
-                                        title: title,
-                                        label: label,
-                                        hasError: locator.hasError,
-                                        onTap: branchAction,
-                                        tiles: tiles,
-                                        stripHeight: _stripHeight,
-                                        compactCols:
-                                            viewportWidth < 360 ||
-                                            _clampedScaler.scale(12) > 15,
-                                      ),
+          boxShadow: shadowT > 0
+              ? [
+                  BoxShadow(
+                    color: (dark || onDarkSlab ? Colors.black : scheme.primary)
+                        .withValues(
+                          alpha: (dark ? 0.28 : 0.14) * shadowT,
+                        ),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : const [],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(bottomRadius),
+          ),
+          child: Material(
+            color: slab.fill,
+            child: MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: _clampedScaler),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (topOpacity > 0.02)
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      top: topPadding + 10,
+                      bottom: bottomPad + barHeight + 6,
+                      child: IgnorePointer(
+                        ignoring: rawT > 0.45,
+                        child: ExcludeSemantics(
+                          excluding: rawT > 0.45,
+                          child: ClipRect(
+                            child: OverflowBox(
+                              alignment: Alignment.topCenter,
+                              minHeight: 0,
+                              maxHeight: _topSectionHeight,
+                              child: Opacity(
+                                opacity: topOpacity,
+                                child: Transform.translate(
+                                  offset: Offset(0, topSlide),
+                                  child: Transform.scale(
+                                    scale: topScale,
+                                    alignment: Alignment.topCenter,
+                                    child: _noBranches
+                                        ? Align(
+                                            alignment: AlignmentDirectional
+                                                .centerStart,
+                                            child: _Wordmark(ink: slab.ink),
+                                          )
+                                        : _ExpandedBranchSection(
+                                            ink: slab.ink,
+                                            tileInk: tileInk,
+                                            onDarkSlab: onDarkSlab,
+                                            title: title,
+                                            label: label,
+                                            hasError: locator.hasError,
+                                            onTap: branchAction,
+                                            tiles: tiles,
+                                            stripHeight: _stripHeight,
+                                            compactCols:
+                                                viewportWidth < 360 ||
+                                                _clampedScaler.scale(12) > 15,
+                                          ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                Positioned(
-                  left: 16,
-                  right: 16,
-                  bottom: bottomPad,
-                  height: barHeight,
-                  child: searchBar,
-                ),
-                if (refreshing)
                   Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: LinearProgressIndicator(
-                      minHeight: 2,
-                      semanticsLabel: 'Updating products',
-                      color: scheme.primary,
-                      backgroundColor: scheme.surfaceContainerHighest,
+                    left: 16,
+                    right: 16,
+                    bottom: bottomPad,
+                    height: barHeight,
+                    child: MediaQuery(
+                      data: MediaQuery.of(context)
+                          .copyWith(textScaler: textScaler),
+                      child: searchBar,
                     ),
                   ),
-              ],
+                  if (refreshing)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: LinearProgressIndicator(
+                        minHeight: 2,
+                        semanticsLabel: 'Updating products',
+                        color: onDarkSlab ? scheme.secondary : scheme.primary,
+                        backgroundColor: onDarkSlab
+                            ? Colors.white.withValues(alpha: 0.22)
+                            : scheme.surfaceContainerHighest,
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -276,14 +316,18 @@ class SliverShopHeaderDelegate extends SliverPersistentHeaderDelegate {
   /// Open status, distance and delivery for the active branch, most
   /// important first, each a glyph with a short title and detail.
   static List<_Forecast> _forecast(
+    BuildContext context,
     ThemeData theme,
     BranchDistance active,
-    bool picked,
-  ) {
+    bool picked, {
+    required bool onDarkSlab,
+  }) {
     final scheme = theme.colorScheme;
-    final dark = scheme.brightness == Brightness.dark;
-    final openColour =
-        dark ? const Color(0xFF7ADFA0) : const Color(0xFF2F855A);
+    final brandColors = AppBrandColors.of(context);
+    final openColour = onDarkSlab
+        ? brandColors.openOnHeader
+        : brandColors.careTeal;
+    final closedColour = onDarkSlab ? brandColors.closedOnHeader : scheme.error;
     final branch = active.branch;
     final km = active.distanceKm;
     final opens = branch.nextOpeningAt;
@@ -295,15 +339,16 @@ class SliverShopHeaderDelegate extends SliverPersistentHeaderDelegate {
       branch.isOpen
           ? _Forecast(
               icon: PhosphorIconsRegular.sun,
+              glyph: onDarkSlab ? brandColors.sunGold : null,
               title: 'Open',
               titleColour: openColour,
               detail: branch.open24Hours ? '24 hours' : 'now',
             )
           : _Forecast(
               icon: PhosphorIconsRegular.moon,
-              glyph: scheme.error,
+              glyph: closedColour,
               title: 'Closed',
-              titleColour: scheme.error,
+              titleColour: closedColour,
               detail: opens == null
                   ? 'for today'
                   : 'Opens ${opensLabel(opens)}',
@@ -347,14 +392,16 @@ class SliverShopHeaderDelegate extends SliverPersistentHeaderDelegate {
       searchBar != oldDelegate.searchBar ||
       reducedMotion != oldDelegate.reducedMotion ||
       refreshing != oldDelegate.refreshing ||
-      dockCategoryRail != oldDelegate.dockCategoryRail ||
-      forceFlatBottom != oldDelegate.forceFlatBottom;
+      dockBottomRail != oldDelegate.dockBottomRail ||
+      forceFlatBottom != oldDelegate.forceFlatBottom ||
+      compactOnly != oldDelegate.compactOnly;
 }
 
 class _ExpandedBranchSection extends StatelessWidget {
   const _ExpandedBranchSection({
     required this.ink,
     required this.tileInk,
+    required this.onDarkSlab,
     required this.title,
     required this.label,
     required this.hasError,
@@ -366,6 +413,7 @@ class _ExpandedBranchSection extends StatelessWidget {
 
   final Color ink;
   final Color tileInk;
+  final bool onDarkSlab;
   final String title;
   final String label;
   final bool hasError;
@@ -379,6 +427,21 @@ class _ExpandedBranchSection extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final dark = scheme.brightness == Brightness.dark;
+    final pinColor = onDarkSlab ? scheme.secondary : ink;
+    final stripFill = onDarkSlab
+        ? Colors.white.withValues(alpha: dark ? 0.10 : 0.14)
+        : scheme.surfaceContainerLowest.withValues(alpha: dark ? 0.78 : 0.92);
+    final stripBorder = onDarkSlab
+        ? Colors.white.withValues(alpha: 0.22)
+        : (dark
+              ? scheme.outlineVariant.withValues(alpha: 0.75)
+              : scheme.primary.withValues(alpha: 0.10));
+    final dividerColor = onDarkSlab
+        ? Colors.white.withValues(alpha: 0.22)
+        : scheme.outlineVariant;
+    final detailColor = onDarkSlab
+        ? ink.withValues(alpha: 0.84)
+        : scheme.onSurfaceVariant;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -392,7 +455,7 @@ class _ExpandedBranchSection extends StatelessWidget {
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(14),
-            splashColor: ink.withValues(alpha: 0.12),
+            splashColor: ink.withValues(alpha: 0.14),
             highlightColor: ink.withValues(alpha: 0.08),
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 48),
@@ -400,7 +463,7 @@ class _ExpandedBranchSection extends StatelessWidget {
                 padding: const EdgeInsetsDirectional.fromSTEB(2, 3, 2, 3),
                 child: Row(
                   children: [
-                    Icon(PhosphorIconsFill.mapPin, size: 19, color: ink),
+                    Icon(PhosphorIconsFill.mapPin, size: 19, color: pinColor),
                     const SizedBox(width: 9),
                     Expanded(
                       child: Column(
@@ -432,8 +495,9 @@ class _ExpandedBranchSection extends StatelessWidget {
                                     text:
                                         '\u00A0${String.fromCharCode(PhosphorIconsBold.caretDown.codePoint)}',
                                     style: TextStyle(
-                                      fontFamily:
-                                          PhosphorIconsBold.caretDown.fontFamily,
+                                      fontFamily: PhosphorIconsBold
+                                          .caretDown
+                                          .fontFamily,
                                       package: PhosphorIconsBold
                                           .caretDown
                                           .fontPackage,
@@ -460,7 +524,7 @@ class _ExpandedBranchSection extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.labelSmall?.copyWith(
                               fontSize: 11.5,
-                              color: ink.withValues(alpha: 0.78),
+                              color: ink.withValues(alpha: 0.84),
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0,
                             ),
@@ -470,9 +534,10 @@ class _ExpandedBranchSection extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     ExcludeSemantics(
-                      child: Image.asset(
-                        'assets/branding/everyday-emblem.webp',
-                        height: 28,
+                      child: _UnifiedEmblemBadge(
+                        ink: ink,
+                        onDarkSlab: onDarkSlab,
+                        compact: compactCols,
                       ),
                     ),
                   ],
@@ -484,16 +549,10 @@ class _ExpandedBranchSection extends StatelessWidget {
         if (tiles != null) ...[
           const SizedBox(height: 8),
           Material(
-            color: scheme.surfaceContainerLowest.withValues(
-              alpha: dark ? 0.78 : 0.92,
-            ),
+            color: stripFill,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-              side: BorderSide(
-                color: dark
-                    ? scheme.outlineVariant.withValues(alpha: 0.75)
-                    : scheme.primary.withValues(alpha: 0.10),
-              ),
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: stripBorder),
             ),
             clipBehavior: Clip.antiAlias,
             child: SizedBox(
@@ -506,9 +565,9 @@ class _ExpandedBranchSection extends StatelessWidget {
                       VerticalDivider(
                         width: 1,
                         thickness: 1,
-                        indent: 10,
-                        endIndent: 10,
-                        color: scheme.outlineVariant,
+                        indent: 9,
+                        endIndent: 9,
+                        color: dividerColor,
                       ),
                     Expanded(
                       child: Semantics(
@@ -521,7 +580,7 @@ class _ExpandedBranchSection extends StatelessWidget {
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
-                              vertical: 5,
+                              vertical: 4,
                             ),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -547,7 +606,7 @@ class _ExpandedBranchSection extends StatelessWidget {
                                             ?.copyWith(
                                               fontSize: 12.5,
                                               fontWeight: FontWeight.w800,
-                                              height: 1.15,
+                                              height: 1.12,
                                               color:
                                                   tile.titleColour ?? tileInk,
                                             ),
@@ -555,7 +614,7 @@ class _ExpandedBranchSection extends StatelessWidget {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 2),
+                                const SizedBox(height: 1),
                                 Text(
                                   tile.detail,
                                   maxLines: 2,
@@ -563,9 +622,9 @@ class _ExpandedBranchSection extends StatelessWidget {
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w500,
-                                    height: 1.2,
+                                    height: 1.12,
                                     letterSpacing: 0,
-                                    color: scheme.onSurfaceVariant,
+                                    color: detailColor,
                                   ),
                                 ),
                               ],
@@ -581,6 +640,115 @@ class _ExpandedBranchSection extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Compact overlapping sun-and-cloud pill so the 2:1 sprite reads as one emblem.
+class _UnifiedEmblemBadge extends StatelessWidget {
+  const _UnifiedEmblemBadge({
+    required this.ink,
+    required this.onDarkSlab,
+    required this.compact,
+  });
+
+  final Color ink;
+  final bool onDarkSlab;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: onDarkSlab
+            ? Colors.white.withValues(alpha: 0.14)
+            : scheme.surfaceContainerLowest.withValues(alpha: 0.90),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: onDarkSlab
+              ? Colors.white.withValues(alpha: 0.22)
+              : scheme.primary.withValues(alpha: 0.14),
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 9, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 28,
+              height: 22,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: ClipRect(
+                        child: OverflowBox(
+                          alignment: Alignment.centerLeft,
+                          minWidth: 36,
+                          maxWidth: 36,
+                          minHeight: 18,
+                          maxHeight: 18,
+                          child: Image.asset(
+                            'assets/branding/everyday-emblem.webp',
+                            width: 36,
+                            height: 18,
+                            fit: BoxFit.fill,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: SizedBox(
+                      width: 20,
+                      height: 16,
+                      child: ClipRect(
+                        child: OverflowBox(
+                          alignment: Alignment.centerRight,
+                          minWidth: 38,
+                          maxWidth: 38,
+                          minHeight: 19,
+                          maxHeight: 19,
+                          child: Image.asset(
+                            'assets/branding/everyday-emblem.webp',
+                            width: 38,
+                            height: 19,
+                            fit: BoxFit.fill,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (!compact) ...[
+              const SizedBox(width: 5),
+              Text(
+                'EVERYDAY',
+                maxLines: 1,
+                style: TextStyle(
+                  fontFamily: appFontFamily,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.25,
+                  height: 1.05,
+                  color: ink,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
@@ -628,8 +796,8 @@ class _Wordmark extends StatelessWidget {
               TextSpan(
                 text: '  Pharmacy',
                 style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: ink.withValues(alpha: 0.72),
+                  fontWeight: FontWeight.w600,
+                  color: ink.withValues(alpha: 0.92),
                 ),
               ),
             ],
