@@ -299,19 +299,21 @@ class MedicationPlanApiTest extends TestCase
                 'sku' => "AML-{$suffix}", 'price' => '12.00', 'stock_quantity' => 50, 'status' => 'active', ...$directions,
             ]);
         }
+        // Postgres checks that totals add up: line_total = unit_price × quantity.
+        $total = number_format(12 * $quantity, 2, '.', '');
         $order = Order::create([
             'user_id' => $buyer->id, 'number' => 'JM-'.Str::upper(Str::random(8)), 'status' => $sellerOrderStatus,
             'recipient_name' => $buyer->name, 'phone' => '+639171234567', 'address_line' => '100 Market Street', 'city' => 'Cebu',
-            'subtotal' => '12.00', 'shipping_amount' => '0.00', 'total' => '12.00',
+            'subtotal' => $total, 'shipping_amount' => '0.00', 'total' => $total,
         ]);
         $sellerOrder = $order->sellerOrders()->create([
             'tenant_id' => $product->tenant_id, 'store_id' => $product->store_id, 'status' => $sellerOrderStatus,
-            'subtotal' => '12.00', 'shipping_amount' => '0.00', 'total' => '12.00',
+            'subtotal' => $total, 'shipping_amount' => '0.00', 'total' => $total,
             'delivered_at' => $sellerOrderStatus === 'delivered' ? now() : null,
         ]);
         $item = $sellerOrder->items()->create([
             'product_id' => $product->id, 'product_name' => $product->name, 'sku' => $product->sku,
-            'unit_price' => '12.00', 'quantity' => $quantity, 'line_total' => '12.00',
+            'unit_price' => '12.00', 'quantity' => $quantity, 'line_total' => $total,
         ]);
 
         return [$buyer, $item];
