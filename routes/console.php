@@ -3,6 +3,7 @@
 use App\Actions\MakeSuperAdministrator;
 use App\Actions\SetUpPharmacyCompany;
 use App\Actions\UpdateSellerOrderStatus;
+use App\Models\CaregiverLink;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Payment;
@@ -13,8 +14,10 @@ use App\Notifications\MarketplaceNotice;
 use App\Services\GmailOrderMailer;
 use App\Services\PayMongo;
 use App\Services\PushNotifier;
+use App\Support\MedicationSupply;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 Artisan::command('inspire', function () {
@@ -210,3 +213,50 @@ Artisan::command('discount-ids:purge', function (): void {
 
     $this->info("Deleted {$orders->count()} finished order(s)' discount ID photo(s).");
 })->purpose('Delete SC/PWD ID photos from orders finished more than 30 days ago')->daily();
+
+Artisan::command('medications:check-missed', function (PushNotifier $notifier): void {
+    $sent = 0;
+    $links = CaregiverLink::query()
+        ->where('status', 'accepted')
+        ->whereNotNull('caregiver_user_id')
+        ->whereHas('patient', fn ($patient) => $patient->where('is_active', true)->whereNotNull('medication_reminders_consent_at'))
+        ->with(['patient', 'caregiver'])
+        ->get();
+
+    foreach ($links as $link) {
+        // Only the patient's own medicine: family profiles are on the patient's phone, not theirs.
+        $plans = $link->patient->medicationPlans()
+            ->whereNull('care_profile_id')
+            ->where('status', 'active')
+            ->where('medicine_kind', '!=', 'as_needed')
+            ->with(['doseLogs' => fn ($logs) => $logs->whereNotNull('scheduled_for')->where('scheduled_for', '>=', now()->subHours(6))])
+            ->get();
+
+        foreach ($plans as $plan) {
+            $answered = $plan->doseLogs->map(fn ($log): int => $log->scheduled_for->getTimestamp())->flip();
+            // Six hours back at most: an old miss is no longer worth a call.
+            foreach (MedicationSupply::slots($plan, now()->subHours(6), now()->subMinutes($link->notify_after_minutes)) as $slot) {
+                if ($answered->has($slot->getTimestamp())) {
+                    continue;
+                }
+
+                $isNew = DB::table('caregiver_alerts')->insertOrIgnore([
+                    'caregiver_link_id' => $link->id, 'medication_plan_id' => $plan->id, 'slot_at' => $slot->setTimezone(config('app.timezone')), 'created_at' => now(),
+                ]) === 1;
+                if (! $isNew) {
+                    continue;
+                }
+
+                $time = $slot->setTimezone(MedicationSupply::TIMEZONE)->format('g:i A');
+                // "Hasn't marked", not "missed": the patient's phone may simply be offline.
+                $body = $link->share_medicine_names
+                    ? "{$link->patient->name} hasn't marked {$plan->product_name} ({$time}) as taken."
+                    : "{$link->patient->name} hasn't marked their {$time} medicine as taken.";
+                $notifier->sendToUser($link->caregiver, 'Medicine reminder', $body, ['type' => 'medication']);
+                $sent++;
+            }
+        }
+    }
+
+    $this->info("Sent {$sent} caregiver alert(s).");
+})->purpose('Tell caregivers when a patient has not marked a dose')->everyFifteenMinutes();

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AccountController;
+use App\Http\Controllers\Api\V1\CaregiverController;
 use App\Http\Controllers\Api\V1\CareProfileController;
 use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\CatalogController;
@@ -95,6 +96,11 @@ Route::prefix('v1')->group(function (): void {
         Route::middleware('throttle:api')->group(function (): void {
             Route::put('/me/medication-consent', [MedicationConsentController::class, 'store'])->name('api.v1.medication-consent.store');
             Route::delete('/me/medication-consent', [MedicationConsentController::class, 'destroy'])->name('api.v1.medication-consent.destroy');
+            // Caregivers accept and leave without opting in themselves; inviting one needs the patient's consent.
+            Route::get('/caregivers', [CaregiverController::class, 'index'])->name('api.v1.caregivers.index');
+            Route::post('/caregivers', [CaregiverController::class, 'store'])->middleware('throttle:10,1')->name('api.v1.caregivers.store');
+            Route::post('/caregivers/{link}/accept', [CaregiverController::class, 'accept'])->name('api.v1.caregivers.accept');
+            Route::delete('/caregivers/{link}', [CaregiverController::class, 'destroy'])->name('api.v1.caregivers.destroy');
 
             Route::middleware(EnsureMedicationConsent::class)->group(function (): void {
                 Route::get('/medication-plans', [MedicationPlanController::class, 'index'])->name('api.v1.medication-plans.index');
