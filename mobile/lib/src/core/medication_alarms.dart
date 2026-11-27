@@ -112,6 +112,9 @@ List<PlannedAlarm> _alarmsFor(
             int.parse(parts[1]),
           );
           lastDose = at;
+          if (plan.answeredSlots.contains(at)) {
+            continue;
+          }
           final payload =
               '/medicines/dose?plan=${plan.id}&slot=${Uri.encodeQueryComponent(_manilaIso(at))}';
           if (inWindow(at)) {

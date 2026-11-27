@@ -26,6 +26,7 @@ void main() {
       'count_prompt_on': null,
       'expires_on': null,
       'expires_before_run_out': false,
+      'answered_slots': ['2026-12-10T08:00:00+08:00'],
     });
 
     expect(plan.doseQuantity, 2.5);
@@ -37,6 +38,7 @@ void main() {
     expect(plan.endsOn, isNull);
     expect(plan.isAsNeeded, isFalse);
     expect(plan.doseLabel, '2.5 mL');
+    expect(plan.answeredSlots, [DateTime(2026, 12, 10, 8)]);
   });
 
   test('supply labels use plural units except for measures like mL', () {

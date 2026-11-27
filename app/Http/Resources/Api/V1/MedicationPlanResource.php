@@ -47,6 +47,14 @@ class MedicationPlanResource extends JsonResource
                 ->map(fn ($log): string => $log->logged_at->setTimezone(MedicationSupply::TIMEZONE)->toDateString())
                 ->unique()
                 ->count(),
+            // Doses already marked in the last day: the app leaves out their reminder and follow-up.
+            'answered_slots' => $this->doseLogs
+                ->filter(fn ($log): bool => $log->scheduled_for !== null && $log->scheduled_for->gte(now()->subDay()))
+                ->map(fn ($log): string => $log->scheduled_for->setTimezone(MedicationSupply::TIMEZONE)->toIso8601String())
+                ->unique()
+                ->sort()
+                ->values()
+                ->all(),
             'expires_before_run_out' => $this->expires_on !== null && $summary['run_out_on'] !== null && $this->expires_on->toDateString() < $summary['run_out_on'],
         ];
     }
