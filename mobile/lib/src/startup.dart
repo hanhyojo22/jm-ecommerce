@@ -29,6 +29,7 @@ class _AppStartupState extends State<AppStartup> {
         theme: buildAppTheme(),
         debugShowCheckedModeBanner: false,
         home: StartupSplash(
+          isLoading: !snapshot.hasData,
           onComplete: () => setState(() => _animationComplete = true),
         ),
       );
