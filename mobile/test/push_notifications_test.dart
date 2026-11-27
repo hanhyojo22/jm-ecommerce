@@ -482,7 +482,8 @@ void main() {
   });
 
   test('Taken and Skip on a medicine reminder open the dose screen with the action', () {
-    const dose = '/medicines/dose?plan=p1&slot=2026-12-10T08%3A00%3A00%2B08%3A00';
+    const dose =
+        '/medicines/dose?plan=p1&slot=2026-12-10T08%3A00%3A00%2B08%3A00';
 
     expect(
       PushNotifications.responseRoute(dose, 'taken'),
@@ -493,6 +494,34 @@ void main() {
     expect(
       PushNotifications.responseRoute('/conversations/c1', 'reply'),
       '/conversations/c1?reply=1',
+    );
+  });
+
+  test('a foreground push is shown even when the refresh callback throws', () {
+    final shown = <RemoteMessage>[];
+    var refreshed = 0;
+    PushNotifications.onMessageCallback = () => throw StateError('disposed');
+    const message = RemoteMessage(data: {'type': 'medication'});
+
+    PushNotifications.handleForeground(
+      message,
+      display: (m) async => shown.add(m),
+    );
+    expect(shown, [message]);
+
+    PushNotifications.onMessageCallback = () => refreshed++;
+    PushNotifications.handleForeground(
+      message,
+      display: (m) async => shown.add(m),
+    );
+    expect(shown, hasLength(2));
+    expect(refreshed, 1, reason: 'the latest sign-in callback is used');
+  });
+
+  test('a caregiver alert opens the family and caregivers screen', () {
+    expect(
+      PushNotifications.routeFor({'type': 'medication'}),
+      '/medicines/people',
     );
   });
 }

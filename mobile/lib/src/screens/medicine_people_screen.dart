@@ -106,6 +106,11 @@ class MedicinePeopleScreen extends ConsumerWidget {
                             onPressed: () => _remove(context, ref, link),
                           )
                         : FilledButton(
+                            // The app theme makes buttons full width; in a list row that
+                            // squeezes the name to one letter per line.
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(88, 40),
+                            ),
                             onPressed: () => _accept(context, ref, link),
                             child: const Text('Accept'),
                           ),
