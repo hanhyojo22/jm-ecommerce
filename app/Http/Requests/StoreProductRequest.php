@@ -9,7 +9,7 @@ use Illuminate\Validation\Validator;
 
 class StoreProductRequest extends FormRequest
 {
-    use ValidatesProductVariants;
+    use ValidatesMedicineDirections, ValidatesProductVariants;
 
     public function authorize(): bool
     {
@@ -31,6 +31,7 @@ class StoreProductRequest extends FormRequest
             'manufacturer' => ['nullable', 'string', 'max:160'],
             'requires_prescription' => ['sometimes', 'boolean'],
             'switch_with_care' => ['sometimes', 'boolean'],
+            ...self::medicineDirectionRules(),
             'condition' => ['nullable', Rule::in(['new', 'refurbished'])],
             'price' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
             'compare_at_price' => ['nullable', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99', 'gt:price'],
@@ -55,6 +56,7 @@ class StoreProductRequest extends FormRequest
     {
         return [function (Validator $validator): void {
             $this->validateVariants($validator);
+            self::validateMedicineDirections($validator);
             if (count((array) $this->file('images', [])) + ($this->hasFile('image') ? 1 : 0) > 8) {
                 $validator->errors()->add('images', 'Upload no more than 8 product photos.');
             }

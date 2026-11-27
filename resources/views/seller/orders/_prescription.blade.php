@@ -62,6 +62,30 @@
                 </div>
             @endif
         @endif
+        @if ($canReviewPrescription)
+            {{-- The pharmacist's directions replace the product label for this purchase when the buyer sets up medicine reminders. --}}
+            <details class="sc-clean-history" @if ($errors->hasAny(['medicine_kind', 'dose_quantity', 'dose_unit', 'doses_per_day', 'course_days', 'max_doses_per_day'])) open @endif><summary>Reminder directions</summary>
+                @foreach ($sellerOrder->items as $item)
+                    @php($directions = $item->medicationDirections() ?? [])
+                    <form method="POST" action="{{ route('seller.orders.items.directions', [$sellerOrder, $item]) }}" class="mt-3 grid gap-2">@csrf @method('PATCH')
+                        <p class="font-semibold">{{ $item->product_name }}</p>
+                        <label class="sr-only" for="kind-{{ $item->id }}">Kind</label>
+                        <select id="kind-{{ $item->id }}" name="medicine_kind" class="sc-input">@foreach (['maintenance' => 'Every day', 'course' => 'Course', 'as_needed' => 'As needed', 'none' => 'No reminders'] as $value => $label)<option value="{{ $value }}" @selected(($directions['medicine_kind'] ?? 'maintenance') === $value)>{{ $label }}</option>@endforeach</select>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input name="dose_quantity" inputmode="decimal" value="{{ $directions['dose_quantity'] ?? '' }}" class="sc-input" placeholder="Dose" aria-label="Dose">
+                            <input name="dose_unit" maxlength="20" value="{{ $directions['dose_unit'] ?? '' }}" class="sc-input" placeholder="Unit" aria-label="Unit">
+                            <input name="doses_per_day" inputmode="numeric" value="{{ $directions['doses_per_day'] ?? '' }}" class="sc-input" placeholder="Doses a day" aria-label="Doses a day">
+                            <input name="course_days" inputmode="numeric" value="{{ $directions['course_days'] ?? '' }}" class="sc-input" placeholder="Course days" aria-label="Course days">
+                            <input name="max_doses_per_day" inputmode="numeric" value="{{ $directions['max_doses_per_day'] ?? '' }}" class="sc-input" placeholder="Most a day (as needed)" aria-label="Most doses a day">
+                            <input name="min_hours_between" inputmode="numeric" value="{{ $directions['min_hours_between'] ?? '' }}" class="sc-input" placeholder="Hours between" aria-label="Hours between doses">
+                        </div>
+                        <input name="directions_note" maxlength="200" value="{{ $directions['directions_note'] ?? '' }}" class="sc-input" placeholder="Note, e.g. after meals" aria-label="Note for the buyer">
+                        <button type="submit" class="sc-btn w-full justify-center">Save directions</button>
+                    </form>
+                @endforeach
+                @foreach (['medicine_kind', 'dose_quantity', 'dose_unit', 'doses_per_day', 'course_days', 'max_doses_per_day'] as $field)<x-input-error :messages="$errors->get($field)" class="mt-2" />@endforeach
+            </details>
+        @endif
         @unless ($approvalInFooter ?? false)
             <details class="sc-clean-history"><summary>Review history</summary>@include('seller.orders._prescription-history', ['prescription' => $prescription])</details>
         @endunless
