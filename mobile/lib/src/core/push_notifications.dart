@@ -16,6 +16,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../router.dart';
 import '../config.dart';
 import 'api_client.dart';
+import 'medication_alarms.dart';
 
 /// Legacy notification payloads are already displayed by Android.
 @pragma('vm:entry-point')
@@ -60,10 +61,12 @@ class PushNotifications {
     importance: Importance.defaultImportance,
   );
   static const _icon = '@drawable/ic_stat_notification';
+  static const notificationIcon = _icon;
   static const _accent = Color(0xFF071C94);
 
   static final _local = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
+  static bool _launchHandled = false;
   static Future<void>? _localInitialization;
   static StreamSubscription<String>? _refreshSubscription;
   static final _renderVersions = <String, int>{};
@@ -84,7 +87,7 @@ class PushNotifications {
       debugPrint('[Push] permission status: ${settings.authorizationStatus}');
 
       if (!_initialized) {
-        await _initializeLocal();
+        await initializeLocal();
 
         FirebaseMessaging.onMessage.listen((message) {
           onMessage?.call();
@@ -111,11 +114,7 @@ class PushNotifications {
         apiClient.registerDeviceToken,
       );
 
-      final launch = await _local.getNotificationAppLaunchDetails();
-      if (launch?.didNotificationLaunchApp == true) {
-        final response = launch!.notificationResponse;
-        _handleResponse(response);
-      }
+      await openLaunchNotification();
       final initialMessage = await FirebaseMessaging.instance
           .getInitialMessage();
       if (initialMessage != null) {
@@ -170,12 +169,31 @@ class PushNotifications {
   @visibleForTesting
   static String iconFor(String? smallIcon) => _icon;
 
-  static Future<void> _initializeLocal() => _localInitialization ??= () async {
+  /// Opens the notification that launched the app, once per process. Push
+  /// registration and medicine reminders both call it, so a tap on a medicine
+  /// reminder from a closed app still lands even when push setup fails.
+  static Future<void> openLaunchNotification() async {
+    if (_launchHandled) {
+      return;
+    }
+    _launchHandled = true;
+    final launch = await _local.getNotificationAppLaunchDetails();
+    if (launch?.didNotificationLaunchApp == true) {
+      _handleResponse(launch!.notificationResponse);
+    }
+  }
+
+  static Future<void> initializeLocal() => _localInitialization ??= () async {
     final android = _local
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
-    for (final channel in [_chatChannel, _orderChannel, _updatesChannel]) {
+    for (final channel in [
+      _chatChannel,
+      _orderChannel,
+      _updatesChannel,
+      MedicationAlarms.channel,
+    ]) {
       await android?.createNotificationChannel(channel);
     }
     await _local.initialize(
@@ -186,13 +204,21 @@ class PushNotifications {
     );
   }();
 
-  static void _handleResponse(NotificationResponse? response) {
-    var route = response?.payload;
-    if (response?.actionId == 'reply' &&
-        route?.startsWith('/conversations/') == true) {
-      route = '$route?reply=1';
+  static void _handleResponse(NotificationResponse? response) =>
+      _open(responseRoute(response?.payload, response?.actionId));
+
+  /// Where a tapped notification goes. Taken/Skip on a medicine reminder
+  /// carry the action so the dose screen can log it straight away.
+  @visibleForTesting
+  static String? responseRoute(String? payload, String? actionId) {
+    if (actionId == 'reply' && payload?.startsWith('/conversations/') == true) {
+      return '$payload?reply=1';
     }
-    _open(route);
+    if ((actionId == 'taken' || actionId == 'skip') &&
+        payload?.startsWith('/medicines/dose?') == true) {
+      return '$payload&action=$actionId';
+    }
+    return payload;
   }
 
   /// The in-app destination for an announcement link. Known pages open their
@@ -283,7 +309,7 @@ class PushNotifications {
       if (tag != null) {
         _renderVersions[tag] = version;
       }
-      await _initializeLocal();
+      await initializeLocal();
       final details = await detailsFor(message);
       if (tag != null && _renderVersions[tag] != version) {
         return;
