@@ -7,7 +7,6 @@ import 'package:jmmart/src/models/store_branch.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/providers/order_providers.dart';
 import 'package:jmmart/src/providers/store_locator_providers.dart';
-import 'package:jmmart/src/providers/theme_providers.dart';
 import 'package:jmmart/src/screens/account_screen.dart';
 import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/widgets/shell.dart';
@@ -66,7 +65,6 @@ void main() {
           isSignedInProvider.overrideWithValue(true),
           apiClientProvider.overrideWithValue(api),
           activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
-          initialThemeModeProvider.overrideWithValue(ThemeMode.dark),
         ],
       );
       addTearDown(container.dispose);
@@ -112,9 +110,10 @@ void main() {
       expect(find.text('My reviews'), findsOneWidget);
       expect(find.text('Settings'), findsOneWidget);
       expect(
-        find.text('Notifications, appearance (Dark), help'),
-        findsOneWidget,
+        find.text('Dose schedules, refills & expiry alerts'),
+        findsNothing,
       );
+      expect(find.text('Manage saved delivery locations'), findsNothing);
 
       // Sign out opens confirmation dialog before signing out.
       await tester.tap(find.text('Sign out'));

@@ -32,7 +32,7 @@ productGrid(BuildContext context, BoxConstraints constraints) {
 }
 
 /// The product list shared by Shop and the search page: headings, the "Other brands of …"
-/// search sections, equal-height card rows, paging, and the empty and "Not at your branch" states.
+/// search sections, staggered masonry card columns, paging, and the empty and "Not at your branch" states.
 class ProductFeedSlivers {
   const ProductFeedSlivers({
     required this.context,
@@ -325,54 +325,64 @@ class ProductFeedSlivers {
     return sections;
   }
 
-  // Rows of equal-height cards: each row takes its tallest card's height and
-  // the cart buttons sit on one line, so prices and actions are easy to compare.
+  Widget _buildFeedCard(Product product) => ProductCard(
+    product: product,
+    discovery: true,
+    showAddToCart: true,
+    stackCartControls: ProductCard.stacksCartAt(context, cardWidth),
+    onTap: () =>
+        context.push('/product/${product.store?.slug ?? ''}/${product.slug}'),
+  );
+
+  // Staggered masonry columns: every card hugs its own natural content height
+  // with no stretched whitespace inside or between cards.
   Widget _productMasonry(List<Product> products) {
     final columns = gridDelegate.crossAxisCount;
 
+    if (columns <= 1) {
+      return SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        sliver: SliverList.builder(
+          itemCount: products.length,
+          itemBuilder: (context, index) => Padding(
+            key: ValueKey(products[index].id),
+            padding: EdgeInsets.only(bottom: gridDelegate.mainAxisSpacing),
+            child: _buildFeedCard(products[index]),
+          ),
+        ),
+      );
+    }
+
+    final buckets = List.generate(columns, (_) => <Product>[]);
+    for (var i = 0; i < products.length; i++) {
+      buckets[i % columns].add(products[i]);
+    }
+
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      sliver: SliverList.builder(
-        itemCount: (products.length + columns - 1) ~/ columns,
-        itemBuilder: (context, row) {
-          final rowProducts = products
-              .skip(row * columns)
-              .take(columns)
-              .toList();
-
-          return Padding(
-            key: ValueKey(rowProducts.first.id),
-            padding: EdgeInsets.only(bottom: gridDelegate.mainAxisSpacing),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (var column = 0; column < columns; column++) ...[
-                    if (column > 0)
-                      SizedBox(width: gridDelegate.crossAxisSpacing),
-                    Expanded(
-                      child: column < rowProducts.length
-                          ? ProductCard(
-                              product: rowProducts[column],
-                              discovery: true,
-                              showAddToCart: true,
-                              fillHeight: true,
-                              stackCartControls: ProductCard.stacksCartAt(
-                                context,
-                                cardWidth,
-                              ),
-                              onTap: () => context.push(
-                                '/product/${rowProducts[column].store?.slug ?? ''}/${rowProducts[column].slug}',
-                              ),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
+      sliver: SliverToBoxAdapter(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var column = 0; column < columns; column++) ...[
+              if (column > 0) SizedBox(width: gridDelegate.crossAxisSpacing),
+              Expanded(
+                child: Column(
+                  children: [
+                    for (final product in buckets[column])
+                      Padding(
+                        key: ValueKey(product.id),
+                        padding: EdgeInsets.only(
+                          bottom: gridDelegate.mainAxisSpacing,
+                        ),
+                        child: _buildFeedCard(product),
+                      ),
                   ],
-                ],
+                ),
               ),
-            ),
-          );
-        },
+            ],
+          ],
+        ),
       ),
     );
   }

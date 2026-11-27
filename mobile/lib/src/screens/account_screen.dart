@@ -13,8 +13,6 @@ import '../providers/catalog_providers.dart';
 import '../providers/chat_providers.dart';
 import '../providers/discount_card_providers.dart';
 import '../providers/order_providers.dart';
-import '../providers/store_locator_providers.dart';
-import '../providers/theme_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/grouped_list_card.dart';
@@ -136,8 +134,6 @@ class AccountScreen extends ConsumerWidget {
             .value
             ?.fold<int>(0, (sum, item) => sum + item.unreadCount) ??
         0;
-    final activeBranch = ref.watch(nearestStoreProvider).value?.activeBranch;
-    final themeMode = ref.watch(themeModeProvider);
 
     return AsyncView(
       value: me,
@@ -145,11 +141,6 @@ class AccountScreen extends ConsumerWidget {
       builder: (account) {
         final theme = Theme.of(context);
         final scheme = theme.colorScheme;
-        final branchSubtitle = activeBranch == null
-            ? 'Find nearby Everyday branches & hours'
-            : activeBranch.branch.shortName.isNotEmpty
-            ? activeBranch.branch.shortName
-            : activeBranch.branch.name;
 
         return RefreshIndicator(
           onRefresh: () async {
@@ -211,7 +202,6 @@ class AccountScreen extends ConsumerWidget {
                           icon: PhosphorIconsRegular.pill,
                           tone: GroupedIconTone.teal,
                           title: 'Medicine reminders',
-                          subtitle: 'Dose schedules, refills & expiry alerts',
                           trailing: account.medicationReminders
                               ? const GroupedStatusPill(label: 'On')
                               : null,
@@ -227,14 +217,12 @@ class AccountScreen extends ConsumerWidget {
                           icon: PhosphorIconsRegular.storefront,
                           tone: GroupedIconTone.neutral,
                           title: 'Branch locator',
-                          subtitle: branchSubtitle,
                           onTap: () => context.push('/branches'),
                         ),
                         GroupedRowTile(
                           icon: PhosphorIconsRegular.chatCircleDots,
                           tone: GroupedIconTone.neutral,
                           title: 'Pharmacist messages',
-                          subtitle: 'Ask about orders or prescriptions',
                           trailing: unreadMessages > 0
                               ? GroupedStatusPill(
                                   label: '$unreadMessages',
@@ -254,21 +242,18 @@ class AccountScreen extends ConsumerWidget {
                           icon: PhosphorIconsRegular.mapPin,
                           tone: GroupedIconTone.neutral,
                           title: 'Delivery addresses',
-                          subtitle: 'Manage saved delivery locations',
                           onTap: () => context.push('/addresses'),
                         ),
                         GroupedRowTile(
                           icon: PhosphorIconsRegular.heart,
                           tone: GroupedIconTone.neutral,
                           title: 'Saved items',
-                          subtitle: 'Bookmarked medicines & essentials',
                           onTap: () => context.push('/saved'),
                         ),
                         GroupedRowTile(
                           icon: PhosphorIconsRegular.star,
                           tone: GroupedIconTone.neutral,
                           title: 'My reviews',
-                          subtitle: 'Rate medicines & branch service',
                           onTap: () => _openOrdersTab(ref, 'to_review'),
                         ),
                       ],
@@ -281,8 +266,6 @@ class AccountScreen extends ConsumerWidget {
                           icon: PhosphorIconsRegular.gearSix,
                           tone: GroupedIconTone.primary,
                           title: 'Settings',
-                          subtitle:
-                              'Notifications, appearance (${themeModeLabel(themeMode)}), help',
                           onTap: () => context.push('/settings'),
                         ),
                       ],
@@ -677,7 +660,7 @@ class _SavedDiscountCardRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Saved discount ID · ${card.name}',
+                    card.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(

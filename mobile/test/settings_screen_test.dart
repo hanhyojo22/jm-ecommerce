@@ -95,15 +95,10 @@ void main() {
     await tester.tap(find.text('Dark'));
     await tester.pumpAndSettle();
     expect(container.read(themeModeProvider), ThemeMode.dark);
-    expect(
-      find.text('Always use dark navy surfaces for low-light reading'),
-      findsOneWidget,
-    );
 
     await tester.tap(find.text('Light'));
     await tester.pumpAndSettle();
     expect(container.read(themeModeProvider), ThemeMode.light);
-    expect(find.text('Always use crisp daylight surfaces'), findsOneWidget);
   });
 
   testWidgets('help center sheet opens FAQs and jumps to pharmacist messages', (
@@ -129,11 +124,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(find.text('Help center & FAQs'), 200);
-    await tester.tap(find.text('Help center & FAQs'));
+    await tester.scrollUntilVisible(find.text('Help center'), 200);
+    await tester.tap(find.text('Help center'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Help center'), findsOneWidget);
+    expect(find.text('Help center'), findsWidgets);
     expect(find.text('Uploading a prescription'), findsOneWidget);
 
     await tester.tap(find.text('Message a pharmacist').last);

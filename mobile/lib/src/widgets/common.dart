@@ -611,7 +611,7 @@ class ProductCard extends StatelessWidget {
               fillHeight,
               Padding(
                 padding: discovery
-                    ? const EdgeInsets.fromLTRB(10, 10, 10, 10)
+                    ? const EdgeInsets.fromLTRB(10, 8, 10, 8)
                     : const EdgeInsets.fromLTRB(12, 10, 12, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -630,7 +630,7 @@ class ProductCard extends StatelessWidget {
                           height: discovery ? 1.35 : null,
                         ),
                       ),
-                      if (discovery) const SizedBox(height: 3),
+                      if (discovery) const SizedBox(height: 2),
                     ],
                     Text(
                       product.name,
@@ -639,7 +639,7 @@ class ProductCard extends StatelessWidget {
                       style: titleStyle,
                     ),
                     if (discovery) ...[
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       if (product.ratingCount > 0)
                         _StarRating(product: product)
                       else
@@ -653,7 +653,7 @@ class ProductCard extends StatelessWidget {
                           ),
                         ),
                       if (fillHeight) const Spacer(),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       if (stackCartControls)
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -985,7 +985,9 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
             final router = GoRouter.maybeOf(context);
             showAddedToCartToast(
               context,
-              onViewCart: onOpenCart ?? (router != null ? () => router.push('/cart') : null),
+              onViewCart:
+                  onOpenCart ??
+                  (router != null ? () => router.push('/cart') : null),
             );
           }
         },

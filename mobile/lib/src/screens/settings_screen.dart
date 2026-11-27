@@ -153,31 +153,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final signedIn = ref.watch(isSignedInProvider);
     final account = signedIn ? ref.watch(meProvider).value : null;
     final themeMode = ref.watch(themeModeProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Divider(height: 1, thickness: 1, color: scheme.outlineVariant),
-        ),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           GroupedSection(
+            label: 'Appearance',
+            children: [
+              _AppearanceSelector(
+                mode: themeMode,
+                onSelected: (mode) =>
+                    ref.read(themeModeProvider.notifier).setMode(mode),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          GroupedSection(
             label: 'Notifications',
+            dividerIndent: 54,
             children: [
               if (signedIn)
                 GroupedSwitchTile(
                   icon: PhosphorIconsRegular.bell,
-                  tone: GroupedIconTone.primary,
+                  tone: GroupedIconTone.neutral,
+                  boxedIcon: false,
                   title: 'Cart reminders',
-                  subtitle: 'Remind me when items sit in my cart for a day',
                   value: account?.cartReminders ?? true,
                   onChanged: account == null || _savingCartReminders
                       ? null
@@ -186,17 +193,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               GroupedRowTile(
                 icon: PhosphorIconsRegular.slidersHorizontal,
                 tone: GroupedIconTone.neutral,
-                title: 'Order & message alerts',
-                subtitle:
-                    'Manage order, prescription & chat notification channels',
+                boxedIcon: false,
+                title: 'Push notifications',
                 onTap: _openSystemNotificationSettings,
               ),
               if (signedIn)
                 GroupedRowTile(
                   icon: PhosphorIconsRegular.alarm,
-                  tone: GroupedIconTone.teal,
+                  tone: GroupedIconTone.neutral,
+                  boxedIcon: false,
                   title: 'Medicine reminders',
-                  subtitle: 'Dose alarms & refill schedules',
                   trailing: account == null
                       ? null
                       : GroupedStatusPill(
@@ -209,69 +215,64 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 20),
           GroupedSection(
-            label: 'Appearance',
-            children: [
-              _AppearanceSelector(
-                mode: themeMode,
-                onSelected: (mode) =>
-                    ref.read(themeModeProvider.notifier).setMode(mode),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          GroupedSection(
-            label: 'Help & support',
+            label: 'Help',
+            dividerIndent: 54,
             children: [
               GroupedRowTile(
                 icon: PhosphorIconsRegular.question,
-                tone: GroupedIconTone.teal,
-                title: 'Help center & FAQs',
-                subtitle: 'Prescriptions, Senior/PWD IDs, orders & returns',
+                tone: GroupedIconTone.neutral,
+                boxedIcon: false,
+                title: 'Help center',
                 onTap: _showHelpCenterSheet,
               ),
               GroupedRowTile(
                 icon: PhosphorIconsRegular.chatCircleDots,
                 tone: GroupedIconTone.neutral,
+                boxedIcon: false,
                 title: 'Message a pharmacist',
-                subtitle: 'Get help from your nearest Everyday branch',
                 onTap: _openPharmacistChat,
-              ),
-              const GroupedRowTile(
-                icon: PhosphorIconsRegular.info,
-                tone: GroupedIconTone.neutral,
-                title: 'About Everyday Pharmacy',
-                subtitle: 'Version $appVersionLabel (build $appBuildLabel)',
-                showChevron: false,
               ),
             ],
           ),
           if (signedIn) ...[
-            const SizedBox(height: 18),
+            const SizedBox(height: 20),
             GroupedSection(
               label: 'Account',
+              dividerIndent: 54,
               children: [
                 GroupedRowTile(
                   icon: PhosphorIconsRegular.user,
                   tone: GroupedIconTone.neutral,
+                  boxedIcon: false,
                   title: 'Personal information',
-                  subtitle: 'Name, birth date, mobile number',
                   onTap: () => context.push('/profile'),
                 ),
                 GroupedRowTile(
                   icon: PhosphorIconsRegular.trash,
                   tone: GroupedIconTone.danger,
+                  boxedIcon: false,
                   title: _deletingAccount
                       ? 'Deleting account…'
                       : 'Delete account',
-                  subtitle: 'Permanently remove profile, addresses & saved IDs',
                   dangerTitle: true,
                   onTap: _deletingAccount ? null : _deleteAccount,
                 ),
               ],
             ),
           ],
+          const SizedBox(height: 24),
+          Text(
+            'Everyday Pharmacy · v$appVersionLabel',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: scheme.onSurfaceVariant,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
         ],
       ),
     );
@@ -284,16 +285,9 @@ class _AppearanceSelector extends StatelessWidget {
   final ThemeMode mode;
   final ValueChanged<ThemeMode> onSelected;
 
-  String get _hint => switch (mode) {
-    ThemeMode.system => 'Matches your phone’s dark mode setting automatically',
-    ThemeMode.light => 'Always use crisp daylight surfaces',
-    ThemeMode.dark => 'Always use dark navy surfaces for low-light reading',
-  };
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final scheme = Theme.of(context).colorScheme;
 
     const options = [
       (
@@ -306,66 +300,30 @@ class _AppearanceSelector extends StatelessWidget {
     ];
 
     return Padding(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
+      padding: const EdgeInsets.all(6),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(3),
+          child: Row(
             children: [
-              const GroupedIconBadge(
-                icon: PhosphorIconsRegular.palette,
-                tone: GroupedIconTone.neutral,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Theme',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _hint,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontSize: 12.5,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+              for (var i = 0; i < options.length; i++) ...[
+                if (i > 0) const SizedBox(width: 4),
+                Expanded(
+                  child: _ThemeOptionButton(
+                    label: options[i].label,
+                    icon: options[i].icon,
+                    selected: mode == options[i].mode,
+                    onTap: () => onSelected(options[i].mode),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: scheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: scheme.outlineVariant),
-            ),
-            child: Row(
-              children: [
-                for (var i = 0; i < options.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 4),
-                  Expanded(
-                    child: _ThemeOptionButton(
-                      label: options[i].label,
-                      icon: options[i].icon,
-                      selected: mode == options[i].mode,
-                      onTap: () => onSelected(options[i].mode),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -395,16 +353,16 @@ class _ThemeOptionButton extends StatelessWidget {
       selected: selected,
       child: Material(
         color: selected ? scheme.surfaceContainerLowest : Colors.transparent,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(8),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(8),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             constraints: const BoxConstraints(minHeight: 44),
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(8),
               border: selected
                   ? Border.all(color: scheme.outlineVariant)
                   : null,
@@ -433,7 +391,7 @@ class _ThemeOptionButton extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: selected
                           ? scheme.primary
@@ -498,14 +456,7 @@ class _HelpCenterSheet extends StatelessWidget {
               ),
             ],
           ),
-          Text(
-            'Quick answers for orders, prescriptions, and discounts.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontSize: 13,
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
           GroupedCard(
             showDividers: false,
             children: [

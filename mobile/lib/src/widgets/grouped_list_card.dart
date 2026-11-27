@@ -9,10 +9,16 @@ enum GroupedPillTone { teal, primary, unread }
 
 /// Labeled section container with a Material 3 elevated card and inset hairlines.
 class GroupedSection extends StatelessWidget {
-  const GroupedSection({super.key, this.label, required this.children});
+  const GroupedSection({
+    super.key,
+    this.label,
+    required this.children,
+    this.dividerIndent = 62,
+  });
 
   final String? label;
   final List<Widget> children;
+  final double dividerIndent;
 
   @override
   Widget build(BuildContext context) {
@@ -36,22 +42,24 @@ class GroupedSection extends StatelessWidget {
             ),
           ),
         ],
-        GroupedCard(children: children),
+        GroupedCard(dividerIndent: dividerIndent, children: children),
       ],
     );
   }
 }
 
-/// Surface card with a crisp 1px hairline border and 62dp inset dividers.
+/// Surface card with a crisp 1px hairline border and inset dividers.
 class GroupedCard extends StatelessWidget {
   const GroupedCard({
     super.key,
     required this.children,
     this.showDividers = true,
+    this.dividerIndent = 62,
   });
 
   final List<Widget> children;
   final bool showDividers;
+  final double dividerIndent;
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +94,7 @@ class GroupedCard extends StatelessWidget {
                 Divider(
                   height: 1,
                   thickness: 1,
-                  indent: 62,
+                  indent: dividerIndent,
                   color: scheme.outlineVariant,
                 ),
               children[i],
@@ -188,7 +196,7 @@ class GroupedStatusPill extends StatelessWidget {
   }
 }
 
-/// Interactive (or static) grouped list row with >= 58dp height.
+/// Interactive (or static) grouped list row with >= 52dp height.
 class GroupedRowTile extends StatelessWidget {
   const GroupedRowTile({
     super.key,
@@ -196,6 +204,7 @@ class GroupedRowTile extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.tone = GroupedIconTone.neutral,
+    this.boxedIcon = true,
     this.dangerTitle = false,
     this.trailing,
     this.showChevron = true,
@@ -206,6 +215,7 @@ class GroupedRowTile extends StatelessWidget {
   final String title;
   final String? subtitle;
   final GroupedIconTone tone;
+  final bool boxedIcon;
   final bool dangerTitle;
   final Widget? trailing;
   final bool showChevron;
@@ -215,15 +225,41 @@ class GroupedRowTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final hasSubtitle = subtitle != null && subtitle!.isNotEmpty;
+
+    final Widget leading = boxedIcon
+        ? GroupedIconBadge(icon: icon, tone: tone)
+        : SizedBox(
+            width: 24,
+            height: 24,
+            child: Center(
+              child: Icon(
+                icon,
+                size: 20,
+                color: dangerTitle
+                    ? scheme.error
+                    : tone == GroupedIconTone.teal
+                    ? AppBrandColors.of(context).careTeal
+                    : tone == GroupedIconTone.primary
+                    ? scheme.primary
+                    : scheme.onSurfaceVariant,
+              ),
+            ),
+          );
 
     final content = ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 58),
+      constraints: BoxConstraints(minHeight: hasSubtitle ? 58 : 52),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 11, 12, 11),
+        padding: EdgeInsets.fromLTRB(
+          boxedIcon ? 14 : 16,
+          hasSubtitle ? 11 : 12,
+          12,
+          hasSubtitle ? 11 : 12,
+        ),
         child: Row(
           children: [
-            GroupedIconBadge(icon: icon, tone: tone),
-            const SizedBox(width: 12),
+            leading,
+            SizedBox(width: boxedIcon ? 12 : 14),
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -233,12 +269,12 @@ class GroupedRowTile extends StatelessWidget {
                     title,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontSize: 14.5,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       height: 1.3,
                       color: dangerTitle ? scheme.error : scheme.onSurface,
                     ),
                   ),
-                  if (subtitle != null && subtitle!.isNotEmpty) ...[
+                  if (hasSubtitle) ...[
                     const SizedBox(height: 2),
                     Text(
                       subtitle!,
@@ -257,7 +293,7 @@ class GroupedRowTile extends StatelessWidget {
               const SizedBox(width: 4),
               Icon(
                 PhosphorIconsRegular.caretRight,
-                size: 18,
+                size: 17,
                 color: scheme.onSurfaceVariant,
               ),
             ],
@@ -282,6 +318,7 @@ class GroupedSwitchTile extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.tone = GroupedIconTone.primary,
+    this.boxedIcon = true,
     required this.value,
     required this.onChanged,
   });
@@ -290,6 +327,7 @@ class GroupedSwitchTile extends StatelessWidget {
   final String title;
   final String? subtitle;
   final GroupedIconTone tone;
+  final bool boxedIcon;
   final bool value;
   final ValueChanged<bool>? onChanged;
 
@@ -297,19 +335,41 @@ class GroupedSwitchTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final hasSubtitle = subtitle != null && subtitle!.isNotEmpty;
+
+    final Widget leading = boxedIcon
+        ? GroupedIconBadge(icon: icon, tone: tone)
+        : SizedBox(
+            width: 24,
+            height: 24,
+            child: Center(
+              child: Icon(
+                icon,
+                size: 20,
+                color: tone == GroupedIconTone.primary
+                    ? scheme.primary
+                    : scheme.onSurfaceVariant,
+              ),
+            ),
+          );
 
     return Semantics(
       toggled: value,
       child: InkWell(
         onTap: onChanged == null ? null : () => onChanged!(!value),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 62),
+          constraints: BoxConstraints(minHeight: hasSubtitle ? 62 : 52),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
+            padding: EdgeInsets.fromLTRB(
+              boxedIcon ? 14 : 16,
+              hasSubtitle ? 10 : 8,
+              12,
+              hasSubtitle ? 10 : 8,
+            ),
             child: Row(
               children: [
-                GroupedIconBadge(icon: icon, tone: tone),
-                const SizedBox(width: 12),
+                leading,
+                SizedBox(width: boxedIcon ? 12 : 14),
                 Expanded(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -319,12 +379,12 @@ class GroupedSwitchTile extends StatelessWidget {
                         title,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontSize: 14.5,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                           height: 1.3,
                           color: scheme.onSurface,
                         ),
                       ),
-                      if (subtitle != null && subtitle!.isNotEmpty) ...[
+                      if (hasSubtitle) ...[
                         const SizedBox(height: 2),
                         Text(
                           subtitle!,
