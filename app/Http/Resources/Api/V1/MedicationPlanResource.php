@@ -41,6 +41,12 @@ class MedicationPlanResource extends JsonResource
             'reorder_on' => $summary['reorder_on'],
             'count_prompt_on' => $summary['count_prompt_on'],
             'expires_on' => $this->expires_on?->toDateString(),
+            // Days in the last four with an as-needed dose: on the third the app suggests talking to a pharmacist.
+            'recent_dose_days' => $this->medicine_kind !== 'as_needed' ? null : $this->doseLogs
+                ->filter(fn ($log): bool => $log->status === 'taken' && $log->logged_at->gte(now()->subDays(4)))
+                ->map(fn ($log): string => $log->logged_at->setTimezone(MedicationSupply::TIMEZONE)->toDateString())
+                ->unique()
+                ->count(),
             'expires_before_run_out' => $this->expires_on !== null && $summary['run_out_on'] !== null && $this->expires_on->toDateString() < $summary['run_out_on'],
         ];
     }

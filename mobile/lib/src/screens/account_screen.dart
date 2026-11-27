@@ -134,6 +134,22 @@ class AccountScreen extends ConsumerWidget {
                   },
                 ),
               ),
+              Material(
+                color: scheme.surfaceContainerLowest,
+                child: ListTile(
+                  leading: Icon(Icons.alarm_rounded, color: scheme.primary),
+                  title: const Text(
+                    'Medicine reminders',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  ),
+                  subtitle: const Text(
+                    'Dose reminders, refills and expiry alerts',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push('/medicines'),
+                ),
+              ),
               const _SavedDiscountCardsSection(),
               const SizedBox(height: 8),
               _LazadaToolsGridSection(

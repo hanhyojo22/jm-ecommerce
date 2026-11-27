@@ -132,6 +132,21 @@ class MedicationPlanApiTest extends TestCase
             ->assertJsonPath('plan.units_left', 8);
     }
 
+    public function test_as_needed_plans_report_how_many_recent_days_had_a_dose(): void
+    {
+        [$buyer, $item] = $this->deliveredItem(directions: ['medicine_kind' => 'as_needed', 'pack_units' => 20, 'dose_quantity' => 1, 'max_doses_per_day' => 4]);
+        $this->consent($buyer);
+        $planId = $this->postJson(route('api.v1.medication-plans.store'), $this->planBody($item, ['medicine_kind' => 'as_needed', 'dose_times' => []]))->json('data.id');
+        foreach ([0, 1, 2] as $day) {
+            $this->travel($day === 0 ? 0 : 1)->days();
+            $this->postJson(route('api.v1.medication-plans.doses.store', $planId), ['logs' => [
+                ['client_uuid' => (string) Str::uuid(), 'status' => 'taken', 'logged_at' => now()->toIso8601String()],
+            ]])->assertOk();
+        }
+
+        $this->getJson(route('api.v1.medication-plans.index'))->assertJsonPath('data.0.recent_dose_days', 3);
+    }
+
     public function test_count_resets_the_supply(): void
     {
         [$buyer, $item] = $this->deliveredItem();

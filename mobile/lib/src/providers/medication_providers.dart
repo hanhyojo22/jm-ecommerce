@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/medication_alarms.dart';
 import '../models/medication.dart';
 import 'auth_providers.dart';
 
@@ -27,3 +28,18 @@ final medicationHistoryProvider = FutureProvider.autoDispose
           .watch(apiClientProvider)
           .medicationHistory(profileId: query.profileId, days: query.days),
     );
+
+/// Keeps the phone's medicine alarms in step with the server: rebuilt each app
+/// session and whenever the plans change; cleared when reminders are off.
+final medicationAlarmSyncProvider = FutureProvider<void>((ref) async {
+  final account = await ref.watch(meProvider.future);
+  if (!account.medicationReminders) {
+    try {
+      await MedicationAlarms.cancelMedicineAlarms();
+    } catch (_) {
+      // No plugin (tests, unsupported platform): nothing is scheduled.
+    }
+    return;
+  }
+  await MedicationAlarms.sync(await ref.watch(medicationPlansProvider.future));
+});

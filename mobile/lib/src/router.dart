@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import 'models/medication.dart';
 import 'providers/catalog_providers.dart';
 import 'screens/auth_gate.dart';
 import 'screens/addresses_screen.dart';
@@ -8,6 +9,10 @@ import 'screens/cart_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/checkout_screen.dart';
 import 'screens/checkout_success_screen.dart';
+import 'screens/medicine_history_screen.dart';
+import 'screens/medicine_people_screen.dart';
+import 'screens/medicine_setup_screen.dart';
+import 'screens/medicines_screen.dart';
 import 'screens/order_detail_screen.dart';
 import 'screens/product_screen.dart';
 import 'screens/profile_screen.dart';
@@ -74,6 +79,44 @@ final appRouter = GoRouter(
       builder: (context, state) => const AddressesScreen(),
     ),
     GoRoute(path: '/saved', builder: (context, state) => const SavedScreen()),
+    GoRoute(
+      path: '/medicines',
+      builder: (context, state) =>
+          MedicinesScreen(countPlanId: state.uri.queryParameters['count']),
+    ),
+    GoRoute(
+      path: '/medicines/setup',
+      builder: (context, state) => state.extra is MedicationSuggestion
+          ? MedicineSetupScreen(
+              suggestion: state.extra! as MedicationSuggestion,
+            )
+          : const MedicinesScreen(),
+    ),
+    GoRoute(
+      path: '/medicines/history',
+      builder: (context, state) => const MedicineHistoryScreen(),
+    ),
+    GoRoute(
+      path: '/medicines/people',
+      builder: (context, state) => const MedicinePeopleScreen(),
+    ),
+    GoRoute(
+      path: '/medicines/dose',
+      builder: (context, state) => MedicineDoseScreen(
+        planId: state.uri.queryParameters['plan'] ?? '',
+        slot: state.uri.queryParameters['slot'] ?? '',
+        action: state.uri.queryParameters['action'],
+      ),
+    ),
+    GoRoute(
+      path: '/medicines/reorder',
+      builder: (context, state) => MedicineReorderScreen(
+        planIds: (state.uri.queryParameters['plans'] ?? '')
+            .split(',')
+            .where((id) => id.isNotEmpty)
+            .toList(),
+      ),
+    ),
     GoRoute(
       path: '/profile',
       builder: (context, state) => ProfileScreen(

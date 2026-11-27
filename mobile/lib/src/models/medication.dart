@@ -117,6 +117,7 @@ class MedicationPlan {
     this.countPromptOn,
     this.expiresOn,
     this.expiresBeforeRunOut = false,
+    this.recentDoseDays,
   });
 
   final String id;
@@ -144,6 +145,9 @@ class MedicationPlan {
   final DateTime? countPromptOn;
   final DateTime? expiresOn;
   final bool expiresBeforeRunOut;
+
+  /// As-needed only: days in the last four with a dose.
+  final int? recentDoseDays;
 
   bool get isAsNeeded => medicineKind == 'as_needed';
   bool get isActive => status == 'active';
@@ -183,6 +187,9 @@ class MedicationPlan {
       countPromptOn: _date(json['count_prompt_on']),
       expiresOn: _date(json['expires_on']),
       expiresBeforeRunOut: boolean(json['expires_before_run_out']),
+      recentDoseDays: json['recent_dose_days'] == null
+          ? null
+          : integer(json['recent_dose_days']),
     );
   }
 }
