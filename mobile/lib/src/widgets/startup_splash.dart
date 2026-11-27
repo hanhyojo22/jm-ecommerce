@@ -6,24 +6,23 @@ import 'package:flutter/services.dart';
 const splashBackground = Color(0xFFCCE5FA);
 const _splashHorizon = Color(0xFFF9D8BF);
 const _splashGradient = LinearGradient(
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  colors: [
-    splashBackground,
-    Color(0xFFE9F4FC),
-    Color(0xFFFDF7E9),
-    Color(0xFFFFE7B8),
-    _splashHorizon,
-  ],
-  stops: [0, .28, .53, .78, 1],
+  begin: Alignment.topCenter,
+  end: Alignment.bottomCenter,
+  colors: [splashBackground, Color(0xFFFDF7E9), _splashHorizon],
+  stops: [0, .62, 1],
 );
 const _emblemAsset = AssetImage('assets/branding/everyday-emblem.webp');
 const _logoAsset = AssetImage('assets/branding/everyday-company-logo.png');
 
 class StartupSplash extends StatefulWidget {
-  const StartupSplash({super.key, required this.onComplete});
+  const StartupSplash({
+    super.key,
+    required this.onComplete,
+    this.isLoading = false,
+  });
 
   final VoidCallback onComplete;
+  final bool isLoading;
 
   @override
   State<StartupSplash> createState() => _StartupSplashState();
@@ -34,7 +33,7 @@ class _StartupSplashState extends State<StartupSplash>
   late final AnimationController _controller =
       AnimationController(
         vsync: this,
-        duration: const Duration(milliseconds: 2100),
+        duration: const Duration(milliseconds: 1600),
       )..addStatusListener((status) {
         if (status == AnimationStatus.completed) _finish();
       });
@@ -87,118 +86,151 @@ class _StartupSplashState extends State<StartupSplash>
           child: Semantics(
             label: 'Everyday Pharmacy. Starting app.',
             child: ExcludeSemantics(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final width = math.min(
-                    math.min(constraints.maxWidth * .74, 340.0),
-                    constraints.maxHeight * .68,
-                  );
-                  return Center(
-                    child: FractionalTranslation(
-                      translation: const Offset(0, -.12),
-                      child: SizedBox(
-                        width: width,
-                        child: AnimatedBuilder(
-                          animation: _controller,
-                          builder: (context, child) {
-                            final time = _controller.value;
-                            // A slow rise: about 1.9 s.
-                            final cloud = const Interval(
-                              .057,
-                              .95,
-                              curve: Curves.easeOutCubic,
-                            ).transform(time);
-                            // The sun climbs an arc from behind the cloud on the right to its spot top-left.
-                            final sun = const Interval(
-                              .08,
-                              .8,
-                              curve: Curves.easeInOutSine,
-                            ).transform(time);
-                            final sunArcRise = math.sin(sun * math.pi / 2);
-                            final wordmark = const Interval(
-                              .131,
-                              .67,
-                              curve: Curves.easeOutCubic,
-                            ).transform(time);
-                            final emblemWidth = width * .76;
-                            final emblemHeight = emblemWidth / 1.12;
-                            return Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SizedBox(
-                                  width: emblemWidth,
-                                  height: emblemHeight,
-                                  child: Stack(
-                                    clipBehavior: Clip.none,
-                                    children: [
-                                      Positioned(
-                                        top: 0,
-                                        left: -emblemWidth * .03,
-                                        child: Opacity(
-                                          opacity: math.min(1, sun * 3),
-                                          child: Transform.translate(
-                                            offset: reducedMotion
-                                                ? Offset.zero
-                                                : Offset(
-                                                    emblemWidth *
-                                                        .55 *
-                                                        (1 - sun),
-                                                    emblemHeight *
-                                                        .5 *
-                                                        (1 - sunArcRise),
+              child: SafeArea(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = math.min(
+                      math.min(constraints.maxWidth * .72, 280.0),
+                      math.max(0, constraints.maxHeight - 64) * .62,
+                    );
+                    return Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Positioned.fill(
+                          bottom: 64,
+                          child: Align(
+                            alignment: Alignment.center,
+                            child: SizedBox(
+                              width: width,
+                              child: RepaintBoundary(
+                                child: AnimatedBuilder(
+                                  animation: _controller,
+                                  builder: (context, child) {
+                                    final time = _controller.value;
+                                    final cloud = const Interval(
+                                      0,
+                                      .65,
+                                      curve: Curves.easeOutCubic,
+                                    ).transform(time);
+                                    final sun = const Interval(
+                                      .06,
+                                      .78,
+                                      curve: Curves.easeOutCubic,
+                                    ).transform(time);
+                                    final wordmark = const Interval(
+                                      .28,
+                                      .76,
+                                      curve: Curves.easeOutCubic,
+                                    ).transform(time);
+                                    final emblemWidth = width;
+                                    final emblemHeight = width * .92;
+                                    return Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SizedBox(
+                                          width: emblemWidth,
+                                          height: emblemHeight,
+                                          child: Stack(
+                                            clipBehavior: Clip.none,
+                                            children: [
+                                              Positioned(
+                                                top: -emblemWidth * .015,
+                                                left: -emblemWidth * .035,
+                                                child: Opacity(
+                                                  opacity: .35 + .65 * sun,
+                                                  child: Transform.translate(
+                                                    offset: reducedMotion
+                                                        ? Offset.zero
+                                                        : Offset(
+                                                            6 * (1 - sun),
+                                                            28 * (1 - sun),
+                                                          ),
+                                                    child: Transform.rotate(
+                                                      angle: reducedMotion
+                                                          ? 0
+                                                          : -.16 * (1 - sun),
+                                                      child: _EmblemSprite(
+                                                        size: emblemWidth * .8,
+                                                        alignment: Alignment
+                                                            .centerLeft,
+                                                      ),
+                                                    ),
                                                   ),
-                                            child: Transform.rotate(
-                                              angle: reducedMotion
-                                                  ? 0
-                                                  : 1.2 * (1 - sun),
-                                              child: _EmblemSprite(
-                                                size: emblemWidth * .88,
-                                                alignment: Alignment.centerLeft,
+                                                ),
                                               ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        top: emblemHeight * .16,
-                                        left: emblemWidth * .08,
-                                        child: Opacity(
-                                          opacity: cloud,
-                                          child: Transform.translate(
-                                            offset: reducedMotion
-                                                ? Offset.zero
-                                                : Offset(
-                                                    0,
-                                                    emblemHeight *
-                                                        .95 *
-                                                        (1 - cloud),
+                                              Positioned(
+                                                top: emblemWidth * .16,
+                                                left: emblemWidth * .045,
+                                                child: Transform.translate(
+                                                  offset: reducedMotion
+                                                      ? Offset.zero
+                                                      : Offset(
+                                                          0,
+                                                          16 * (1 - cloud),
+                                                        ),
+                                                  child: _EmblemSprite(
+                                                    size: emblemWidth * .95,
+                                                    alignment:
+                                                        Alignment.centerRight,
                                                   ),
-                                            child: _EmblemSprite(
-                                              size: emblemWidth * 1.08,
-                                              alignment: Alignment.centerRight,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        SizedBox(height: width * .07),
+                                        Opacity(
+                                          opacity: wordmark,
+                                          child: Transform.translate(
+                                            offset: Offset(
+                                              0,
+                                              reducedMotion
+                                                  ? 0
+                                                  : 8 * (1 - wordmark),
+                                            ),
+                                            child: _LogoWordmark(
+                                              width: width * .88,
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
+                                      ],
+                                    );
+                                  },
                                 ),
-                                const SizedBox(height: 26),
-                                Opacity(
-                                  opacity: wordmark,
-                                  child: FractionalTranslation(
-                                    translation: const Offset(.1, 0),
-                                    child: _LogoWordmark(width: width * .8),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  );
-                },
+                        if (widget.isLoading)
+                          Positioned(
+                            left: 24,
+                            right: 24,
+                            bottom: 28,
+                            child: AnimatedBuilder(
+                              animation: _controller,
+                              builder: (context, child) => Opacity(
+                                opacity: const Interval(
+                                  .85,
+                                  1,
+                                ).transform(_controller.value),
+                                child: child,
+                              ),
+                              child: const Text(
+                                'Starting app…',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: 'Manrope',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF48546B),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -208,7 +240,7 @@ class _StartupSplashState extends State<StartupSplash>
   }
 }
 
-/// Show only the yellow and blue wordmark beside the animated emblem.
+/// Crop to the original lettering, without the miniature emblem and tagline.
 class _LogoWordmark extends StatelessWidget {
   const _LogoWordmark({required this.width});
 
@@ -217,21 +249,22 @@ class _LogoWordmark extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
     width: width,
-    height: width * 100 / 216,
+    height: width * 58 / 168,
     child: ClipRect(
-      child: OverflowBox(
-        alignment: Alignment.centerRight,
-        minWidth: width * 341 / 216,
-        maxWidth: width * 341 / 216,
-        minHeight: width * 100 / 216,
-        maxHeight: width * 100 / 216,
-        child: Image(
-          image: _logoAsset,
-          width: width * 341 / 216,
-          height: width * 100 / 216,
-          fit: BoxFit.fill,
-          filterQuality: FilterQuality.medium,
-        ),
+      child: Stack(
+        children: [
+          Positioned(
+            left: -width * 126 / 168,
+            top: -width * 13 / 168,
+            width: width * 341 / 168,
+            height: width * 100 / 168,
+            child: Image(
+              image: _logoAsset,
+              fit: BoxFit.fill,
+              filterQuality: FilterQuality.high,
+            ),
+          ),
+        ],
       ),
     ),
   );

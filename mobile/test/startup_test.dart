@@ -40,12 +40,14 @@ void main() {
     expect(find.byType(StartupSplash), findsOneWidget);
     expect(find.text('EVERYDAY\nPHARMACY'), findsNothing);
     expect(_brandWordmark, findsOneWidget);
+    expect(find.text('Starting app…'), findsOneWidget);
     expect(find.text('Ready to shop'), findsNothing);
 
     application.complete(_readyApp);
     await tester.pumpAndSettle();
 
     expect(find.text('Ready to shop'), findsOneWidget);
+    expect(find.text('Starting app…'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -83,30 +85,47 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('splash fits a small phone with large text and landscape', (
-    tester,
-  ) async {
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    for (final size in [const Size(320, 568), const Size(740, 320)]) {
-      await tester.binding.setSurfaceSize(size);
-      await tester.pumpWidget(
-        MaterialApp(
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context).copyWith(
-              disableAnimations: true,
-              textScaler: const TextScaler.linear(2),
+  testWidgets(
+    'splash fits phones and tablets with large text in both orientations',
+    (tester) async {
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      for (final size in [
+        const Size(320, 568),
+        const Size(740, 320),
+        const Size(800, 1280),
+        const Size(1280, 800),
+      ]) {
+        await tester.binding.setSurfaceSize(size);
+        await tester.pumpWidget(
+          MaterialApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                disableAnimations: true,
+                textScaler: const TextScaler.linear(2),
+              ),
+              child: child!,
             ),
-            child: child!,
+            home: StartupSplash(
+              key: ValueKey(size),
+              isLoading: true,
+              onComplete: () {},
+            ),
           ),
-          home: StartupSplash(key: ValueKey(size), onComplete: () {}),
-        ),
-      );
-      await tester.pump();
+        );
+        await tester.pump();
 
-      expect(_brandWordmark, findsOneWidget);
-      expect(tester.takeException(), isNull);
-    }
-  });
+        expect(_brandWordmark, findsOneWidget);
+        final wordmark = tester.getRect(
+          find
+              .ancestor(of: _brandWordmark, matching: find.byType(ClipRect))
+              .first,
+        );
+        final status = tester.getRect(find.text('Starting app…'));
+        expect(wordmark.bottom, lessThan(status.top));
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
 }
 
 final _brandWordmark = find.byWidgetPredicate(
