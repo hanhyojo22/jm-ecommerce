@@ -884,6 +884,26 @@ class ApiClient {
     ];
   }
 
+  /// Every province with its cities and municipalities, for the address
+  /// dropdowns.
+  Future<Map<String, List<String>>> provinces() async => {
+    for (final province in listOf(await _data('GET', '/locations')))
+      '${province['name']}': [
+        for (final city in province['cities'] as List? ?? const []) '$city',
+      ],
+  };
+
+  /// The barangays of one city, matched however its name is written.
+  Future<List<String>> barangays(String province, String city) async {
+    final names = await _data(
+      'GET',
+      '/locations/barangays',
+      query: {'province': province, 'city': city},
+    );
+
+    return [for (final name in names as List? ?? const []) '$name'];
+  }
+
   Future<Address> createAddress(Address address) async => Address.fromJson(
     mapOf(await _data('POST', '/delivery-addresses', data: address.toJson())),
   );

@@ -21,6 +21,7 @@ import '../providers/store_locator_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/delivery_pin_map.dart';
+import '../widgets/place_fields.dart';
 import '../widgets/status_notice.dart';
 import 'delivery_pin_screen.dart';
 import 'checkout_success_screen.dart';
@@ -2928,36 +2929,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-              TextFormField(
-                controller: _barangay,
-                textInputAction: TextInputAction.next,
-                textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(labelText: 'Barangay'),
-                validator: (value) =>
-                    (value ?? '').trim().isEmpty ? 'Enter the barangay.' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _city,
-                textInputAction: TextInputAction.next,
-                textCapitalization: TextCapitalization.words,
-                autofillHints: const [AutofillHints.addressCity],
-                decoration: const InputDecoration(
-                  labelText: 'City / municipality',
-                ),
-                validator: (value) => (value ?? '').trim().isEmpty
-                    ? 'Enter the city or municipality.'
-                    : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _province,
-                textInputAction: TextInputAction.next,
-                textCapitalization: TextCapitalization.words,
-                autofillHints: const [AutofillHints.addressState],
-                decoration: const InputDecoration(labelText: 'Province'),
-                validator: (value) =>
-                    (value ?? '').trim().isEmpty ? 'Enter the province.' : null,
+              PlaceFields(
+                province: _province,
+                city: _city,
+                barangay: _barangay,
               ),
               const SizedBox(height: 10),
               TextFormField(

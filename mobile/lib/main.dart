@@ -18,6 +18,7 @@ import 'src/models/models.dart';
 import 'src/providers/auth_providers.dart';
 import 'src/providers/catalog_providers.dart';
 import 'src/providers/connectivity_providers.dart';
+import 'src/providers/theme_providers.dart';
 import 'src/startup.dart';
 
 void main() {
@@ -30,7 +31,11 @@ Future<Widget> _createApplication() async {
   final historyFile = File(
     '${Directory.systemTemp.path}/jmmart_search_history.json',
   );
+  final themeModeFile = File(
+    '${Directory.systemTemp.path}/jmmart_appearance.json',
+  );
   final initialHistory = await _loadSearchHistory(historyFile);
+  final initialThemeMode = await loadThemeMode(themeModeFile);
 
   if (!AppConfig.hasClerk) {
     await firebaseReady;
@@ -40,6 +45,8 @@ Future<Widget> _createApplication() async {
       overrides: [
         searchHistoryFileProvider.overrideWithValue(historyFile),
         initialSearchHistoryProvider.overrideWithValue(initialHistory),
+        themeModeFileProvider.overrideWithValue(themeModeFile),
+        initialThemeModeProvider.overrideWithValue(initialThemeMode),
       ],
       child: const JmMartApp(),
     );
@@ -67,6 +74,8 @@ Future<Widget> _createApplication() async {
       clerkAuthProvider.overrideWithValue(authState),
       searchHistoryFileProvider.overrideWithValue(historyFile),
       initialSearchHistoryProvider.overrideWithValue(initialHistory),
+      themeModeFileProvider.overrideWithValue(themeModeFile),
+      initialThemeModeProvider.overrideWithValue(initialThemeMode),
     ],
     child: JmMartApp(authState: authState),
   );

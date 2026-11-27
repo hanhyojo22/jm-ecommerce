@@ -2,6 +2,7 @@ import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_icons/phosphor_icons.dart';
 
 import '../core/api_exception.dart';
 import '../core/formatters.dart';
@@ -9,12 +10,17 @@ import '../core/push_notifications.dart';
 import '../models/models.dart';
 import '../providers/auth_providers.dart';
 import '../providers/catalog_providers.dart';
+import '../providers/chat_providers.dart';
 import '../providers/discount_card_providers.dart';
 import '../providers/order_providers.dart';
+import '../providers/store_locator_providers.dart';
+import '../providers/theme_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
-import '../widgets/status_notice.dart';
+import '../widgets/grouped_list_card.dart';
 import '../widgets/shell.dart';
+import '../widgets/status_notice.dart';
+import 'settings_screen.dart';
 
 /// Signs out and leaves the app running as a guest on Shop. Local state is
 /// cleared even if a step fails, such as Clerk's sign-out after the account
@@ -43,543 +49,37 @@ class AccountScreen extends ConsumerWidget {
     ref.read(shellTabProvider.notifier).select(1);
   }
 
-  Future<void> _showHelpSheet(BuildContext context) async {
-    await showModalBottomSheet<void>(
+  Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
       context: context,
-      showDragHandle: true,
-      useSafeArea: true,
-      builder: (context) {
-        final theme = Theme.of(context);
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Help',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Questions about an order or a medicine? Message your branch from the order details or the Messages tab.',
-                style: theme.textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Got it'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final me = ref.watch(meProvider);
-
-    return AsyncView(
-      value: me,
-      onRetry: () => ref.invalidate(meProvider),
-      builder: (account) {
-        final theme = Theme.of(context);
-        final scheme = theme.colorScheme;
-
-        return RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(meProvider);
-            await ref.read(meProvider.future);
-          },
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 28),
-            children: [
-              _LazadaAccountHeader(account: account),
-              const SizedBox(height: 8),
-              _AccountOrdersSection(
-                onOpenTab: (tab) => _openOrdersTab(ref, tab),
-              ),
-              const SizedBox(height: 8),
-              Material(
-                color: scheme.surfaceContainerLowest,
-                child: SwitchListTile(
-                  secondary: Icon(
-                    Icons.notifications_active_outlined,
-                    color: scheme.primary,
-                  ),
-                  title: const Text(
-                    'Cart reminders',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                  ),
-                  subtitle: const Text(
-                    'Remind me when items sit in my cart for a day',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  value: account.cartReminders,
-                  onChanged: (enabled) async {
-                    final feedback = AppNotice.of(context);
-                    try {
-                      await ref
-                          .read(apiClientProvider)
-                          .updateCartReminders(enabled);
-                      ref.invalidate(meProvider);
-                    } catch (_) {
-                      feedback.show('Could not save. Try again.');
-                    }
-                  },
-                ),
-              ),
-              Material(
-                color: scheme.surfaceContainerLowest,
-                child: ListTile(
-                  leading: Icon(Icons.alarm_rounded, color: scheme.primary),
-                  title: const Text(
-                    'Medicine reminders',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                  ),
-                  subtitle: const Text(
-                    'Dose reminders, refills and expiry alerts',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => context.push('/medicines'),
-                ),
-              ),
-              const _SavedDiscountCardsSection(),
-              const SizedBox(height: 8),
-              _LazadaToolsGridSection(
-                onSavedTap: () => context.push('/saved'),
-                onAddressesTap: () => context.push('/addresses'),
-                onReviewsTap: () => _openOrdersTab(ref, 'to_review'),
-                onMessagesTap: () =>
-                    ref.read(shellTabProvider.notifier).select(2),
-                onBranchesTap: () => context.push('/branches'),
-                onHelpTap: () => _showHelpSheet(context),
-              ),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: OutlinedButton.icon(
-                  onPressed: () => signOutOfApp(ClerkAuth.of(context), ref),
-                  icon: const Icon(Icons.logout_rounded),
-                  label: const Text('Sign out'),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// Profile banner: avatar, name, email and whether the email is verified.
-class _LazadaAccountHeader extends StatelessWidget {
-  const _LazadaAccountHeader({required this.account});
-
-  final Account account;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return DecoratedBox(
-      // The same flat cloud-blue sky as the Shop header.
-      decoration: BoxDecoration(color: skySlab(scheme).fill),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 12, 18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  CircleAvatar(
-                    radius: 26,
-                    backgroundColor: scheme.primary,
-                    foregroundColor: scheme.onPrimary,
-                    child: Text(
-                      initials(account.name),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          account.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 18,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          account.email,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            if (!account.profileComplete)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: scheme.tertiaryContainer,
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Text(
-                                  'Complete your profile',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: scheme.onTertiaryContainer,
-                                  ),
-                                ),
-                              ),
-                            if (account.emailVerified)
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.verified_rounded,
-                                    size: 15,
-                                    color: scheme.primary,
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    'Verified',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Edit profile',
-                    onPressed: () => context.push('/profile'),
-                    icon: const Icon(Icons.edit_outlined),
-                  ),
-                ],
-              ),
-            ],
-          ),
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Sign out of Everyday Pharmacy?'),
+        content: const Text(
+          'You can still browse medicines as a guest. Your cart, orders, and reminders stay safely linked to your account.',
         ),
-      ),
-    );
-  }
-}
-
-/// Lazada-style "My Orders" section with "View All Orders >" and the 5 status
-/// icon shortcuts.
-class _AccountOrdersSection extends StatelessWidget {
-  const _AccountOrdersSection({required this.onOpenTab});
-
-  final ValueChanged<String> onOpenTab;
-
-  static const _shortcuts = [
-    (
-      key: 'to_pay',
-      label: 'To Pay',
-      icon: Icons.account_balance_wallet_outlined,
-    ),
-    (key: 'to_dispatch', label: 'Preparing', icon: Icons.inventory_2_outlined),
-    (
-      key: 'to_receive',
-      label: 'On the way',
-      icon: Icons.local_shipping_outlined,
-    ),
-    (key: 'to_review', label: 'To Review', icon: Icons.rate_review_outlined),
-    (
-      key: 'returns',
-      // Five tiles share the row; the long label was cut to "Cancellatio…".
-      label: 'Returns',
-      icon: Icons.assignment_return_outlined,
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Material(
-      color: scheme.surfaceContainerLowest,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 12, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'My Orders',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
-                ),
-                InkWell(
-                  borderRadius: BorderRadius.circular(appSurfaceRadius),
-                  onTap: () => onOpenTab('all'),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 2,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'View All Orders',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          size: 18,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+              foregroundColor: Theme.of(dialogContext).colorScheme.onError,
             ),
-            const SizedBox(height: 12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final item in _shortcuts)
-                  Expanded(
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(appSurfaceRadius),
-                      onTap: () => onOpenTab(item.key),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 2,
-                          vertical: 4,
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(item.icon, size: 25, color: scheme.onSurface),
-                            const SizedBox(height: 6),
-                            Text(
-                              item.label,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                fontSize: 11,
-                                height: 1.15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Account shortcuts: saved items, addresses, reviews, messages, branches and help.
-class _LazadaToolsGridSection extends StatelessWidget {
-  const _LazadaToolsGridSection({
-    required this.onSavedTap,
-    required this.onAddressesTap,
-    required this.onReviewsTap,
-    required this.onMessagesTap,
-    required this.onBranchesTap,
-    required this.onHelpTap,
-  });
-
-  final VoidCallback onSavedTap;
-  final VoidCallback onAddressesTap;
-  final VoidCallback onReviewsTap;
-  final VoidCallback onMessagesTap;
-  final VoidCallback onBranchesTap;
-  final VoidCallback onHelpTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    final row1 = [
-      (
-        icon: Icons.favorite_border_rounded,
-        label: 'Saved items',
-        onTap: onSavedTap,
-      ),
-      (
-        icon: Icons.location_on_outlined,
-        label: 'Delivery addresses',
-        onTap: onAddressesTap,
-      ),
-      (
-        icon: Icons.rate_review_outlined,
-        label: 'My Reviews',
-        onTap: onReviewsTap,
-      ),
-    ];
-    final row2 = [
-      (
-        icon: Icons.chat_bubble_outline_rounded,
-        label: 'Messages',
-        onTap: onMessagesTap,
-      ),
-      (
-        icon: Icons.storefront_outlined,
-        label: 'Branches',
-        onTap: onBranchesTap,
-      ),
-      (icon: Icons.help_outline_rounded, label: 'Help', onTap: onHelpTap),
-    ];
-
-    Widget buildRow(
-      List<({IconData icon, String label, VoidCallback onTap})> items,
-    ) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final item in items)
-            Expanded(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(appSurfaceRadius),
-                onTap: item.onTap,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 6,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(item.icon, size: 25, color: scheme.onSurface),
-                      const SizedBox(height: 6),
-                      Text(
-                        item.label,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontSize: 11.5,
-                          height: 1.15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Sign out'),
+          ),
         ],
-      );
-    }
-
-    return Material(
-      color: scheme.surfaceContainerLowest,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 14, 12, 16),
-        child: Column(
-          children: [buildRow(row1), const SizedBox(height: 8), buildRow(row2)],
-        ),
       ),
     );
-  }
-}
-
-/// The IDs saved at checkout, with a way to remove one. Hidden when there are none.
-class _SavedDiscountCardsSection extends ConsumerWidget {
-  const _SavedDiscountCardsSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cards =
-        ref.watch(discountCardsProvider).value ?? const <DiscountCard>[];
-
-    if (cards.isEmpty) {
-      return const SizedBox.shrink();
+    if (confirmed != true || !context.mounted) {
+      return;
     }
-
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Card(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-              child: Text(
-                'Saved discount IDs',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            for (final card in cards)
-              ListTile(
-                dense: true,
-                contentPadding: const EdgeInsets.only(left: 16, right: 8),
-                title: Text(
-                  '${card.typeLabel} · ${card.idNumberMasked}',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                subtitle: Text(card.name),
-                trailing: IconButton(
-                  tooltip: 'Delete',
-                  onPressed: () => _delete(context, ref, card),
-                  icon: const Icon(Icons.delete_outline_rounded),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
+    await signOutOfApp(ClerkAuth.of(context), ref);
   }
 
-  Future<void> _delete(
+  Future<void> _deleteDiscountCard(
     BuildContext context,
     WidgetRef ref,
     DiscountCard card,
@@ -607,7 +107,9 @@ class _SavedDiscountCardsSection extends ConsumerWidget {
         ],
       ),
     );
-    if (confirmed != true || !context.mounted) return;
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
     try {
       await ref.read(apiClientProvider).deleteDiscountCard(card.id);
       ref.invalidate(discountCardsProvider);
@@ -621,5 +123,584 @@ class _SavedDiscountCardsSection extends ConsumerWidget {
         AppNotice.of(context).show(error.friendly);
       }
     }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final me = ref.watch(meProvider);
+    final cards =
+        ref.watch(discountCardsProvider).value ?? const <DiscountCard>[];
+    final unreadMessages =
+        ref
+            .watch(conversationsProvider)
+            .value
+            ?.fold<int>(0, (sum, item) => sum + item.unreadCount) ??
+        0;
+    final activeBranch = ref.watch(nearestStoreProvider).value?.activeBranch;
+    final themeMode = ref.watch(themeModeProvider);
+
+    return AsyncView(
+      value: me,
+      onRetry: () => ref.invalidate(meProvider),
+      builder: (account) {
+        final theme = Theme.of(context);
+        final scheme = theme.colorScheme;
+        final branchSubtitle = activeBranch == null
+            ? 'Find nearby Everyday branches & hours'
+            : activeBranch.branch.shortName.isNotEmpty
+            ? activeBranch.branch.shortName
+            : activeBranch.branch.name;
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(meProvider);
+            ref.invalidate(discountCardsProvider);
+            await ref.read(meProvider.future);
+          },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 8, 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Account',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Settings',
+                          constraints: const BoxConstraints(
+                            minWidth: 48,
+                            minHeight: 48,
+                          ),
+                          onPressed: () => context.push('/settings'),
+                          icon: const Icon(
+                            PhosphorIconsRegular.gearSix,
+                            size: 22,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+                sliver: SliverList.list(
+                  children: [
+                    _ProfileCard(account: account),
+                    const SizedBox(height: 16),
+                    _AccountOrdersCard(
+                      onOpenTab: (tab) => _openOrdersTab(ref, tab),
+                    ),
+                    const SizedBox(height: 18),
+                    GroupedSection(
+                      label: 'Pharmacy & care',
+                      children: [
+                        GroupedRowTile(
+                          icon: PhosphorIconsRegular.pill,
+                          tone: GroupedIconTone.teal,
+                          title: 'Medicine reminders',
+                          subtitle: 'Dose schedules, refills & expiry alerts',
+                          trailing: account.medicationReminders
+                              ? const GroupedStatusPill(label: 'On')
+                              : null,
+                          onTap: () => context.push('/medicines'),
+                        ),
+                        for (final card in cards)
+                          _SavedDiscountCardRow(
+                            card: card,
+                            onDelete: () =>
+                                _deleteDiscountCard(context, ref, card),
+                          ),
+                        GroupedRowTile(
+                          icon: PhosphorIconsRegular.storefront,
+                          tone: GroupedIconTone.neutral,
+                          title: 'Branch locator',
+                          subtitle: branchSubtitle,
+                          onTap: () => context.push('/branches'),
+                        ),
+                        GroupedRowTile(
+                          icon: PhosphorIconsRegular.chatCircleDots,
+                          tone: GroupedIconTone.neutral,
+                          title: 'Pharmacist messages',
+                          subtitle: 'Ask about orders or prescriptions',
+                          trailing: unreadMessages > 0
+                              ? GroupedStatusPill(
+                                  label: '$unreadMessages',
+                                  tone: GroupedPillTone.unread,
+                                )
+                              : null,
+                          onTap: () =>
+                              ref.read(shellTabProvider.notifier).select(2),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    GroupedSection(
+                      label: 'Shopping',
+                      children: [
+                        GroupedRowTile(
+                          icon: PhosphorIconsRegular.mapPin,
+                          tone: GroupedIconTone.neutral,
+                          title: 'Delivery addresses',
+                          subtitle: 'Manage saved delivery locations',
+                          onTap: () => context.push('/addresses'),
+                        ),
+                        GroupedRowTile(
+                          icon: PhosphorIconsRegular.heart,
+                          tone: GroupedIconTone.neutral,
+                          title: 'Saved items',
+                          subtitle: 'Bookmarked medicines & essentials',
+                          onTap: () => context.push('/saved'),
+                        ),
+                        GroupedRowTile(
+                          icon: PhosphorIconsRegular.star,
+                          tone: GroupedIconTone.neutral,
+                          title: 'My reviews',
+                          subtitle: 'Rate medicines & branch service',
+                          onTap: () => _openOrdersTab(ref, 'to_review'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    GroupedSection(
+                      label: 'App',
+                      children: [
+                        GroupedRowTile(
+                          icon: PhosphorIconsRegular.gearSix,
+                          tone: GroupedIconTone.primary,
+                          title: 'Settings',
+                          subtitle:
+                              'Notifications, appearance (${themeModeLabel(themeMode)}), help',
+                          onTap: () => context.push('/settings'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(50),
+                        backgroundColor: scheme.surfaceContainerLowest,
+                        foregroundColor: scheme.error,
+                        side: BorderSide(color: scheme.outlineVariant),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(appSurfaceRadius),
+                        ),
+                      ),
+                      onPressed: () => _confirmSignOut(context, ref),
+                      icon: const Icon(PhosphorIconsRegular.signOut, size: 19),
+                      label: const Text(
+                        'Sign out',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Everyday Pharmacy · v$appVersionLabel',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurfaceVariant,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Elevated identity card with verified status, edit profile shortcut, and
+/// incomplete-profile prompt banner when required details are missing.
+class _ProfileCard extends StatelessWidget {
+  const _ProfileCard({required this.account});
+
+  final Account account;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brand = AppBrandColors.of(context);
+    final dark = theme.brightness == Brightness.dark;
+
+    return GroupedCard(
+      showDividers: false,
+      children: [
+        InkWell(
+          onTap: () => context.push('/profile'),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+            child: Row(
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    CircleAvatar(
+                      radius: 26,
+                      backgroundColor: scheme.primary,
+                      foregroundColor: scheme.onPrimary,
+                      child: Text(
+                        initials(account.name),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    if (account.emailVerified)
+                      Positioned(
+                        right: -1,
+                        bottom: -1,
+                        child: Container(
+                          width: 18,
+                          height: 18,
+                          decoration: BoxDecoration(
+                            color: brand.careTeal,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: scheme.surfaceContainerLowest,
+                              width: 2,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Icon(
+                            PhosphorIconsRegular.check,
+                            size: 10,
+                            color: dark
+                                ? const Color(0xFF0B1020)
+                                : Colors.white,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              account.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontSize: 16.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                          ),
+                          if (account.emailVerified) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: brand.careTealSoft,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                'Verified',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: brand.careTeal,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        account.email,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontSize: 13,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  PhosphorIconsRegular.pencilSimple,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (!account.profileComplete) ...[
+          Divider(height: 1, thickness: 1, color: scheme.outlineVariant),
+          InkWell(
+            onTap: () => context.push('/profile?complete=1'),
+            child: Ink(
+              color: dark ? const Color(0xFF2E2412) : const Color(0xFFFFF4D1),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+                child: Row(
+                  children: [
+                    Icon(
+                      PhosphorIconsRegular.warningCircle,
+                      size: 17,
+                      color: dark
+                          ? const Color(0xFFFCD34D)
+                          : const Color(0xFF7A4F00),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Complete your profile for Rx & discounts',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: dark
+                              ? const Color(0xFFFCD34D)
+                              : const Color(0xFF7A4F00),
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      PhosphorIconsRegular.caretRight,
+                      size: 16,
+                      color: dark
+                          ? const Color(0xFFFCD34D)
+                          : const Color(0xFF7A4F00),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Elevated "My Orders" card with "View all" link and the 5 status shortcuts.
+class _AccountOrdersCard extends StatelessWidget {
+  const _AccountOrdersCard({required this.onOpenTab});
+
+  final ValueChanged<String> onOpenTab;
+
+  static const _shortcuts = [
+    (key: 'to_pay', label: 'To pay', icon: PhosphorIconsRegular.wallet),
+    (
+      key: 'to_dispatch',
+      label: 'Preparing',
+      icon: PhosphorIconsRegular.package,
+    ),
+    (key: 'to_receive', label: 'On the way', icon: PhosphorIconsRegular.truck),
+    (key: 'to_review', label: 'To review', icon: PhosphorIconsRegular.star),
+    (
+      key: 'returns',
+      label: 'Returns',
+      icon: PhosphorIconsRegular.arrowCounterClockwise,
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return GroupedCard(
+      showDividers: false,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 8, 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'My orders',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(48, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  foregroundColor: scheme.primary,
+                ),
+                onPressed: () => onOpenTab('all'),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'View all',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(width: 2),
+                    Icon(PhosphorIconsRegular.caretRight, size: 16),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(6, 2, 6, 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final item in _shortcuts)
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () => onOpenTab(item.key),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 68),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 2,
+                          vertical: 6,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: scheme.surface,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              alignment: Alignment.center,
+                              child: Icon(
+                                item.icon,
+                                size: 20,
+                                color: scheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              item.label,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontSize: 11,
+                                height: 1.2,
+                                fontWeight: FontWeight.w600,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Saved Senior Citizen / PWD discount ID row inside Pharmacy & care.
+class _SavedDiscountCardRow extends StatelessWidget {
+  const _SavedDiscountCardRow({required this.card, required this.onDelete});
+
+  final DiscountCard card;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 58),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 9, 8, 9),
+        child: Row(
+          children: [
+            const GroupedIconBadge(
+              icon: PhosphorIconsRegular.identificationCard,
+              tone: GroupedIconTone.primary,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${card.typeLabel} · ${card.idNumberMasked}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Saved discount ID · ${card.name}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 12.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: 'Delete',
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              onPressed: onDelete,
+              icon: Icon(
+                PhosphorIconsRegular.trash,
+                size: 19,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

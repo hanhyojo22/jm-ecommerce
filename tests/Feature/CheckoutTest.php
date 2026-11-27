@@ -193,7 +193,7 @@ class CheckoutTest extends TestCase
             ->assertSeeInOrder(['Delivery or pickup', 'Payment method', 'Review &amp; place order', 'Order summary'], false)
             ->assertSee('Cash on delivery')
             ->assertSee('Place order')
-            ->assertDontSee('name="province"', false)
+            ->assertSee('<select id="province" name="province"', false)
             ->assertDontSee('name="postal_code"', false)
             ->assertSee('name="delivery_note"', false)
             ->assertSee('name="client_request_id"', false)

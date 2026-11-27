@@ -6,6 +6,7 @@ import './image-viewer';
 import './notifications';
 import './web-push';
 import './cart';
+import './address-places';
 import { clerkComponentAppearance, clerkUserProfileAppearance } from './clerk-appearance';
 
 window.marketplaceSuggestions = (initialQuery, url, resultsUrl, clearUrl = null) => ({
