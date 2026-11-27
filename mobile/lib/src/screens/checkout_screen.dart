@@ -508,7 +508,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
       final room = 10 - _prescriptions.length;
       if (room <= 0) {
-        _showFeedback('A prescription can have up to 10 pages.');
+        _showFeedback('Up to 10 prescription pages.');
         return;
       }
 
@@ -518,7 +518,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       _refreshDocumentsSheet();
       if (picked.length > room) {
         _showFeedback(
-          'Only the first $room pages were added.',
+          'Added first $room pages.',
           kind: NoticeKind.info,
         );
       }
@@ -1271,7 +1271,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               const SizedBox(height: 2),
               Text(
                 rxNames.isEmpty
-                    ? 'Required for prescription medicines'
+                    ? 'Required for Rx items'
                     : 'Required for ${_joinNames(rxNames)}',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: dark
@@ -1632,13 +1632,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               padding: const EdgeInsets.only(bottom: 12),
                               child: Semantics(
                                 liveRegion: true,
-                                child: notice.kind == NoticeKind.success
-                                    ? Text(notice.message)
-                                    : StatusNoticeCard(
-                                        message: notice.message,
-                                        kind: notice.kind,
-                                        onDismiss: _clearDocumentsNotice,
-                                      ),
+                                child: StatusNoticeCard(
+                                  message: notice.message,
+                                  kind: notice.kind,
+                                  onDismiss: _clearDocumentsNotice,
+                                ),
                               ),
                             ),
                           prescription

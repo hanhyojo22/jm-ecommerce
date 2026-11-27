@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_icons/phosphor_icons.dart';
 import 'package:jmmart/src/core/api_client.dart';
 import 'package:jmmart/src/core/api_exception.dart';
 import 'package:jmmart/src/models/models.dart';
@@ -121,26 +122,27 @@ void main() {
     },
   );
 
-  testWidgets('a product already in the cart adds one more on every tap', (
+  testWidgets('a product already in the cart adds one more on every tap and shows its 48dp quantity pip', (
     tester,
   ) async {
     final api = _CartApi()..cartProduct = 'shirt';
     await _pumpCard(tester, api);
     expect(find.byTooltip('Remove one'), findsNothing);
     expect(_inCart(2), findsOneWidget);
-    // No count badge on the card's cart icon.
-    expect(find.text('2'), findsNothing);
-    expect(find.byType(Badge), findsNothing);
+    expect(tester.getSize(_addButton), const Size(48, 48));
+    expect(find.text('2'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Add to cart'));
     await _settleQuantity(tester);
     expect(api.updatedTo, 3);
     expect(_inCart(3), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Add to cart'));
     await _settleQuantity(tester);
     expect(api.updatedTo, 4);
     expect(_inCart(4), findsOneWidget);
+    expect(find.text('4'), findsOneWidget);
     expect(api.adds, 0);
   });
 
@@ -163,9 +165,60 @@ void main() {
       api.pendingUpdate!.complete(_cart(5, productId: 'shirt'));
       await tester.pump();
       expect(find.text('Added to cart'), findsOneWidget);
-      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+      expect(find.byIcon(PhosphorIconsRegular.checkCircle), findsOneWidget);
       await tester.pump(const Duration(seconds: 2));
       await tester.pumpAndSettle();
+      expect(find.text('Added to cart'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'Added to cart View cart opens cart via CartFlightTarget without blocking background taps',
+    (tester) async {
+      var opened = 0;
+      var backgroundTaps = 0;
+      final cartKey = GlobalKey<CartBadgeIconState>();
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            theme: buildAppTheme(),
+            home: CartFlightTarget(
+              targetKey: cartKey,
+              onOpenCart: () => opened++,
+              child: Scaffold(
+                body: Builder(
+                  builder: (context) => Column(
+                    children: [
+                      TextButton(
+                        onPressed: () => showAddedToCartToast(
+                          context,
+                          onViewCart: CartFlightTarget.maybeOpenCartOf(context),
+                        ),
+                        child: const Text('Trigger'),
+                      ),
+                      TextButton(
+                        onPressed: () => backgroundTaps++,
+                        child: const Text('Background'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Trigger'));
+      await tester.pump();
+      expect(find.text('Added to cart'), findsOneWidget);
+      expect(find.text('View cart'), findsOneWidget);
+
+      await tester.tap(find.text('Background'));
+      expect(backgroundTaps, 1);
+
+      await tester.tap(find.text('View cart'));
+      await tester.pumpAndSettle();
+      expect(opened, 1);
       expect(find.text('Added to cart'), findsNothing);
     },
   );
@@ -251,7 +304,7 @@ void main() {
       );
       expect(
         tester
-            .renderObject<RenderParagraph>(find.text('No reviews'))
+            .renderObject<RenderParagraph>(find.text('In stock'))
             .didExceedMaxLines,
         isFalse,
       );

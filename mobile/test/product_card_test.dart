@@ -6,7 +6,7 @@ import 'package:jmmart/src/widgets/common.dart';
 
 void main() {
   testWidgets(
-    'unreviewed discovery cards show grey stars between the name and price',
+    'unrated discovery cards show clean stock metadata instead of hollow stars',
     (tester) async {
       final semantics = tester.ensureSemantics();
       try {
@@ -14,20 +14,19 @@ void main() {
         final name = find.text('Cargo Pants');
         // A one-line name takes only the space it needs, with no reserved blank line.
         expect(tester.getSize(name).height, lessThan(30));
-        final noReviews = find.text('No reviews');
-        expect(noReviews, findsOneWidget);
-        // Outlines, never filled stars, so no rating reads as a low one.
-        expect(find.byIcon(Icons.star_outline_rounded), findsNWidgets(5));
+        final stock = find.text('In stock');
+        expect(stock, findsOneWidget);
+        expect(find.text('No reviews'), findsNothing);
+        expect(find.byIcon(Icons.star_outline_rounded), findsNothing);
         expect(find.byIcon(Icons.star_rounded), findsNothing);
         expect(
-          tester.getTopLeft(noReviews).dy,
+          tester.getTopLeft(stock).dy,
           greaterThan(tester.getBottomLeft(name).dy),
         );
         expect(
-          tester.getBottomLeft(noReviews).dy,
+          tester.getBottomLeft(stock).dy,
           lessThan(tester.getTopLeft(find.text('₱255.00')).dy),
         );
-        expect(find.bySemanticsLabel(RegExp('No reviews yet')), findsOneWidget);
       } finally {
         semantics.dispose();
       }
@@ -91,7 +90,7 @@ void main() {
     }
   });
 
-  testWidgets('discovery cards badge prescription medicines, never COD', (
+  testWidgets('discovery cards badge prescription medicines in clinical indigo, never COD', (
     tester,
   ) async {
     await tester.pumpWidget(_card(discovery: true));
@@ -99,7 +98,15 @@ void main() {
     expect(find.text('COD'), findsNothing);
 
     await tester.pumpWidget(_card(discovery: true, requiresPrescription: true));
-    expect(find.text('Rx'), findsOneWidget);
+    final rxText = find.text('Rx');
+    expect(rxText, findsOneWidget);
+    final scheme = Theme.of(tester.element(rxText)).colorScheme;
+    final widget = tester.widget<Text>(rxText);
+    expect(widget.style?.color, scheme.onTertiaryContainer);
+    final box = tester.widget<DecoratedBox>(
+      find.ancestor(of: rxText, matching: find.byType(DecoratedBox)).first,
+    );
+    expect((box.decoration as BoxDecoration).color, scheme.tertiaryContainer);
   });
 
   testWidgets('discovery cards label sold out stock', (tester) async {

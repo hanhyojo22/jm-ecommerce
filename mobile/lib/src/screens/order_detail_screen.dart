@@ -150,15 +150,10 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         builder: (value) => Column(
           children: [
             if (order.hasError)
-              MaterialBanner(
-                content: const Text('Could not refresh this order.'),
-                actions: [
-                  TextButton(
-                    onPressed: () =>
-                        ref.invalidate(orderProvider(widget.orderId)),
-                    child: const Text('Retry'),
-                  ),
-                ],
+              RefreshNoticeStrip(
+                message: 'Could not refresh this order.',
+                actionLabel: 'Retry',
+                onAction: () => ref.invalidate(orderProvider(widget.orderId)),
               ),
             Expanded(
               child: RefreshIndicator(
@@ -214,7 +209,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       ),
       _ => (
         'Prescription in review',
-        'A pharmacist is checking your prescription. Your order is prepared once it is approved.',
+        'Pharmacist is reviewing your prescription.',
       ),
     };
 
@@ -384,7 +379,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     }
     if (picked.isEmpty || !mounted) return;
     if (picked.length > 10) {
-      _showFeedback('A prescription can have up to 10 pages.');
+      _showFeedback('Up to 10 prescription pages.');
       return;
     }
 
@@ -393,7 +388,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       await ref.read(apiClientProvider).resubmitPrescription(order.id, picked);
       ref.invalidate(orderProvider(widget.orderId));
       _showFeedback(
-        'Thanks. A pharmacist will check your new pages.',
+        'Prescription sent for review.',
         kind: NoticeKind.success,
       );
     } on ApiException catch (error) {

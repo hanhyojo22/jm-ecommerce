@@ -329,7 +329,12 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
       // Confirm only once the server agreed and the thumbnail has landed.
       landed?.then((_) {
         if (mounted) {
-          showAddedToCartToast(context);
+          final router = GoRouter.maybeOf(context);
+          showAddedToCartToast(
+            context,
+            onViewCart: router != null ? () => router.push('/cart') : null,
+            bottomOffset: 84,
+          );
         }
       });
       if (buyNow) {

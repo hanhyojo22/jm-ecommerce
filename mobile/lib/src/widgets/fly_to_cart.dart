@@ -3,9 +3,11 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phosphor_icons/phosphor_icons.dart';
 
 import '../providers/cart_providers.dart';
 import 'common.dart';
+import 'status_notice.dart';
 
 /// App-bar cart icon with a live badge. It watches the cart on its own so a
 /// count change repaints this icon instead of the whole page around it, and
@@ -25,17 +27,22 @@ class CartFlightTarget extends InheritedWidget {
   const CartFlightTarget({
     super.key,
     required this.targetKey,
+    this.onOpenCart,
     required super.child,
   });
 
   final GlobalKey<CartBadgeIconState> targetKey;
+  final VoidCallback? onOpenCart;
 
   static GlobalKey<CartBadgeIconState>? maybeOf(BuildContext context) =>
       context.getInheritedWidgetOfExactType<CartFlightTarget>()?.targetKey;
 
+  static VoidCallback? maybeOpenCartOf(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<CartFlightTarget>()?.onOpenCart;
+
   @override
   bool updateShouldNotify(CartFlightTarget oldWidget) =>
-      targetKey != oldWidget.targetKey;
+      targetKey != oldWidget.targetKey || onOpenCart != oldWidget.onOpenCart;
 }
 
 class CartBadgeIconState extends ConsumerState<CartBadgeIcon>
@@ -132,24 +139,46 @@ Future<void> flyToCart({
   return landed.future;
 }
 
-/// Brief centred "Added to cart" confirmation, as marketplace apps show after
-/// the item lands in the cart. Ignores touches and removes itself.
-void showAddedToCartToast(BuildContext context) {
+/// Non-blocking bottom-floating Minimal Ink pill confirming the cart add.
+void showAddedToCartToast(
+  BuildContext context, {
+  VoidCallback? onViewCart,
+  double bottomOffset = 80,
+}) {
   final overlay = Overlay.maybeOf(context, rootOverlay: true);
   if (overlay == null) {
     return;
   }
+  var removed = false;
   late final OverlayEntry entry;
+  void removeEntry() {
+    if (removed) {
+      return;
+    }
+    removed = true;
+    entry.remove();
+  }
+
   entry = OverlayEntry(
-    builder: (_) => _AddedToast(onDone: () => entry.remove()),
+    builder: (_) => _AddedToast(
+      onDone: removeEntry,
+      onViewCart: onViewCart,
+      bottomOffset: bottomOffset,
+    ),
   );
   overlay.insert(entry);
 }
 
 class _AddedToast extends StatefulWidget {
-  const _AddedToast({required this.onDone});
+  const _AddedToast({
+    required this.onDone,
+    required this.bottomOffset,
+    this.onViewCart,
+  });
 
   final VoidCallback onDone;
+  final VoidCallback? onViewCart;
+  final double bottomOffset;
 
   @override
   State<_AddedToast> createState() => _AddedToastState();
@@ -157,11 +186,21 @@ class _AddedToast extends StatefulWidget {
 
 class _AddedToastState extends State<_AddedToast>
     with SingleTickerProviderStateMixin {
-  // Pop in, hold, fade out.
   late final _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1600),
-  )..forward().whenComplete(widget.onDone);
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        widget.onDone();
+      }
+    });
+    _controller.forward();
+  }
 
   @override
   void dispose() {
@@ -171,10 +210,20 @@ class _AddedToastState extends State<_AddedToast>
 
   @override
   Widget build(BuildContext context) {
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final theme = Theme.of(context);
+    final media = MediaQuery.of(context);
+    final reduceMotion = media.disableAnimations;
+    final bottomPadding = media.padding.bottom;
 
-    return IgnorePointer(
-      child: Center(
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          12,
+          16,
+          bottomPadding + widget.bottomOffset,
+        ),
         child: AnimatedBuilder(
           animation: _controller,
           builder: (context, child) {
@@ -184,43 +233,77 @@ class _AddedToastState extends State<_AddedToast>
                 : t > 0.8
                 ? (1 - t) / 0.2
                 : 1.0;
-            final scale = reduceMotion
-                ? 1.0
+            final dy = reduceMotion
+                ? 0.0
                 : lerpDouble(
-                    0.8,
-                    1,
-                    Curves.easeOutBack.transform((t / 0.15).clamp(0, 1)),
+                    10,
+                    0,
+                    Curves.easeOutCubic.transform((t / 0.15).clamp(0, 1)),
                   )!;
             return Opacity(
               opacity: opacity.clamp(0, 1),
-              child: Transform.scale(scale: scale, child: child),
+              child: Transform.translate(offset: Offset(0, dy), child: child),
             );
           },
           child: Semantics(
             liveRegion: true,
-            child: Material(
-              color: Colors.black.withValues(alpha: 0.78),
-              borderRadius: BorderRadius.circular(14),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 28, vertical: 20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.check_circle_rounded,
-                      color: Colors.white,
-                      size: 40,
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Added to cart',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+            child: DecoratedBox(
+              decoration: minimalInkDecoration(theme.brightness, radius: 22),
+              child: Material(
+                type: MaterialType.transparency,
+                borderRadius: BorderRadius.circular(22),
+                clipBehavior: Clip.antiAlias,
+                child: Padding(
+                  padding: widget.onViewCart == null
+                      ? const EdgeInsets.symmetric(horizontal: 18, vertical: 11)
+                      : const EdgeInsets.fromLTRB(16, 0, 10, 0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const ExcludeSemantics(
+                        child: Icon(
+                          PhosphorIconsRegular.checkCircle,
+                          color: Color(0xFF5EEAD4),
+                          size: 18,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 9),
+                      Flexible(
+                        child: Text(
+                          'Added to cart',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: Colors.white,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.05,
+                          ),
+                        ),
+                      ),
+                      if (widget.onViewCart != null) ...[
+                        const SizedBox(width: 6),
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: const Color(0xFFFFC82C),
+                            minimumSize: const Size(48, 44),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            textStyle: theme.textTheme.labelLarge?.copyWith(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          onPressed: () {
+                            widget.onDone();
+                            widget.onViewCart!();
+                          },
+                          child: const Text('View cart'),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
             ),

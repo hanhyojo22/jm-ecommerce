@@ -1,0 +1,3171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Everyday Pharmacy — Flutter Homepage Redesign Mockup</title>
+  <style>
+    @font-face {
+      font-family: 'Manrope';
+      src: url('../mobile/assets/fonts/Manrope-Regular.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Manrope';
+      src: url('../mobile/assets/fonts/Manrope-Medium.ttf') format('truetype');
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Manrope';
+      src: url('../mobile/assets/fonts/Manrope-SemiBold.ttf') format('truetype');
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Manrope';
+      src: url('../mobile/assets/fonts/Manrope-Bold.ttf') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Manrope';
+      src: url('../mobile/assets/fonts/Manrope-ExtraBold.ttf') format('truetype');
+      font-weight: 800;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root {
+      --studio-bg: #0b1120;
+      --studio-surface: #111827;
+      --studio-surface-2: #182235;
+      --studio-border: #223049;
+      --studio-fg: #f8fafc;
+      --studio-muted: #94a3b8;
+      --studio-accent: #3b82f6;
+      --studio-gold: #ffc82c;
+      --studio-green: #10b981;
+      --studio-red: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at 18% 0%, #16223d 0%, var(--studio-bg) 52%);
+      color: var(--studio-fg);
+      font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    button, input {
+      font-family: inherit;
+    }
+
+    .tabular {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    /* Studio Shell Layout */
+    .studio-shell {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 18px 20px 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .control-deck {
+      background: rgba(17, 24, 39, 0.92);
+      border: 1px solid var(--studio-border);
+      border-radius: 16px;
+      padding: 16px 18px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .deck-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .deck-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .deck-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .deck-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(255, 200, 44, 0.14);
+      color: var(--studio-gold);
+      border: 1px solid rgba(255, 200, 44, 0.28);
+    }
+
+    .deck-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+    }
+
+    .deck-subtitle {
+      margin: 0;
+      font-size: 12.5px;
+      color: var(--studio-muted);
+    }
+
+    .layout-segmented {
+      display: inline-flex;
+      padding: 3px;
+      border-radius: 10px;
+      background: var(--studio-bg);
+      border: 1px solid var(--studio-border);
+      gap: 3px;
+    }
+
+    .seg-btn {
+      border: 0;
+      background: transparent;
+      color: var(--studio-muted);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 7px 12px;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .seg-btn.active {
+      background: #1e3a8a;
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(30, 58, 138, 0.4);
+    }
+
+    .seg-btn:hover:not(.active) {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* Direction Switcher */
+    .direction-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    @media (max-width: 980px) {
+      .direction-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .direction-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .dir-btn {
+      text-align: left;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1.5px solid var(--studio-border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      color: var(--studio-fg);
+      cursor: pointer;
+      transition: all 0.16s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .dir-btn:hover {
+      border-color: #475569;
+      background: rgba(30, 41, 59, 0.72);
+    }
+
+    .dir-btn.active {
+      border-color: var(--studio-gold);
+      background: rgba(30, 58, 138, 0.28);
+      box-shadow: 0 0 0 1px rgba(255, 200, 44, 0.28), 0 8px 20px rgba(0, 0, 0, 0.24);
+    }
+
+    .dir-btn-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .dir-btn-title {
+      font-size: 12.5px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .dir-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 4px;
+      display: inline-block;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      flex-shrink: 0;
+    }
+
+    .dir-tag {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .tag-rec {
+      background: rgba(16, 185, 129, 0.16);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .tag-alt {
+      background: rgba(59, 130, 246, 0.14);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.28);
+    }
+
+    .tag-warn {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.28);
+    }
+
+    .dir-desc {
+      margin: 0;
+      font-size: 11px;
+      line-height: 1.38;
+      color: var(--studio-muted);
+    }
+
+    /* Controls Bar */
+    .deck-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--studio-border);
+    }
+
+    .scrubber-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 260px;
+      font-size: 12px;
+    }
+
+    .scrubber-group label {
+      font-weight: 700;
+      color: var(--studio-muted);
+      white-space: nowrap;
+    }
+
+    .scrubber-group input[type="range"] {
+      width: 170px;
+      accent-color: var(--studio-gold);
+      cursor: pointer;
+    }
+
+    .collapse-pct {
+      min-width: 38px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .preset-pills {
+      display: inline-flex;
+      gap: 4px;
+    }
+
+    .ctrl-pill {
+      border: 1px solid var(--studio-border);
+      background: var(--studio-bg);
+      color: #e2e8f0;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .ctrl-pill:hover {
+      background: var(--studio-surface-2);
+      border-color: #475569;
+    }
+
+    .ctrl-pill.active {
+      background: #1d4ed8;
+      border-color: #3b82f6;
+      color: #ffffff;
+    }
+
+    .ctrl-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Stage Workspace */
+    .stage-workspace {
+      display: grid;
+      grid-template-columns: auto minmax(340px, 1fr);
+      gap: 24px;
+      align-items: start;
+      justify-content: center;
+    }
+
+    .stage-workspace.compare-mode {
+      grid-template-columns: 1fr;
+    }
+
+    @media (max-width: 960px) {
+      .stage-workspace {
+        grid-template-columns: 1fr;
+        justify-items: center;
+      }
+    }
+
+    .phones-cluster {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .phone-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .phone-caption {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 390px;
+      padding: 0 4px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #cbd5e1;
+    }
+
+    .caption-chip {
+      font-size: 10.5px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(15, 61, 158, 0.45);
+      color: #bfdbfe;
+      border: 1px solid rgba(96, 165, 250, 0.35);
+    }
+
+    .caption-chip.before {
+      background: rgba(245, 158, 11, 0.16);
+      color: #fcd34d;
+      border-color: rgba(245, 158, 11, 0.32);
+    }
+
+    /* Realistic 390x844 Phone Shell */
+    .phone-bezel {
+      width: 406px;
+      height: 860px;
+      padding: 8px;
+      border-radius: 44px;
+      background: linear-gradient(145deg, #27344f 0%, #0f172a 100%);
+      box-shadow:
+        0 30px 70px rgba(0, 0, 0, 0.55),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .phone-screen {
+      /* Default Option A Light tokens */
+      --p-header-bg: #0f3d9e;
+      --p-header-ink: #ffffff;
+      --p-header-sub: rgba(255, 255, 255, 0.82);
+      --p-strip-bg: rgba(255, 255, 255, 0.14);
+      --p-strip-border: rgba(255, 255, 255, 0.22);
+      --p-strip-ink: #ffffff;
+      --p-strip-muted: rgba(255, 255, 255, 0.84);
+      --p-open-color: #6ee7b7;
+      --p-open-dot: #34d399;
+      --p-primary: #0f3d9e;
+      --p-on-primary: #ffffff;
+      --p-primary-soft: #e8effd;
+      --p-gold: #ffc82c;
+      --p-gold-ink: #0d1f4f;
+      --p-teal: #0f766e;
+      --p-teal-soft: #e6f6f4;
+      --p-canvas: #f5f6f9;
+      --p-card: #ffffff;
+      --p-card-border: #e4e8f2;
+      --p-card-shadow: 0 2px 10px rgba(15, 29, 64, 0.055);
+      --p-ink: #0d1f4f;
+      --p-muted: #52607a;
+      --p-rx-bg: #eef2ff;
+      --p-rx-fg: #3730a3;
+      --p-sale: #dc2626;
+      --p-deals-band: #ebf1ff;
+      --p-deals-border: #dbe6fe;
+      --p-hero-bg: #0f3d9e;
+      --p-hero-ink: #ffffff;
+      --p-hero-eyebrow-bg: rgba(255, 255, 255, 0.15);
+      --p-hero-eyebrow-fg: #ffffff;
+      --p-nav-bg: #ffffff;
+      --p-nav-border: #e4e8f2;
+      --p-nav-pill: #e8effd;
+      --p-nav-active: #0f3d9e;
+      --p-search-bg: #ffffff;
+      --p-search-border: rgba(15, 61, 158, 0.12);
+      --p-search-shadow: 0 6px 16px rgba(9, 25, 71, 0.22);
+      --p-card-radius: 12px;
+      --p-btn-bg: #e8effd;
+      --p-btn-fg: #0f3d9e;
+      --p-btn-active-bg: #0f3d9e;
+      --p-btn-active-fg: #ffffff;
+      --p-cat-bg-rx: #eef2ff;
+      --p-cat-bg-pain: #fff1f2;
+      --p-cat-bg-cough: #e0f2fe;
+      --p-cat-bg-vit: #fef3c7;
+      --p-cat-bg-aid: #e6f6f4;
+
+      width: 390px;
+      height: 844px;
+      border-radius: 36px;
+      overflow: hidden;
+      background: var(--p-canvas);
+      color: var(--p-ink);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: background-color 0.22s ease, color 0.22s ease;
+    }
+
+    /* Option B: Modern Care Teal & Sun Gold */
+    .phone-screen[data-option="b"] {
+      --p-header-bg: #0b5d56;
+      --p-header-ink: #ffffff;
+      --p-header-sub: rgba(255, 255, 255, 0.84);
+      --p-strip-bg: rgba(255, 255, 255, 0.14);
+      --p-strip-border: rgba(255, 255, 255, 0.24);
+      --p-strip-ink: #ffffff;
+      --p-strip-muted: rgba(255, 255, 255, 0.86);
+      --p-open-color: #fde68a;
+      --p-open-dot: #ffc82c;
+      --p-primary: #0d7a70;
+      --p-on-primary: #ffffff;
+      --p-primary-soft: #e6f4f1;
+      --p-gold: #ffc82c;
+      --p-gold-ink: #0c2320;
+      --p-teal: #0b5d56;
+      --p-teal-soft: #e6f4f1;
+      --p-canvas: #f7f7f4;
+      --p-card: #ffffff;
+      --p-card-border: #e5e7e2;
+      --p-card-shadow: 0 2px 10px rgba(12, 35, 32, 0.055);
+      --p-ink: #0c2320;
+      --p-muted: #4f6360;
+      --p-deals-band: #e6f4f1;
+      --p-deals-border: #cde9e2;
+      --p-hero-bg: #0b5d56;
+      --p-nav-pill: #e6f4f1;
+      --p-nav-active: #0b5d56;
+      --p-search-border: rgba(11, 93, 86, 0.14);
+      --p-search-shadow: 0 6px 16px rgba(7, 46, 42, 0.22);
+      --p-btn-bg: #e6f4f1;
+      --p-btn-fg: #0b5d56;
+      --p-btn-active-bg: #0b5d56;
+      --p-btn-active-fg: #ffffff;
+    }
+
+    /* Option C: Crisp Daylight */
+    .phone-screen[data-option="c"] {
+      --p-header-bg: #d6e8ff;
+      --p-header-ink: #0d1f4f;
+      --p-header-sub: #334e86;
+      --p-strip-bg: rgba(255, 255, 255, 0.92);
+      --p-strip-border: rgba(15, 61, 158, 0.14);
+      --p-strip-ink: #0d1f4f;
+      --p-strip-muted: #52607a;
+      --p-open-color: #0f766e;
+      --p-open-dot: #0f766e;
+      --p-primary: #0f3d9e;
+      --p-on-primary: #ffffff;
+      --p-primary-soft: #e8effd;
+      --p-gold: #ffc82c;
+      --p-gold-ink: #0d1f4f;
+      --p-canvas: #f5f6f9;
+      --p-card: #ffffff;
+      --p-card-border: #e4e8f2;
+      --p-card-shadow: 0 2px 10px rgba(15, 29, 64, 0.055);
+      --p-ink: #0d1f4f;
+      --p-muted: #52607a;
+      --p-deals-band: #eef3ff;
+      --p-deals-border: #dbe6fe;
+      --p-hero-bg: #0f3d9e;
+      --p-nav-pill: #e8effd;
+      --p-nav-active: #0f3d9e;
+      --p-search-border: rgba(15, 61, 158, 0.16);
+      --p-search-shadow: 0 4px 14px rgba(15, 61, 158, 0.12);
+    }
+
+    /* Dark Mode Overrides */
+    .phone-screen.is-dark[data-option="a"],
+    .phone-screen.is-dark[data-option="c"] {
+      --p-header-bg: #112254;
+      --p-header-ink: #f8fafc;
+      --p-header-sub: #c7d5f8;
+      --p-strip-bg: rgba(11, 16, 32, 0.45);
+      --p-strip-border: rgba(122, 162, 255, 0.25);
+      --p-strip-ink: #f8fafc;
+      --p-strip-muted: #b6c4e2;
+      --p-open-color: #6ee7b7;
+      --p-open-dot: #34d399;
+      --p-primary: #7aa2ff;
+      --p-on-primary: #0b132b;
+      --p-primary-soft: #1b2a52;
+      --p-gold: #ffc82c;
+      --p-gold-ink: #0d1f4f;
+      --p-teal: #5eead4;
+      --p-teal-soft: #123635;
+      --p-canvas: #0b1020;
+      --p-card: #131b30;
+      --p-card-border: #243052;
+      --p-card-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+      --p-ink: #f1f5f9;
+      --p-muted: #9aa9c7;
+      --p-rx-bg: #1e2859;
+      --p-rx-fg: #c7d2fe;
+      --p-sale: #f87171;
+      --p-deals-band: #111b36;
+      --p-deals-border: #223159;
+      --p-hero-bg: #142a6b;
+      --p-nav-bg: #10172b;
+      --p-nav-border: #222e4f;
+      --p-nav-pill: #1b2b58;
+      --p-nav-active: #7aa2ff;
+      --p-search-bg: #16203a;
+      --p-search-border: #2b3a63;
+      --p-search-shadow: 0 6px 16px rgba(0, 0, 0, 0.38);
+      --p-btn-bg: #1d2c54;
+      --p-btn-fg: #9ec0ff;
+      --p-btn-active-bg: #7aa2ff;
+      --p-btn-active-fg: #0b132b;
+      --p-cat-bg-rx: #1b254a;
+      --p-cat-bg-pain: #331c28;
+      --p-cat-bg-cough: #152b3f;
+      --p-cat-bg-vit: #322814;
+      --p-cat-bg-aid: #14302d;
+    }
+
+    .phone-screen.is-dark[data-option="b"] {
+      --p-header-bg: #0a3d39;
+      --p-header-ink: #f8fafc;
+      --p-header-sub: #b5e3de;
+      --p-strip-bg: rgba(10, 20, 19, 0.45);
+      --p-strip-border: rgba(79, 209, 197, 0.26);
+      --p-strip-ink: #f8fafc;
+      --p-strip-muted: #a7c7c3;
+      --p-open-color: #fde68a;
+      --p-open-dot: #ffc82c;
+      --p-primary: #4fd1c5;
+      --p-on-primary: #062825;
+      --p-primary-soft: #133532;
+      --p-gold: #ffc82c;
+      --p-gold-ink: #0c2320;
+      --p-teal: #4fd1c5;
+      --p-teal-soft: #133532;
+      --p-canvas: #0a1413;
+      --p-card: #11201e;
+      --p-card-border: #203835;
+      --p-card-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+      --p-ink: #eff7f6;
+      --p-muted: #95b3af;
+      --p-rx-bg: #1e2859;
+      --p-rx-fg: #c7d2fe;
+      --p-sale: #f87171;
+      --p-deals-band: #0e2623;
+      --p-deals-border: #1d423d;
+      --p-hero-bg: #0d4a44;
+      --p-nav-bg: #0e1a18;
+      --p-nav-border: #1f3532;
+      --p-nav-pill: #143834;
+      --p-nav-active: #4fd1c5;
+      --p-search-bg: #142624;
+      --p-search-border: #264541;
+      --p-search-shadow: 0 6px 16px rgba(0, 0, 0, 0.38);
+      --p-btn-bg: #143632;
+      --p-btn-fg: #6ee7dc;
+      --p-btn-active-bg: #4fd1c5;
+      --p-btn-active-fg: #062825;
+      --p-cat-bg-rx: #1b254a;
+      --p-cat-bg-pain: #331c28;
+      --p-cat-bg-cough: #152b3f;
+      --p-cat-bg-vit: #322814;
+      --p-cat-bg-aid: #14302d;
+    }
+
+    /* Current (Before) Faithful Reproduction */
+    .phone-screen[data-option="before"] {
+      --p-header-bg: #e4f2fd;
+      --p-header-ink: #000b88;
+      --p-header-sub: #000b88;
+      --p-primary: #000b88;
+      --p-on-primary: #ffffff;
+      --p-primary-soft: #e4f2fd;
+      --p-gold: #f8bf0b;
+      --p-canvas: #f4f8fc;
+      --p-card: #ffffff;
+      --p-card-border: #dce2ee;
+      --p-card-shadow: none;
+      --p-ink: #111a33;
+      --p-muted: #525d78;
+      --p-rx-bg: #9a5b00;
+      --p-rx-fg: #ffffff;
+      --p-sale: #ba1a1a;
+      --p-nav-bg: #ffffff;
+      --p-nav-border: #dce2ee;
+      --p-nav-pill: #fff4d1;
+      --p-nav-active: #000b88;
+      --p-search-bg: #ffffff;
+      --p-search-border: rgba(0, 11, 136, 0.14);
+      --p-search-shadow: 0 2px 10px rgba(0, 11, 136, 0.07);
+    }
+
+    /* Touch Target Inspector Overlay */
+    .touch-debug [data-touch="true"] {
+      outline: 1.5px dashed #10b981 !important;
+      outline-offset: -1.5px;
+      position: relative;
+    }
+    .touch-debug [data-touch="true"]::after {
+      content: attr(data-size);
+      position: absolute;
+      top: 1px;
+      right: 1px;
+      background: #059669;
+      color: #ffffff;
+      font-size: 8px;
+      font-weight: 800;
+      line-height: 1;
+      padding: 2px 3px;
+      border-radius: 3px;
+      pointer-events: none;
+      z-index: 40;
+      font-family: ui-monospace, monospace;
+    }
+    .touch-debug [data-touch-bad="true"] {
+      outline-color: #ef4444 !important;
+    }
+    .touch-debug [data-touch-bad="true"]::after {
+      background: #dc2626 !important;
+    }
+
+    /* Phone Status Bar */
+    .phone-status {
+      height: 28px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--p-header-bg);
+      color: var(--p-header-ink);
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+      transition: background-color 0.22s ease, color 0.22s ease;
+    }
+
+    .status-icons {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10.5px;
+    }
+
+    /* Phone Collapsible Header */
+    .shop-header {
+      background: var(--p-header-bg);
+      color: var(--p-header-ink);
+      padding: 4px 16px 12px;
+      border-bottom-left-radius: 20px;
+      border-bottom-right-radius: 20px;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 20;
+      transition: background-color 0.22s ease, border-radius 0.16s ease, padding 0.16s ease;
+    }
+
+    .shop-header.flat-bottom {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      padding-bottom: 8px;
+    }
+
+    .header-expandable {
+      overflow: hidden;
+      transition: opacity 0.12s linear;
+    }
+
+    .branch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 44px;
+    }
+
+    .branch-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      border: 0;
+      padding: 4px 2px;
+      color: var(--p-header-ink);
+      cursor: pointer;
+      min-height: 44px;
+      text-align: left;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .branch-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .branch-name {
+      font-size: 17.5px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .branch-sub {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--p-header-sub);
+      opacity: 0.92;
+      margin-top: 1px;
+    }
+
+    /* Unified Brand Emblem Badge (Redesign) */
+    .unified-emblem {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 9px 4px 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      flex-shrink: 0;
+    }
+
+    .phone-screen[data-option="c"]:not(.is-dark) .unified-emblem {
+      background: rgba(255, 255, 255, 0.78);
+      border-color: rgba(15, 61, 158, 0.15);
+    }
+
+    .emblem-stack {
+      position: relative;
+      width: 28px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    .emblem-sun-slice {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 18px;
+      height: 18px;
+      overflow: hidden;
+    }
+
+    .emblem-sun-slice img {
+      width: 36px;
+      height: 18px;
+      max-width: none;
+      object-fit: cover;
+      object-position: left center;
+      display: block;
+    }
+
+    .emblem-cloud-slice {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      width: 21px;
+      height: 16px;
+      overflow: hidden;
+    }
+
+    .emblem-cloud-slice img {
+      width: 42px;
+      height: 16px;
+      max-width: none;
+      margin-left: -21px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .emblem-brand-txt {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      line-height: 1.05;
+      color: var(--p-header-ink);
+    }
+
+    /* Compact Branch Status Strip (Redesign) */
+    .compact-status-strip {
+      margin: 4px 0 8px;
+      height: 34px;
+      border-radius: 10px;
+      background: var(--p-strip-bg);
+      border: 1px solid var(--p-strip-border);
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 8px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--p-strip-ink);
+    }
+
+    .strip-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    .strip-divider {
+      width: 1px;
+      height: 14px;
+      background: var(--p-strip-border);
+      flex-shrink: 0;
+    }
+
+    .strip-muted {
+      font-weight: 600;
+      color: var(--p-strip-muted);
+    }
+
+    /* Before Header Forecast Tiles */
+    .before-forecast-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      height: 54px;
+      margin: 6px 0 8px;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(0, 11, 136, 0.1);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .before-tile {
+      padding: 5px 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border-right: 1px solid #dce2ee;
+    }
+
+    .before-tile:last-child {
+      border-right: 0;
+    }
+
+    .before-tile-top {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #000b88;
+    }
+
+    .before-tile-sub {
+      font-size: 10.5px;
+      font-weight: 500;
+      color: #525d78;
+      margin-top: 1px;
+    }
+
+    /* Search Bar */
+    .search-pill {
+      height: 48px;
+      width: 100%;
+      border-radius: 999px;
+      background: var(--p-search-bg);
+      border: 1px solid var(--p-search-border);
+      box-shadow: var(--p-search-shadow);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 10px;
+      cursor: pointer;
+      color: var(--p-muted);
+      font-size: 14px;
+      font-weight: 500;
+      text-align: left;
+    }
+
+    .search-pill-badge {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--p-primary-soft);
+      color: var(--p-primary);
+    }
+
+    /* Docked Category Pills (visible when collapsed) */
+    .docked-pills-bar {
+      background: var(--p-header-bg);
+      border-bottom-left-radius: 18px;
+      border-bottom-right-radius: 18px;
+      padding: 2px 14px 10px;
+      display: none;
+      gap: 7px;
+      overflow-x: auto;
+      flex-shrink: 0;
+      box-shadow: 0 6px 14px rgba(10, 22, 58, 0.14);
+      z-index: 19;
+    }
+
+    .docked-pills-bar.visible {
+      display: flex;
+    }
+
+    .docked-pills-bar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .cat-pill-chip {
+      height: 40px;
+      padding: 0 12px 0 5px;
+      border-radius: 999px;
+      background: var(--p-card);
+      color: var(--p-ink);
+      border: 1px solid var(--p-card-border);
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .cat-pill-chip.active {
+      background: var(--p-gold);
+      color: var(--p-gold-ink);
+      border-color: transparent;
+      font-weight: 800;
+    }
+
+    .cat-pill-thumb {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: var(--p-primary-soft);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 3px;
+    }
+
+    .cat-pill-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Phone Scroll Feed */
+    .phone-feed {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-bottom: 18px;
+      scroll-behavior: auto;
+    }
+
+    .phone-feed::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    .phone-feed::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.25);
+      border-radius: 999px;
+    }
+
+    /* Quick Actions Row */
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      padding: 8px 16px 2px;
+    }
+
+    .quick-btn {
+      background: transparent;
+      border: 0;
+      padding: 2px;
+      min-height: 48px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      color: var(--p-ink);
+    }
+
+    .quick-icon-disc {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: var(--p-card);
+      border: 1px solid var(--p-card-border);
+      box-shadow: var(--p-card-shadow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--p-primary);
+      transition: transform 0.14s ease, background-color 0.14s ease;
+    }
+
+    .quick-btn:hover .quick-icon-disc {
+      transform: translateY(-1px);
+    }
+
+    .quick-btn.is-active .quick-icon-disc {
+      background: var(--p-primary);
+      color: var(--p-on-primary);
+      border-color: transparent;
+    }
+
+    .quick-label {
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.15;
+      color: var(--p-ink);
+      text-align: center;
+    }
+
+    /* Editorial Split Hero Banner (Redesign) */
+    .hero-wrap {
+      padding: 8px 16px 0;
+    }
+
+    .editorial-banner {
+      height: 152px;
+      border-radius: 16px;
+      background: var(--p-hero-bg);
+      color: var(--p-hero-ink);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      box-shadow: 0 8px 22px rgba(11, 24, 61, 0.16);
+    }
+
+    .editorial-left {
+      width: 56%;
+      padding: 12px 8px 24px 15px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      position: relative;
+      z-index: 3;
+    }
+
+    .editorial-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 7px;
+      border-radius: 6px;
+      background: var(--p-hero-eyebrow-bg);
+      color: var(--p-hero-eyebrow-fg);
+      margin-bottom: 5px;
+    }
+
+    .editorial-title {
+      margin: 0 0 7px;
+      font-size: 16.5px;
+      font-weight: 800;
+      line-height: 1.14;
+      letter-spacing: -0.025em;
+      color: #ffffff;
+    }
+
+    .editorial-cta {
+      min-height: 44px;
+      padding: 0 13px;
+      border-radius: 999px;
+      border: 0;
+      background: var(--p-gold);
+      color: var(--p-gold-ink);
+      font-size: 12px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+    }
+
+    .editorial-right {
+      width: 44%;
+      position: relative;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .editorial-right img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: 54% 22%;
+      display: block;
+    }
+
+    /* Narrow 20% left-edge feather only — faces stay 100% clear */
+    .editorial-right::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, var(--p-hero-bg) 0%, color-mix(in srgb, var(--p-hero-bg) 0%, transparent) 22%);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .banner-dots-overlay {
+      position: absolute;
+      left: 10px;
+      bottom: 2px;
+      z-index: 4;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .banner-dot-hit {
+      min-width: 24px;
+      min-height: 24px;
+      padding: 0 2px;
+      border: 0;
+      background: transparent;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .banner-dot-pill {
+      height: 4px;
+      width: 7px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.42);
+      transition: all 0.18s ease;
+    }
+
+    .banner-dot-hit.active .banner-dot-pill {
+      width: 18px;
+      background: var(--p-gold);
+    }
+
+    .banner-arrows-overlay {
+      position: absolute;
+      right: 6px;
+      bottom: 4px;
+      z-index: 4;
+      display: inline-flex;
+      gap: 4px;
+    }
+
+    .banner-nav-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(13, 31, 79, 0.56);
+      color: #ffffff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+    }
+
+    /* Before Banner (White-Fog + Dead Footer Strip) */
+    .before-banner-card {
+      margin: 14px 16px 0;
+      background: #ffffff;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid #dce2ee;
+    }
+
+    .before-banner-stage {
+      height: 188px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .before-banner-stage img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: right center;
+      display: block;
+    }
+
+    .before-banner-fog {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, #ffffff 0%, #ffffff 50%, rgba(255, 255, 255, 0.3) 85%, rgba(255, 255, 255, 0.02) 100%);
+    }
+
+    .before-banner-copy {
+      position: relative;
+      z-index: 2;
+      width: 64%;
+      padding: 16px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .before-banner-tag {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.9px;
+      color: rgba(0, 11, 136, 0.85);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 8px;
+    }
+
+    .before-banner-h {
+      margin: 0 0 14px;
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.12;
+      letter-spacing: -0.45px;
+      color: #000b88;
+    }
+
+    .before-banner-cta {
+      min-height: 44px;
+      padding: 0 14px;
+      border-radius: 24px;
+      background: #fff4d1;
+      color: #000b88;
+      font-size: 12.5px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 0;
+    }
+
+    .before-banner-footer {
+      height: 48px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 700;
+      color: rgba(0, 11, 136, 0.8);
+    }
+
+    .before-dots {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .before-dot {
+      height: 4px;
+      width: 8px;
+      border-radius: 2px;
+      background: rgba(0, 11, 136, 0.3);
+    }
+
+    .before-dot.active {
+      width: 24px;
+      background: #000b88;
+    }
+
+    /* Category Circles Strip */
+    .cat-strip-wrap {
+      padding: 10px 0 4px;
+    }
+
+    .cat-strip {
+      display: flex;
+      gap: 6px;
+      padding: 0 14px;
+      overflow-x: auto;
+    }
+
+    .cat-strip::-webkit-scrollbar {
+      display: none;
+    }
+
+    .cat-item {
+      width: 78px;
+      flex-shrink: 0;
+      background: transparent;
+      border: 0;
+      padding: 4px 2px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      color: var(--p-ink);
+    }
+
+    .cat-circle {
+      width: 64px;
+      height: 64px;
+      border-radius: 999px;
+      padding: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid transparent;
+      transition: all 0.16s ease;
+    }
+
+    .cat-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .cat-item.active .cat-circle {
+      border-color: var(--p-primary);
+      box-shadow: 0 4px 12px rgba(15, 61, 158, 0.18);
+      transform: translateY(-1px);
+    }
+
+    .cat-label {
+      font-size: 11.5px;
+      font-weight: 600;
+      line-height: 1.22;
+      text-align: center;
+      color: var(--p-ink);
+    }
+
+    .cat-item.active .cat-label {
+      color: var(--p-primary);
+      font-weight: 800;
+    }
+
+    /* Before Category Circles */
+    .before-cat-circle {
+      width: 68px;
+      height: 68px;
+      border-radius: 999px;
+      background: #e4f2fd;
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .before-cat-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Top Deals Showcase Band */
+    .deals-band {
+      margin: 8px 0 4px;
+      padding: 11px 0 13px;
+      background: var(--p-deals-band);
+      border-top: 1px solid var(--p-deals-border);
+      border-bottom: 1px solid var(--p-deals-border);
+    }
+
+    .section-head {
+      padding: 0 16px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .section-title-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-h {
+      margin: 0;
+      font-size: 17.5px;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: var(--p-ink);
+    }
+
+    .deals-pill {
+      font-size: 10.5px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--p-sale);
+      color: #ffffff;
+    }
+
+    .see-all-btn {
+      min-height: 36px;
+      padding: 0 8px;
+      border: 0;
+      background: transparent;
+      color: var(--p-primary);
+      font-size: 12.5px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .deals-rail {
+      display: flex;
+      gap: 10px;
+      padding: 0 16px;
+      overflow-x: auto;
+    }
+
+    .deals-rail::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Product Cards (Grid & Rail) */
+    .products-section {
+      padding: 16px 16px 12px;
+    }
+
+    .products-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .products-count {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--p-muted);
+    }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .product-card {
+      background: var(--p-card);
+      border: 1px solid var(--p-card-border);
+      border-radius: var(--p-card-radius);
+      box-shadow: var(--p-card-shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .deals-rail .product-card {
+      width: 172px;
+      flex-shrink: 0;
+    }
+
+    .card-photo-plate {
+      aspect-ratio: 1 / 0.72;
+      background: #ffffff;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+    }
+
+    .card-badge-sale {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--p-sale);
+      color: #ffffff;
+      font-size: 10.5px;
+      font-weight: 800;
+      padding: 3px 7px;
+      border-radius: 6px;
+    }
+
+    .card-badge-rx {
+      position: absolute;
+      left: 8px;
+      bottom: 8px;
+      background: var(--p-rx-bg);
+      color: var(--p-rx-fg);
+      font-size: 10.5px;
+      font-weight: 800;
+      padding: 3px 7px;
+      border-radius: 6px;
+      letter-spacing: 0.02em;
+    }
+
+    .card-body {
+      padding: 10px 10px 9px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .card-generic {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--p-muted);
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      line-height: 1.28;
+      color: var(--p-ink);
+      margin: 0 0 5px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-meta-line {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--p-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+
+    .card-footer {
+      margin-top: auto;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .card-price-now {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--p-ink);
+      line-height: 1.1;
+    }
+
+    .card-price-now.on-sale {
+      color: var(--p-sale);
+    }
+
+    .card-price-was {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--p-muted);
+      text-decoration: line-through;
+      margin-top: 2px;
+    }
+
+    /* 48x48 Tactile Cart Button (Redesign) */
+    .tactile-cart-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      border: 0;
+      background: var(--p-btn-bg);
+      color: var(--p-btn-fg);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      flex-shrink: 0;
+      transition: transform 0.12s ease, background-color 0.15s ease;
+    }
+
+    .tactile-cart-btn:active {
+      transform: scale(0.92);
+    }
+
+    .tactile-cart-btn.has-qty {
+      background: var(--p-btn-active-bg);
+      color: var(--p-btn-active-fg);
+    }
+
+    .cart-qty-pip {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      border-radius: 999px;
+      background: var(--p-gold);
+      color: var(--p-gold-ink);
+      font-size: 9.5px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Before 40x40 Bare Cart Button */
+    .before-cart-btn {
+      width: 40px;
+      height: 40px;
+      border: 0;
+      background: transparent;
+      color: #000b88;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      flex-shrink: 0;
+    }
+
+    /* Bottom Navigation Bar (68dp) */
+    .bottom-nav {
+      height: 68px;
+      background: var(--p-nav-bg);
+      border-top: 1px solid var(--p-nav-border);
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      padding: 4px 6px 6px;
+      flex-shrink: 0;
+    }
+
+    .nav-item {
+      border: 0;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      cursor: pointer;
+      color: var(--p-muted);
+      position: relative;
+    }
+
+    .nav-pill {
+      width: 56px;
+      height: 30px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: background-color 0.16s ease;
+    }
+
+    .nav-item.active .nav-pill {
+      background: var(--p-nav-pill);
+      color: var(--p-nav-active);
+    }
+
+    .nav-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--p-muted);
+    }
+
+    .nav-item.active .nav-label {
+      font-weight: 800;
+      color: var(--p-nav-active);
+    }
+
+    .nav-badge {
+      position: absolute;
+      top: 0;
+      right: 6px;
+      min-width: 18px;
+      height: 16px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: var(--p-sale);
+      color: #ffffff;
+      font-size: 9.5px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1.5px solid var(--p-nav-bg);
+    }
+
+    .phone-screen[data-option="before"] .nav-badge {
+      background: #000b88;
+    }
+
+    /* Phone inline snackbar toast */
+    .phone-toast {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 78px;
+      background: #0f172a;
+      color: #ffffff;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: all 0.18s ease;
+      z-index: 35;
+    }
+
+    .phone-toast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Right-Hand Design Audit & Token Inspector Panel */
+    .inspector-panel {
+      background: rgba(17, 24, 39, 0.9);
+      border: 1px solid var(--studio-border);
+      border-radius: 16px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+    }
+
+    .stage-workspace.compare-mode .inspector-panel {
+      display: none;
+    }
+
+    .inspector-card {
+      background: rgba(11, 17, 32, 0.65);
+      border: 1px solid var(--studio-border);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .inspector-h {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .swatch-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .swatch-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 9px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .swatch-chip {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      flex-shrink: 0;
+    }
+
+    .swatch-meta {
+      min-width: 0;
+    }
+
+    .swatch-name {
+      font-size: 11px;
+      font-weight: 700;
+      color: #f8fafc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .swatch-hex {
+      font-size: 10.5px;
+      color: var(--studio-muted);
+    }
+
+    .contrast-table {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .contrast-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 11.5px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .contrast-badge {
+      font-size: 10.5px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .c-pass {
+      background: rgba(16, 185, 129, 0.16);
+      color: #34d399;
+    }
+
+    .c-fail {
+      background: rgba(239, 68, 68, 0.16);
+      color: #fca5a5;
+    }
+
+    .audit-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .audit-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #dbe3ef;
+    }
+
+    .audit-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.16);
+      color: #34d399;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .audit-dot.warn {
+      background: rgba(245, 158, 11, 0.16);
+      color: #fbbf24;
+    }
+
+    .active-filter-bar {
+      margin: 10px 16px 0;
+      padding: 7px 11px;
+      border-radius: 10px;
+      background: var(--p-primary-soft);
+      color: var(--p-primary);
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+
+    .active-filter-bar.visible {
+      display: flex;
+    }
+
+    .clear-filter-btn {
+      border: 0;
+      background: transparent;
+      color: var(--p-primary);
+      font-size: 11.5px;
+      font-weight: 800;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="studio-shell">
+    <!-- Top Control Deck -->
+    <header class="control-deck">
+      <div class="deck-top">
+        <div class="deck-title-group">
+          <div class="deck-eyebrow">
+            <span class="deck-badge">UI/UX Pro Max · Design System Audit</span>
+            <span class="deck-badge" style="background: rgba(59,130,246,0.14); color:#93c5fd; border-color: rgba(59,130,246,0.3);">390 × 844dp Interactive Prototype</span>
+          </div>
+          <h1 class="deck-title">Everyday Pharmacy — Flutter Homepage Redesign Mockup</h1>
+          <p class="deck-subtitle">Fixes flat surface contrast, white-fogged hero photos, weak 40dp cart targets, empty-star fatigue, and disconnected branding.</p>
+        </div>
+
+        <div class="layout-segmented" role="tablist" aria-label="View mode">
+          <button id="mode-explorer" type="button" class="seg-btn active" onclick="setViewMode('explorer')">Explorer View</button>
+          <button id="mode-compare" type="button" class="seg-btn" onclick="setViewMode('compare')">Before vs. After</button>
+        </div>
+      </div>
+
+      <div class="direction-grid" role="tablist" aria-label="Color direction">
+        <button type="button" class="dir-btn active" data-dir="a" onclick="setDirection('a')">
+          <div class="dir-btn-head">
+            <span class="dir-btn-title"><span class="dir-swatch" style="background: linear-gradient(135deg,#0f3d9e 55%,#ffc82c 55%);"></span>Option A · Cobalt &amp; Sun</span>
+            <span class="dir-tag tag-rec">Recommended</span>
+          </div>
+          <p class="dir-desc">Unifies logo, splash &amp; welcome promo. Rich #0F3D9E canopy lets Sun Gold #FFC82C pass WCAG AA (6.21:1).</p>
+        </button>
+
+        <button type="button" class="dir-btn" data-dir="b" onclick="setDirection('b')">
+          <div class="dir-btn-head">
+            <span class="dir-btn-title"><span class="dir-swatch" style="background: linear-gradient(135deg,#0b5d56 55%,#ffc82c 55%);"></span>Option B · Care Teal &amp; Sun</span>
+            <span class="dir-tag tag-alt">Wellness-first</span>
+          </div>
+          <p class="dir-desc">Deep pharmacy teal #0B5D56 on warm stone #F7F7F4 canvas with crisp gold highlights (4.99:1).</p>
+        </button>
+
+        <button type="button" class="dir-btn" data-dir="c" onclick="setDirection('c')">
+          <div class="dir-btn-head">
+            <span class="dir-btn-title"><span class="dir-swatch" style="background: linear-gradient(135deg,#d6e8ff 55%,#0f3d9e 55%);"></span>Option C · Crisp Daylight</span>
+            <span class="dir-tag tag-alt">Light header</span>
+          </div>
+          <p class="dir-desc">Keeps airy sky-blue top canopy while anchoring depth in the solid #0F3D9E editorial hero &amp; deals band.</p>
+        </button>
+
+        <button type="button" class="dir-btn" data-dir="before" onclick="setDirection('before')">
+          <div class="dir-btn-head">
+            <span class="dir-btn-title"><span class="dir-swatch" style="background: linear-gradient(135deg,#e4f2fd 55%,#000b88 55%);"></span>Current (Before)</span>
+            <span class="dir-tag tag-warn">Baseline</span>
+          </div>
+          <p class="dir-desc">Washed #F4F8FC canvas (1.07:1), raw #000B88 blue, white-fogged banner, brown Rx pill, 40×40dp cart icon.</p>
+        </button>
+      </div>
+
+      <div class="deck-controls">
+        <div class="scrubber-group">
+          <label for="collapse-slider">Header collapse:</label>
+          <input id="collapse-slider" type="range" min="0" max="100" value="0" oninput="onScrubCollapse(this.value)" />
+          <span id="collapse-pct" class="collapse-pct tabular">0%</span>
+          <div class="preset-pills">
+            <button type="button" class="ctrl-pill" onclick="jumpCollapse(0)">Expanded</button>
+            <button type="button" class="ctrl-pill" onclick="jumpCollapse(100)">Collapsed</button>
+          </div>
+        </div>
+
+        <div class="ctrl-actions">
+          <button id="btn-theme" type="button" class="ctrl-pill" onclick="toggleTheme()">
+            <span id="theme-icon"></span>
+            <span id="theme-label">Dark Mode: Off</span>
+          </button>
+          <button id="btn-touch" type="button" class="ctrl-pill" onclick="toggleTouchDebug()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="4" width="16" height="16" rx="3" stroke-dasharray="3 2"/></svg>
+            <span>Touch Targets</span>
+          </button>
+          <button type="button" class="ctrl-pill" onclick="resetDemo()">Reset Cart &amp; Filters</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Stage Workspace -->
+    <main id="stage-workspace" class="stage-workspace">
+      <section class="phones-cluster" id="phones-cluster"></section>
+
+      <!-- Live Design Audit & Token Inspector -->
+      <aside class="inspector-panel" id="inspector-panel"></aside>
+    </main>
+  </div>
+
+  <script>
+    const BANNERS = [
+      {
+        eyebrow: 'EVERYDAY CARE',
+        title: 'Care for the whole family.',
+        cta: 'Browse vitamins',
+        actionType: 'category',
+        actionTarget: 'vitamins-supplements',
+        img: '../public/images/banners/family-everyday-care.webp',
+        pos: '58% 22%'
+      },
+      {
+        eyebrow: 'FREE DELIVERY',
+        title: 'Free delivery from Cebu Capitol.',
+        cta: 'See top deals',
+        actionType: 'deals',
+        actionTarget: 'deals',
+        img: '../public/images/banners/family-morning-joy.webp',
+        pos: '50% 20%'
+      },
+      {
+        eyebrow: '24/7 BRANCHES',
+        title: 'Your nearest pharmacy, open 24h.',
+        cta: 'Find a branch',
+        actionType: 'toast',
+        actionTarget: 'Opening Branch Locator (/branches) for Cebu Capitol',
+        img: '../public/images/banners/family-garden-moments.webp',
+        pos: '52% 24%'
+      },
+      {
+        eyebrow: 'PRESCRIPTION CARE',
+        title: 'Refill regular medicines easily.',
+        cta: 'Browse Rx meds',
+        actionType: 'category',
+        actionTarget: 'prescription-medicines',
+        img: '../public/images/banners/family-bedtime-comfort.webp',
+        pos: '52% 20%'
+      }
+    ];
+
+    const CATEGORIES = [
+      { slug: 'prescription-medicines', name: 'Prescription', tint: 'var(--p-cat-bg-rx)', img: '../mobile/assets/categories/prescription-medicines.webp' },
+      { slug: 'pain-fever', name: 'Pain & Fever', tint: 'var(--p-cat-bg-pain)', img: '../mobile/assets/categories/pain-fever.webp' },
+      { slug: 'cough-colds', name: 'Cough & Colds', tint: 'var(--p-cat-bg-cough)', img: '../mobile/assets/categories/cough-colds.webp' },
+      { slug: 'vitamins-supplements', name: 'Vitamins', tint: 'var(--p-cat-bg-vit)', img: '../mobile/assets/categories/vitamins-supplements.webp' },
+      { slug: 'first-aid', name: 'First Aid', tint: 'var(--p-cat-bg-aid)', img: '../mobile/assets/categories/first-aid.webp' }
+    ];
+
+    const PRODUCTS = [
+      {
+        id: 'metformin',
+        name: 'Metformin 500 mg Tablet',
+        generic: 'METFORMIN HCL',
+        pack: '10 tablets · In stock',
+        category: 'prescription-medicines',
+        rx: true,
+        price: 6.50,
+        was: null,
+        discount: 0,
+        rating: null,
+        reviews: 0,
+        color: '#2563eb',
+        shape: 'box',
+        label: 'Metformin',
+        dose: '500 mg'
+      },
+      {
+        id: 'losartan',
+        name: 'Losartan 50 mg Tablet',
+        generic: 'LOSARTAN POTASSIUM',
+        pack: '10 tablets · In stock',
+        category: 'prescription-medicines',
+        rx: true,
+        price: 18.00,
+        was: null,
+        discount: 0,
+        rating: null,
+        reviews: 0,
+        color: '#0d9488',
+        shape: 'box',
+        label: 'Losartan',
+        dose: '50 mg'
+      },
+      {
+        id: 'paracetamol',
+        name: 'Paracetamol 500 mg Tablet',
+        generic: 'PARACETAMOL',
+        pack: '10 tablets · OTC',
+        category: 'pain-fever',
+        rx: false,
+        price: 4.50,
+        was: 6.00,
+        discount: 25,
+        rating: 4.9,
+        reviews: 42,
+        color: '#0284c7',
+        shape: 'box',
+        label: 'Paracetamol',
+        dose: '500 mg'
+      },
+      {
+        id: 'vitc',
+        name: 'Vitamin C + Zinc 500 mg',
+        generic: 'ASCORBIC ACID + ZINC',
+        pack: '30 capsules · OTC',
+        category: 'vitamins-supplements',
+        rx: false,
+        price: 145.00,
+        was: 185.00,
+        discount: 22,
+        rating: 4.8,
+        reviews: 19,
+        color: '#ea580c',
+        shape: 'bottle',
+        label: 'Vit C + Zinc',
+        dose: '500 mg'
+      },
+      {
+        id: 'carbocisteine',
+        name: 'Carbocisteine 500 mg Capsule',
+        generic: 'CARBOCISTEINE',
+        pack: '10 capsules · OTC',
+        category: 'cough-colds',
+        rx: false,
+        price: 12.50,
+        was: null,
+        discount: 0,
+        rating: 4.7,
+        reviews: 15,
+        color: '#0891b2',
+        shape: 'box',
+        label: 'Carbocisteine',
+        dose: '500 mg'
+      },
+      {
+        id: 'firstaid',
+        name: 'First Aid Antiseptic Kit',
+        generic: 'POVIDONE-IODINE + GAUZE',
+        pack: 'Complete kit · In stock',
+        category: 'first-aid',
+        rx: false,
+        price: 249.00,
+        was: 310.00,
+        discount: 20,
+        rating: null,
+        reviews: 0,
+        color: '#0f766e',
+        shape: 'kit',
+        label: 'First Aid',
+        dose: 'Care Kit'
+      }
+    ];
+
+    const SEARCH_HINTS = [
+      'Search medicines',
+      'Search generic or brand name',
+      'Search vitamins',
+      'Search first aid'
+    ];
+
+    const DIRECTION_META = {
+      a: {
+        name: 'Option A · Everyday Cobalt & Warm Sun',
+        light: {
+          swatches: [
+            { name: 'Header Cobalt', hex: '#0F3D9E' },
+            { name: 'Sun Gold Accent', hex: '#FFC82C' },
+            { name: 'Care Teal', hex: '#0F766E' },
+            { name: 'Warm Canvas', hex: '#F5F6F9' },
+            { name: 'Rx Indigo Pill', hex: '#3730A3' },
+            { name: 'Sale / Alert Coral', hex: '#DC2626' }
+          ],
+          contrasts: [
+            { pair: 'White text on Cobalt Header (#0F3D9E)', ratio: '9.63:1', pass: true },
+            { pair: 'Sun Gold (#FFC82C) on Cobalt Header', ratio: '6.21:1', pass: true },
+            { pair: 'Deep Navy (#0D1F4F) on Sun Gold CTA', ratio: '10.22:1', pass: true },
+            { pair: 'Rx Indigo (#3730A3) on #EEF2FF Pill', ratio: '8.88:1', pass: true },
+            { pair: 'Care Teal (#0F766E) on #E6F6F4', ratio: '4.91:1', pass: true }
+          ]
+        },
+        dark: {
+          swatches: [
+            { name: 'Header Night Cobalt', hex: '#112254' },
+            { name: 'Interactive Blue', hex: '#7AA2FF' },
+            { name: 'Sun Gold Accent', hex: '#FFC82C' },
+            { name: 'Deep Canvas', hex: '#0B1020' },
+            { name: 'Card Surface', hex: '#131B30' },
+            { name: 'Card Border', hex: '#243052' }
+          ],
+          contrasts: [
+            { pair: 'Light text on Deep Card (#131B30)', ratio: '15.2:1', pass: true },
+            { pair: 'Interactive Blue (#7AA2FF) on Dark', ratio: '7.41:1', pass: true },
+            { pair: 'Deep Navy (#0D1F4F) on Sun Gold CTA', ratio: '10.22:1', pass: true },
+            { pair: 'Mint Open (#6EE7B7) on Dark Header', ratio: '8.94:1', pass: true }
+          ]
+        },
+        fixes: [
+          'Anchored top canopy in Everyday Cobalt (#0F3D9E) so the white search bar & Sun Gold glyph pop immediately.',
+          'Replaced the 50%-85% white fog over faces with a 56/44 editorial split banner and clean family photography.',
+          'Added a full-bleed #EBF1FF Top Deals showcase band to break up monotone scrolling.',
+          'Upgraded card add buttons from bare 40×40dp totes to tactile 48×48dp containers with live quantity pip.',
+          'Removed "☆☆☆☆☆ No reviews" clutter on unrated medicines and restyled Rx badges from brown #9A5B00 to clinical #3730A3.'
+        ]
+      },
+      b: {
+        name: 'Option B · Modern Care Teal & Sun Gold',
+        light: {
+          swatches: [
+            { name: 'Pharmacy Teal', hex: '#0B5D56' },
+            { name: 'Sun Gold Accent', hex: '#FFC82C' },
+            { name: 'Interactive Teal', hex: '#0D7A70' },
+            { name: 'Warm Stone Canvas', hex: '#F7F7F4' },
+            { name: 'Rx Indigo Pill', hex: '#3730A3' },
+            { name: 'Sale / Alert Coral', hex: '#DC2626' }
+          ],
+          contrasts: [
+            { pair: 'White text on Deep Teal (#0B5D56)', ratio: '7.74:1', pass: true },
+            { pair: 'Sun Gold (#FFC82C) on Deep Teal', ratio: '4.99:1', pass: true },
+            { pair: 'Deep Ink (#0C2320) on Sun Gold CTA', ratio: '10.61:1', pass: true },
+            { pair: 'Interactive Teal (#0D7A70) on White', ratio: '5.20:1', pass: true }
+          ]
+        },
+        dark: {
+          swatches: [
+            { name: 'Header Deep Teal', hex: '#0A3D39' },
+            { name: 'Interactive Mint', hex: '#4FD1C5' },
+            { name: 'Sun Gold Accent', hex: '#FFC82C' },
+            { name: 'Deep Canvas', hex: '#0A1413' },
+            { name: 'Card Surface', hex: '#11201E' },
+            { name: 'Card Border', hex: '#203835' }
+          ],
+          contrasts: [
+            { pair: 'Light text on Teal Card (#11201E)', ratio: '14.9:1', pass: true },
+            { pair: 'Interactive Mint (#4FD1C5) on Dark', ratio: '9.86:1', pass: true },
+            { pair: 'Deep Ink (#0C2320) on Sun Gold CTA', ratio: '10.61:1', pass: true }
+          ]
+        },
+        fixes: [
+          'Shifts primary identity to healthcare-native Pharmacy Teal (#0B5D56) paired with warm stone (#F7F7F4).',
+          'Naturally harmonizes with the olive/emerald tones in the family photography.',
+          'Carries all layout, 48×48dp touch target, split-hero, and Top Deals band improvements.'
+        ]
+      },
+      c: {
+        name: 'Option C · Crisp Daylight (Sky Canopy)',
+        light: {
+          swatches: [
+            { name: 'Sky Canopy', hex: '#D6E8FF' },
+            { name: 'Cobalt Hero & CTA', hex: '#0F3D9E' },
+            { name: 'Sun Gold Accent', hex: '#FFC82C' },
+            { name: 'Warm Canvas', hex: '#F5F6F9' },
+            { name: 'Rx Indigo Pill', hex: '#3730A3' },
+            { name: 'Sale / Alert Coral', hex: '#DC2626' }
+          ],
+          contrasts: [
+            { pair: 'Deep Navy (#0D1F4F) on Sky (#D6E8FF)', ratio: '11.42:1', pass: true },
+            { pair: 'White text on Cobalt Hero (#0F3D9E)', ratio: '9.63:1', pass: true },
+            { pair: 'Deep Navy (#0D1F4F) on Sun Gold CTA', ratio: '10.22:1', pass: true },
+            { pair: 'Care Teal (#0F766E) on White Strip', ratio: '5.47:1', pass: true }
+          ]
+        },
+        dark: {
+          swatches: [
+            { name: 'Header Night Cobalt', hex: '#112254' },
+            { name: 'Interactive Blue', hex: '#7AA2FF' },
+            { name: 'Sun Gold Accent', hex: '#FFC82C' },
+            { name: 'Deep Canvas', hex: '#0B1020' }
+          ],
+          contrasts: [
+            { pair: 'Light text on Deep Card (#131B30)', ratio: '15.2:1', pass: true },
+            { pair: 'Interactive Blue (#7AA2FF) on Dark', ratio: '7.41:1', pass: true }
+          ]
+        },
+        fixes: [
+          'Preserves a bright sky-blue header (#D6E8FF) while adding elevation & depth to the search bar and cards.',
+          'Moves high-saturation Cobalt (#0F3D9E) + Sun Gold (#FFC82C) into the editorial hero banner so it no longer washes out.'
+        ]
+      },
+      before: {
+        name: 'Current (Before) — Baseline Audit',
+        light: {
+          swatches: [
+            { name: 'Sky Header', hex: '#E4F2FD' },
+            { name: 'Raw Primary Blue', hex: '#000B88' },
+            { name: 'Washed Sun Cream', hex: '#FFF4D1' },
+            { name: 'Ice Canvas', hex: '#F4F8FC' },
+            { name: 'Muddy Rx Brown', hex: '#9A5B00' },
+            { name: 'Faint Card Border', hex: '#DCE2EE' }
+          ],
+          contrasts: [
+            { pair: 'Canvas #F4F8FC vs White Card #FFFFFF', ratio: '1.07:1', pass: false },
+            { pair: 'Header #E4F2FD vs White Search #FFFFFF', ratio: '1.14:1', pass: false },
+            { pair: 'Card Border #DCE2EE vs White Card', ratio: '1.30:1', pass: false },
+            { pair: 'Wordmark Yellow #F8BF0B on Sky #E4F2FD', ratio: '1.48:1', pass: false }
+          ]
+        },
+        dark: {
+          swatches: [
+            { name: 'Dark Mode Gap', hex: 'Not Wired' },
+            { name: 'Sky Header', hex: '#E4F2FD' }
+          ],
+          contrasts: [
+            { pair: 'MaterialApp.router omits darkTheme', ratio: 'Missing', pass: false }
+          ]
+        },
+        fixes: [
+          'Header (#E4F2FD) + 3 tall forecast cards + 48dp banner footer push products ~630dp down.',
+          'White-fog linear gradient washes out faces on the hero banner.',
+          'Bare 40×40dp card tote button violates 48×48dp Android touch minimum.',
+          'Repeated "☆☆☆☆☆ No reviews" rows make every unrated medicine feel deserted.'
+        ]
+      }
+    };
+
+    const state = {
+      direction: 'a',
+      lastRedesign: 'a',
+      viewMode: 'explorer',
+      dark: false,
+      touchDebug: false,
+      collapsePct: 0,
+      bannerIndex: 0,
+      selectedCategory: null,
+      dealsOnly: false,
+      cart: { paracetamol: 2 },
+      searchHintIndex: 0,
+      toastTimer: null
+    };
+
+    function svgIcon(name, size = 18, color = 'currentColor') {
+      const icons = {
+        pin: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${color}"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"/></svg>`,
+        caret: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>`,
+        search: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>`,
+        sun: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="4" fill="${color}" fill-opacity="0.2"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>`,
+        cloud: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H7a4 4 0 0 1-.4-7.98A5.5 5.5 0 0 1 17.2 9.5a3.5 3.5 0 0 1 .3 9.5Z"/></svg>`,
+        truck: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h11v9H3z"/><path d="M14 9h4l3 3v3h-7z"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/></svg>`,
+        tag: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12.6 2.6H5a2 2 0 0 0-2 2v7.6a2 2 0 0 0 .6 1.4l8.3 8.3a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8l-8.3-8.3a2 2 0 0 0-1.4-.6Z"/><circle cx="7.5" cy="7.5" r="1.3" fill="${color}"/></svg>`,
+        store: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9v1a3 3 0 0 0 6 0V9m0 1a3 3 0 0 0 6 0V9m0 1a3 3 0 0 0 6 0V9"/><path d="M5 12v8h14v-8"/></svg>`,
+        heart: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5s-7.5-4.7-9.2-9.2C1.6 8 3.9 5 7.2 5c2 0 3.7 1 4.8 2.6C13.1 6 14.8 5 16.8 5c3.3 0 5.6 3 4.4 6.3-1.7 4.5-9.2 9.2-9.2 9.2Z"/></svg>`,
+        repeat: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>`,
+        arrowRight: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>`,
+        chevLeft: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>`,
+        chevRight: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`,
+        tote: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1.2 12H5.2L4 8Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg>`,
+        totePlus: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1.2 12H5.2L4 8Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/><path d="M12 11.5v5M9.5 14h5"/></svg>`,
+        star: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${color}"><path d="m12 2.5 2.9 6 6.6.9-4.8 4.6 1.2 6.5-5.9-3.1-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9L12 2.5Z"/></svg>`,
+        starOutline: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.8"><path d="m12 3.2 2.6 5.4 5.9.8-4.3 4.2 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.2 5.9-.8L12 3.2Z"/></svg>`,
+        homeFill: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${color}"><path d="M12 3 3 10.5V20a1 1 0 0 0 1 1h5.5v-6h5v6H20a1 1 0 0 0 1-1v-9.5L12 3Z"/></svg>`,
+        receipt: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18l-2.3-1.5-2.3 1.5-2.4-1.5-2.4 1.5-2.3-1.5L5 21V3Z"/><path d="M8.5 8.5h7M8.5 12.5h5"/></svg>`,
+        chat: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L4 20l1-4.3A8.5 8.5 0 1 1 21 11.5Z"/><circle cx="9" cy="11.5" r="0.9" fill="${color}"/><circle cx="12" cy="11.5" r="0.9" fill="${color}"/><circle cx="15" cy="11.5" r="0.9" fill="${color}"/></svg>`,
+        user: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>`,
+        allGrid: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg>`,
+        check: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>`,
+        moon: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>`
+      };
+      return icons[name] || '';
+    }
+
+    function productIllustrationSvg(p) {
+      if (p.shape === 'bottle') {
+        return `
+          <svg viewBox="0 0 130 110" width="108" height="92" aria-hidden="true">
+            <defs>
+              <linearGradient id="bot-${p.id}" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#fff7ed"/>
+                <stop offset="100%" stop-color="#fed7aa"/>
+              </linearGradient>
+            </defs>
+            <ellipse cx="65" cy="99" rx="34" ry="5" fill="rgba(15,23,42,0.09)"/>
+            <rect x="47" y="14" width="36" height="12" rx="3" fill="${p.color}"/>
+            <rect x="51" y="25" width="28" height="6" fill="#cbd5e1"/>
+            <rect x="38" y="31" width="54" height="66" rx="10" fill="url(#bot-${p.id})" stroke="#fdba74" stroke-width="1.5"/>
+            <rect x="42" y="44" width="46" height="38" rx="4" fill="#ffffff" stroke="#e2e8f0"/>
+            <rect x="42" y="44" width="46" height="12" rx="3" fill="${p.color}"/>
+            <text x="65" y="53" text-anchor="middle" font-family="Manrope,sans-serif" font-size="6.8" font-weight="800" fill="#ffffff">${p.label}</text>
+            <text x="65" y="67" text-anchor="middle" font-family="Manrope,sans-serif" font-size="7.5" font-weight="800" fill="#0f172a">${p.dose}</text>
+            <text x="65" y="77" text-anchor="middle" font-family="Manrope,sans-serif" font-size="5.5" font-weight="600" fill="#64748b">30 CAPSULES</text>
+          </svg>
+        `;
+      }
+      if (p.shape === 'kit') {
+        return `
+          <svg viewBox="0 0 130 110" width="108" height="92" aria-hidden="true">
+            <ellipse cx="65" cy="98" rx="42" ry="5" fill="rgba(15,23,42,0.09)"/>
+            <path d="M48 24h34v8H48z" fill="none" stroke="${p.color}" stroke-width="4" stroke-linejoin="round"/>
+            <rect x="24" y="31" width="82" height="62" rx="12" fill="${p.color}"/>
+            <rect x="24" y="31" width="82" height="22" rx="10" fill="#14b8a6" fill-opacity="0.32"/>
+            <circle cx="65" cy="64" r="16" fill="#ffffff"/>
+            <path d="M65 55v18M56 64h18" stroke="${p.color}" stroke-width="4.2" stroke-linecap="round"/>
+          </svg>
+        `;
+      }
+      return `
+        <svg viewBox="0 0 140 110" width="112" height="84" aria-hidden="true">
+          <ellipse cx="70" cy="101" rx="48" ry="4.5" fill="rgba(15,23,42,0.08)"/>
+          <!-- Medicine Box -->
+          <rect x="20" y="12" width="96" height="54" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.3"/>
+          <path d="M20 48c24-2 52-16 96-26v44H20Z" fill="${p.color}" fill-opacity="0.12"/>
+          <rect x="20" y="12" width="96" height="7" rx="3" fill="${p.color}"/>
+          <text x="30" y="33" font-family="Manrope,sans-serif" font-size="10.5" font-weight="800" fill="#0f172a">${p.label}</text>
+          <rect x="30" y="38" width="38" height="13" rx="4" fill="${p.color}"/>
+          <text x="49" y="47.5" text-anchor="middle" font-family="Manrope,sans-serif" font-size="7.5" font-weight="800" fill="#ffffff">${p.dose}</text>
+          <text x="30" y="60.5" font-family="Manrope,sans-serif" font-size="5.8" font-weight="700" fill="#64748b">10 TABLETS</text>
+          <!-- Blister pack -->
+          <rect x="36" y="68" width="76" height="29" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+          <circle cx="51" cy="77" r="4.3" fill="#ffffff" stroke="#cbd5e1"/>
+          <circle cx="66" cy="77" r="4.3" fill="#ffffff" stroke="#cbd5e1"/>
+          <circle cx="81" cy="77" r="4.3" fill="#ffffff" stroke="#cbd5e1"/>
+          <circle cx="96" cy="77" r="4.3" fill="#ffffff" stroke="#cbd5e1"/>
+          <circle cx="51" cy="88" r="4.3" fill="#ffffff" stroke="#cbd5e1"/>
+          <circle cx="66" cy="88" r="4.3" fill="#ffffff" stroke="#cbd5e1"/>
+          <circle cx="81" cy="88" r="4.3" fill="#ffffff" stroke="#cbd5e1"/>
+          <circle cx="96" cy="88" r="4.3" fill="#ffffff" stroke="#cbd5e1"/>
+        </svg>
+      `;
+    }
+
+    function getVisibleProducts() {
+      return PRODUCTS.filter(p => {
+        if (state.dealsOnly && p.discount === 0) return false;
+        if (state.selectedCategory && p.category !== state.selectedCategory) return false;
+        return true;
+      });
+    }
+
+    function totalCartCount() {
+      return Object.values(state.cart).reduce((acc, v) => acc + v, 0);
+    }
+
+    function renderProductCard(p, option, isRail = false) {
+      const isBefore = option === 'before';
+      const qty = state.cart[p.id] || 0;
+      const ratingHtml = p.rating
+        ? `<div class="card-meta-line">
+             ${svgIcon('star', 13, isBefore ? '#f8bf0b' : '#f59e0b')}
+             <strong style="color:var(--p-ink);font-weight:800;">${p.rating.toFixed(1)}</strong>
+             <span class="tabular">(${p.reviews})</span>
+           </div>`
+        : isBefore
+          ? `<div class="card-meta-line">
+               ${svgIcon('starOutline', 12, '#94a3b8')}${svgIcon('starOutline', 12, '#94a3b8')}${svgIcon('starOutline', 12, '#94a3b8')}${svgIcon('starOutline', 12, '#94a3b8')}${svgIcon('starOutline', 12, '#94a3b8')}
+               <span>No reviews</span>
+             </div>`
+          : `<div class="card-meta-line">${p.pack}</div>`;
+
+      const cartBtn = isBefore
+        ? `<button type="button" class="before-cart-btn" data-touch="true" data-touch-bad="true" data-size="40×40" aria-label="Add ${p.name} to cart" onclick="addToCart('${p.id}')">
+             ${svgIcon('tote', 22, '#000b88')}
+           </button>`
+        : `<button type="button" class="tactile-cart-btn ${qty > 0 ? 'has-qty' : ''}" data-touch="true" data-size="48×48" aria-label="Add ${p.name} to cart" onclick="addToCart('${p.id}')">
+             ${svgIcon('totePlus', 21, 'currentColor')}
+             ${qty > 0 ? `<span class="cart-qty-pip tabular">${qty}</span>` : ''}
+           </button>`;
+
+      return `
+        <article class="product-card">
+          <div class="card-photo-plate">
+            ${productIllustrationSvg(p)}
+            ${p.discount > 0 ? `<span class="card-badge-sale tabular">-${p.discount}%</span>` : ''}
+            ${p.rx ? `<span class="card-badge-rx">Rx</span>` : ''}
+          </div>
+          <div class="card-body">
+            <div class="card-generic">${p.generic}</div>
+            <h3 class="card-title">${p.name}</h3>
+            ${ratingHtml}
+            <div class="card-footer">
+              <div>
+                <div class="card-price-now ${p.discount > 0 ? 'on-sale' : ''} tabular">₱${p.price.toFixed(2)}</div>
+                ${p.was ? `<div class="card-price-was tabular">₱${p.was.toFixed(2)}</div>` : ''}
+              </div>
+              ${cartBtn}
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderPhone(option, roleId) {
+      const isBefore = option === 'before';
+      const activeDark = !isBefore && state.dark;
+      const banner = BANNERS[state.bannerIndex];
+      const products = getVisibleProducts();
+      const dealProducts = PRODUCTS.filter(p => p.discount > 0);
+      const cartCount = isBefore ? 20 : totalCartCount();
+      const activeCatObj = CATEGORIES.find(c => c.slug === state.selectedCategory);
+      const headingText = state.dealsOnly
+        ? 'Top deals'
+        : activeCatObj
+          ? activeCatObj.name
+          : 'Popular products';
+
+      const headerExpandedContent = isBefore
+        ? `
+          <div class="branch-row">
+            <button type="button" class="branch-btn" data-touch="true" data-size="48dp" onclick="showPhoneToast('Branch Picker: Cebu Capitol (Nearest branch)')">
+              ${svgIcon('pin', 19, '#000b88')}
+              <span class="branch-text">
+                <span class="branch-name">Cebu Capitol ${svgIcon('caret', 13, '#000b88')}</span>
+                <span class="branch-sub">Nearest branch</span>
+              </span>
+            </button>
+            <img src="../mobile/assets/branding/everyday-emblem.webp" alt="Everyday Pharmacy emblem" style="height:28px;width:auto;" />
+          </div>
+        `
+        : `
+          <div class="branch-row">
+            <button type="button" class="branch-btn" data-touch="true" data-size="44dp" onclick="showPhoneToast('Branch Picker: Cebu Capitol (Nearest branch)')">
+              ${svgIcon('pin', 18, 'var(--p-gold)')}
+              <span class="branch-text">
+                <span class="branch-name">Cebu Capitol ${svgIcon('caret', 13, 'currentColor')}</span>
+                <span class="branch-sub">Nearest branch</span>
+              </span>
+            </button>
+            <div class="unified-emblem" title="Unified Everyday Pharmacy emblem">
+              <div class="emblem-stack">
+                <span class="emblem-sun-slice"><img src="../mobile/assets/branding/everyday-emblem.webp" alt="" /></span>
+                <span class="emblem-cloud-slice"><img src="../mobile/assets/branding/everyday-emblem.webp" alt="" /></span>
+              </div>
+              <span class="emblem-brand-txt">EVERYDAY</span>
+            </div>
+          </div>
+          <div class="compact-status-strip">
+            <span class="strip-item" style="color:var(--p-open-color);">
+              ${svgIcon('sun', 13, 'var(--p-gold)')}
+              <span>Open 24h</span>
+            </span>
+            <span class="strip-divider"></span>
+            <span class="strip-item strip-muted">1.2 km away</span>
+            <span class="strip-divider"></span>
+            <span class="strip-item strip-muted">${svgIcon('truck', 13, 'currentColor')} Free delivery</span>
+          </div>
+        `;
+
+      const beforeTilesUnderSearch = isBefore
+        ? `
+          <div class="before-forecast-row">
+            <div class="before-tile">
+              <div class="before-tile-top" style="color:#2f855a;">${svgIcon('sun', 13, '#000b88')} Open</div>
+              <div class="before-tile-sub">24 hours</div>
+            </div>
+            <div class="before-tile">
+              <div class="before-tile-top">${svgIcon('cloud', 13, '#000b88')} 1.2 km</div>
+              <div class="before-tile-sub">From you</div>
+            </div>
+            <div class="before-tile">
+              <div class="before-tile-top">${svgIcon('truck', 13, '#000b88')} Free</div>
+              <div class="before-tile-sub">Delivery</div>
+            </div>
+          </div>
+        `
+        : '';
+
+      const bannerBlock = isBefore
+        ? `
+          <div class="before-banner-card">
+            <div class="before-banner-stage">
+              <img src="../mobile/assets/home/family-care-banner-logo.webp" alt="Family care banner" />
+              <div class="before-banner-fog"></div>
+              <div class="before-banner-copy">
+                <div class="before-banner-tag">${svgIcon('heart', 11, '#000b88')} FAMILY CARE</div>
+                <h2 class="before-banner-h">Care for the whole family.</h2>
+                <button type="button" class="before-banner-cta" data-touch="true" data-size="44dp" onclick="showPhoneToast('Opens generic search page')">
+                  Shop essentials ${svgIcon('arrowRight', 14, '#000b88')}
+                </button>
+              </div>
+            </div>
+            <div class="before-banner-footer">
+              <span class="tabular">01 / 04</span>
+              <span class="before-dots">
+                <span class="before-dot active"></span>
+                <span class="before-dot"></span>
+                <span class="before-dot"></span>
+                <span class="before-dot"></span>
+              </span>
+            </div>
+          </div>
+        `
+        : `
+          <div class="quick-actions">
+            <button type="button" class="quick-btn ${state.dealsOnly ? 'is-active' : ''}" data-touch="true" data-size="48dp" onclick="toggleDeals()">
+              <span class="quick-icon-disc">${svgIcon('tag', 19, 'currentColor')}</span>
+              <span class="quick-label">Top deals</span>
+            </button>
+            <button type="button" class="quick-btn" data-touch="true" data-size="48dp" onclick="showPhoneToast('Opening Branch Locator (/branches)')">
+              <span class="quick-icon-disc">${svgIcon('store', 19, 'currentColor')}</span>
+              <span class="quick-label">Branches</span>
+            </button>
+            <button type="button" class="quick-btn" data-touch="true" data-size="48dp" onclick="showPhoneToast('Opening Saved items (/saved)')">
+              <span class="quick-icon-disc">${svgIcon('heart', 19, 'currentColor')}</span>
+              <span class="quick-label">Saved</span>
+            </button>
+            <button type="button" class="quick-btn" data-touch="true" data-size="48dp" onclick="showPhoneToast('Showing previous medicines to reorder')">
+              <span class="quick-icon-disc">${svgIcon('repeat', 19, 'currentColor')}</span>
+              <span class="quick-label">Order again</span>
+            </button>
+          </div>
+
+          <div class="hero-wrap">
+            <div class="editorial-banner">
+              <div class="editorial-left">
+                <span class="editorial-eyebrow">${banner.eyebrow}</span>
+                <h2 class="editorial-title">${banner.title}</h2>
+                <button type="button" class="editorial-cta" data-touch="true" data-size="44dp" onclick="triggerBannerAction()">
+                  <span>${banner.cta}</span>
+                  ${svgIcon('arrowRight', 14, 'var(--p-gold-ink)')}
+                </button>
+              </div>
+              <div class="editorial-right">
+                <img src="${banner.img}" alt="${banner.title}" style="object-position:${banner.pos};" />
+              </div>
+              <div class="banner-dots-overlay" role="tablist" aria-label="Hero slide indicator">
+                ${BANNERS.map((b, idx) => `
+                  <button type="button" class="banner-dot-hit ${idx === state.bannerIndex ? 'active' : ''}" aria-label="Show slide ${idx + 1}: ${b.eyebrow}" onclick="setBanner(${idx})">
+                    <span class="banner-dot-pill"></span>
+                  </button>
+                `).join('')}
+              </div>
+              <div class="banner-arrows-overlay">
+                <button type="button" class="banner-nav-btn" aria-label="Previous slide" onclick="stepBanner(-1)">${svgIcon('chevLeft', 14, '#ffffff')}</button>
+                <button type="button" class="banner-nav-btn" aria-label="Next slide" onclick="stepBanner(1)">${svgIcon('chevRight', 14, '#ffffff')}</button>
+              </div>
+            </div>
+          </div>
+        `;
+
+      const categoryStrip = `
+        <div class="cat-strip-wrap">
+          <div class="cat-strip">
+            ${CATEGORIES.map(c => {
+              const active = state.selectedCategory === c.slug;
+              return `
+                <button type="button" class="cat-item ${active ? 'active' : ''}" data-touch="true" data-size="64×88" onclick="selectCategory('${c.slug}')">
+                  <span class="${isBefore ? 'before-cat-circle' : 'cat-circle'}" style="${isBefore ? '' : `background:${c.tint};`}">
+                    <img src="${c.img}" alt="${c.name}" />
+                  </span>
+                  <span class="cat-label">${c.name}</span>
+                </button>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+
+      const dealsShowcase = (!isBefore && !state.dealsOnly && !state.selectedCategory)
+        ? `
+          <section class="deals-band">
+            <div class="section-head">
+              <div class="section-title-row">
+                <h2 class="section-h">Top deals</h2>
+                <span class="deals-pill">Up to 25% off</span>
+              </div>
+              <button type="button" class="see-all-btn" onclick="toggleDeals()">See all</button>
+            </div>
+            <div class="deals-rail">
+              ${dealProducts.map(p => renderProductCard(p, option, true)).join('')}
+            </div>
+          </section>
+        `
+        : '';
+
+      const filterBanner = (!isBefore && (state.selectedCategory || state.dealsOnly))
+        ? `
+          <div class="active-filter-bar visible">
+            <span>Showing: ${headingText} (${products.length})</span>
+            <button type="button" class="clear-filter-btn" onclick="clearFilters()">Show all</button>
+          </div>
+        `
+        : '';
+
+      const dockedPills = !isBefore
+        ? `
+          <div class="docked-pills-bar" data-docked-pills="${roleId}">
+            <button type="button" class="cat-pill-chip ${!state.selectedCategory && !state.dealsOnly ? 'active' : ''}" onclick="clearFilters()">
+              <span class="cat-pill-thumb">${svgIcon('allGrid', 15, 'currentColor')}</span>
+              <span>All</span>
+            </button>
+            ${CATEGORIES.map(c => `
+              <button type="button" class="cat-pill-chip ${state.selectedCategory === c.slug ? 'active' : ''}" onclick="selectCategory('${c.slug}')">
+                <span class="cat-pill-thumb"><img src="${c.img}" alt="" /></span>
+                <span>${c.name}</span>
+              </button>
+            `).join('')}
+          </div>
+        `
+        : '';
+
+      return `
+        <div class="phone-bezel">
+          <div class="phone-screen ${activeDark ? 'is-dark' : ''}" data-option="${option}" data-phone="${roleId}">
+            <div class="phone-status">
+              <span class="tabular">11:01</span>
+              <span class="status-icons">
+                <span>5G</span>
+                <span>98%</span>
+              </span>
+            </div>
+
+            <div class="shop-header ${isBefore ? '' : 'redesign-header'}" data-header="${roleId}">
+              <div class="header-expandable" data-header-exp="${roleId}">
+                ${headerExpandedContent}
+              </div>
+              <button type="button" class="search-pill" data-touch="true" data-size="48dp" onclick="showPhoneToast('Opening Search screen (/search)')">
+                ${svgIcon('search', 18, isBefore ? '#000b88' : 'var(--p-primary)')}
+                <span data-search-hint>${SEARCH_HINTS[state.searchHintIndex]}</span>
+                ${!isBefore ? `<span class="search-pill-badge">OTC &amp; Rx</span>` : ''}
+              </button>
+              ${beforeTilesUnderSearch}
+            </div>
+
+            ${dockedPills}
+
+            <div class="phone-feed" data-feed="${roleId}" onscroll="onPhoneFeedScroll(this, '${roleId}')">
+              ${bannerBlock}
+              ${categoryStrip}
+              ${filterBanner}
+              ${dealsShowcase}
+
+              <section class="products-section">
+                <div class="products-head">
+                  <h2 class="section-h">${headingText}</h2>
+                  <span class="products-count tabular">${products.length} ${products.length === 1 ? 'product' : 'products'}</span>
+                </div>
+                <div class="products-grid">
+                  ${products.map(p => renderProductCard(p, option, false)).join('')}
+                </div>
+              </section>
+            </div>
+
+            <div class="phone-toast" id="phone-toast-${roleId}"></div>
+
+            <nav class="bottom-nav" aria-label="App navigation">
+              <button type="button" class="nav-item active" onclick="showPhoneToast('Shop tab active')">
+                <span class="nav-pill">${svgIcon('homeFill', 20, 'currentColor')}</span>
+                <span class="nav-label">Shop</span>
+              </button>
+              <button type="button" class="nav-item" onclick="showPhoneToast('Orders tab')">
+                <span class="nav-pill">${svgIcon('receipt', 20, 'currentColor')}</span>
+                <span class="nav-label">Orders</span>
+              </button>
+              <button type="button" class="nav-item" onclick="showPhoneToast('Messages tab')">
+                <span class="nav-pill">${svgIcon('chat', 20, 'currentColor')}</span>
+                <span class="nav-label">Messages</span>
+              </button>
+              <button type="button" class="nav-item" onclick="showPhoneToast('Cart: ${cartCount} items')">
+                <span class="nav-pill">
+                  ${svgIcon('tote', 20, 'currentColor')}
+                  ${cartCount > 0 ? `<span class="nav-badge tabular">${cartCount}</span>` : ''}
+                </span>
+                <span class="nav-label">Cart</span>
+              </button>
+              <button type="button" class="nav-item" onclick="showPhoneToast('Account tab')">
+                <span class="nav-pill">${svgIcon('user', 20, 'currentColor')}</span>
+                <span class="nav-label">Account</span>
+              </button>
+            </nav>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderInspector() {
+      const opt = state.direction;
+      const meta = DIRECTION_META[opt];
+      const modeKey = state.dark ? 'dark' : 'light';
+      const spec = meta[modeKey] || meta.light;
+      const isBefore = opt === 'before';
+
+      return `
+        <div class="inspector-card">
+          <h2 class="inspector-h">
+            <span>${meta.name}</span>
+            <span style="color:var(--studio-gold);">${state.dark ? 'Dark Scheme' : 'Light Scheme'}</span>
+          </h2>
+          <div class="swatch-list">
+            ${spec.swatches.map(s => `
+              <div class="swatch-row">
+                <span class="swatch-chip" style="background:${s.hex.startsWith('#') ? s.hex : '#334155'};"></span>
+                <div class="swatch-meta">
+                  <div class="swatch-name">${s.name}</div>
+                  <div class="swatch-hex mono">${s.hex}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="inspector-card">
+          <h2 class="inspector-h">
+            <span>WCAG 2.1 Contrast Audit</span>
+            <span style="font-size:10.5px;color:var(--studio-muted);">AA ≥ 4.5:1</span>
+          </h2>
+          <div class="contrast-table">
+            ${spec.contrasts.map(c => `
+              <div class="contrast-row">
+                <span>${c.pair}</span>
+                <span class="contrast-badge ${c.pass ? 'c-pass' : 'c-fail'} tabular">${c.ratio} ${c.pass ? 'PASS' : 'FAIL'}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="inspector-card">
+          <h2 class="inspector-h">
+            <span>${isBefore ? 'Identified Audit Gaps' : 'Audit Improvements Applied'}</span>
+          </h2>
+          <ul class="audit-list">
+            ${meta.fixes.map(f => `
+              <li class="audit-item">
+                <span class="audit-dot ${isBefore ? 'warn' : ''}">${isBefore ? '!' : svgIcon('check', 11, 'currentColor')}</span>
+                <span>${f}</span>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+
+        <div class="inspector-card">
+          <h2 class="inspector-h">
+            <span>Design Scorecard (Before → Redesign)</span>
+          </h2>
+          <div class="contrast-table">
+            <div class="contrast-row">
+              <span>Above-the-fold canopy + hero footprint</span>
+              <span class="contrast-badge ${isBefore ? 'c-fail' : 'c-pass'} tabular">${isBefore ? '~630dp (cards hidden)' : '~455dp (deals visible)'}</span>
+            </div>
+            <div class="contrast-row">
+              <span>Card Add-to-Cart touch target (Android ≥ 48dp)</span>
+              <span class="contrast-badge ${isBefore ? 'c-fail' : 'c-pass'} tabular">${isBefore ? '40×40dp bare icon' : '48×48dp tactile pill'}</span>
+            </div>
+            <div class="contrast-row">
+              <span>Hero photography clarity</span>
+              <span class="contrast-badge ${isBefore ? 'c-fail' : 'c-pass'}">${isBefore ? '85% white fog mask' : 'Clean 56/44 editorial split'}</span>
+            </div>
+            <div class="contrast-row">
+              <span>Dark Mode parity (MaterialApp.darkTheme)</span>
+              <span class="contrast-badge ${isBefore ? 'c-fail' : 'c-pass'}">${isBefore ? 'Not wired in app.dart' : 'Full Light + Dark tokens'}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderAll() {
+      const workspace = document.getElementById('stage-workspace');
+      const cluster = document.getElementById('phones-cluster');
+      const inspector = document.getElementById('inspector-panel');
+      const compare = state.viewMode === 'compare';
+
+      workspace.classList.toggle('compare-mode', compare);
+
+      if (compare) {
+        const afterOption = state.direction === 'before' ? state.lastRedesign : state.direction;
+        cluster.innerHTML = `
+          <div class="phone-column">
+            <div class="phone-caption">
+              <span>Current Homepage</span>
+              <span class="caption-chip before">Before · Washed Sky</span>
+            </div>
+            ${renderPhone('before', 'before')}
+          </div>
+          <div class="phone-column">
+            <div class="phone-caption">
+              <span>${DIRECTION_META[afterOption].name}</span>
+              <span class="caption-chip">After · Redesigned</span>
+            </div>
+            ${renderPhone(afterOption, 'after')}
+          </div>
+        `;
+      } else {
+        cluster.innerHTML = `
+          <div class="phone-column">
+            <div class="phone-caption">
+              <span>${DIRECTION_META[state.direction].name}</span>
+              <span class="caption-chip ${state.direction === 'before' ? 'before' : ''}">${state.dark ? 'Dark Theme' : 'Light Theme'}</span>
+            </div>
+            ${renderPhone(state.direction, 'main')}
+          </div>
+        `;
+        inspector.innerHTML = renderInspector();
+      }
+
+      document.body.classList.toggle('touch-debug', state.touchDebug);
+      applyCollapseVisuals(state.collapsePct);
+      syncHeaderButtons();
+    }
+
+    function syncHeaderButtons() {
+      document.querySelectorAll('.dir-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.dir === state.direction);
+      });
+      document.getElementById('mode-explorer').classList.toggle('active', state.viewMode === 'explorer');
+      document.getElementById('mode-compare').classList.toggle('active', state.viewMode === 'compare');
+
+      const themeBtn = document.getElementById('btn-theme');
+      themeBtn.classList.toggle('active', state.dark);
+      document.getElementById('theme-icon').innerHTML = svgIcon(state.dark ? 'moon' : 'sun', 14, 'currentColor');
+      document.getElementById('theme-label').textContent = state.dark ? 'Dark Mode: On' : 'Dark Mode: Off';
+
+      document.getElementById('btn-touch').classList.toggle('active', state.touchDebug);
+      document.getElementById('collapse-slider').value = state.collapsePct;
+      document.getElementById('collapse-pct').textContent = `${state.collapsePct}%`;
+    }
+
+    function applyCollapseVisuals(pct) {
+      const t = pct / 100;
+      document.querySelectorAll('[data-header-exp]').forEach(exp => {
+        if (!exp.dataset.baseHeight) {
+          exp.dataset.baseHeight = exp.scrollHeight || 88;
+        }
+        const base = Number(exp.dataset.baseHeight);
+        exp.style.height = `${Math.max(0, base * (1 - t))}px`;
+        exp.style.opacity = `${Math.max(0, 1 - t * 1.6)}`;
+        exp.style.pointerEvents = t > 0.45 ? 'none' : 'auto';
+      });
+      document.querySelectorAll('[data-header]').forEach(hdr => {
+        const isRedesign = hdr.classList.contains('redesign-header');
+        if (isRedesign) {
+          hdr.classList.toggle('flat-bottom', t >= 0.45);
+        }
+      });
+      document.querySelectorAll('[data-docked-pills]').forEach(pills => {
+        pills.classList.toggle('visible', t >= 0.45);
+      });
+    }
+
+    let syncingScroll = false;
+
+    function onPhoneFeedScroll(el, roleId) {
+      const maxRange = 96;
+      const pct = Math.round(Math.min(1, el.scrollTop / maxRange) * 100);
+      if (pct !== state.collapsePct) {
+        state.collapsePct = pct;
+        document.getElementById('collapse-slider').value = pct;
+        document.getElementById('collapse-pct').textContent = `${pct}%`;
+        applyCollapseVisuals(pct);
+      }
+      if (state.viewMode === 'compare' && !syncingScroll) {
+        syncingScroll = true;
+        document.querySelectorAll('.phone-feed').forEach(other => {
+          if (other !== el) {
+            other.scrollTop = el.scrollTop;
+          }
+        });
+        requestAnimationFrame(() => { syncingScroll = false; });
+      }
+    }
+
+    function onScrubCollapse(val) {
+      state.collapsePct = Number(val);
+      document.getElementById('collapse-pct').textContent = `${state.collapsePct}%`;
+      const targetScroll = (state.collapsePct / 100) * 96;
+      syncingScroll = true;
+      document.querySelectorAll('.phone-feed').forEach(el => {
+        el.scrollTop = targetScroll;
+      });
+      applyCollapseVisuals(state.collapsePct);
+      requestAnimationFrame(() => { syncingScroll = false; });
+    }
+
+    function jumpCollapse(pct) {
+      onScrubCollapse(pct);
+    }
+
+    function setDirection(dir) {
+      state.direction = dir;
+      if (dir !== 'before') {
+        state.lastRedesign = dir;
+      }
+      renderAll();
+    }
+
+    function setViewMode(mode) {
+      state.viewMode = mode;
+      renderAll();
+    }
+
+    function toggleTheme() {
+      state.dark = !state.dark;
+      renderAll();
+    }
+
+    function toggleTouchDebug() {
+      state.touchDebug = !state.touchDebug;
+      renderAll();
+    }
+
+    function setBanner(idx) {
+      state.bannerIndex = idx;
+      renderAll();
+    }
+
+    function stepBanner(delta) {
+      state.bannerIndex = (state.bannerIndex + delta + BANNERS.length) % BANNERS.length;
+      renderAll();
+    }
+
+    function triggerBannerAction() {
+      const b = BANNERS[state.bannerIndex];
+      if (b.actionType === 'category') {
+        state.dealsOnly = false;
+        state.selectedCategory = b.actionTarget;
+        renderAll();
+        showPhoneToast(`Filtered by ${CATEGORIES.find(c => c.slug === b.actionTarget).name}`);
+      } else if (b.actionType === 'deals') {
+        state.selectedCategory = null;
+        state.dealsOnly = true;
+        renderAll();
+        showPhoneToast('Showing Top Deals');
+      } else {
+        showPhoneToast(b.actionTarget);
+      }
+    }
+
+    function selectCategory(slug) {
+      state.dealsOnly = false;
+      state.selectedCategory = state.selectedCategory === slug ? null : slug;
+      renderAll();
+    }
+
+    function toggleDeals() {
+      state.selectedCategory = null;
+      state.dealsOnly = !state.dealsOnly;
+      renderAll();
+    }
+
+    function clearFilters() {
+      state.selectedCategory = null;
+      state.dealsOnly = false;
+      renderAll();
+    }
+
+    function addToCart(id) {
+      state.cart[id] = (state.cart[id] || 0) + 1;
+      const prod = PRODUCTS.find(p => p.id === id);
+      renderAll();
+      showPhoneToast(`Added ${prod.name} to cart (${state.cart[id]} in cart)`);
+    }
+
+    function resetDemo() {
+      state.selectedCategory = null;
+      state.dealsOnly = false;
+      state.cart = { paracetamol: 2 };
+      state.bannerIndex = 0;
+      state.collapsePct = 0;
+      renderAll();
+    }
+
+    function showPhoneToast(msg) {
+      document.querySelectorAll('.phone-toast').forEach(el => {
+        el.textContent = msg;
+        el.classList.add('visible');
+      });
+      clearTimeout(state.toastTimer);
+      state.toastTimer = setTimeout(() => {
+        document.querySelectorAll('.phone-toast').forEach(el => {
+          el.classList.remove('visible');
+        });
+      }, 2200);
+    }
+
+    setInterval(() => {
+      state.searchHintIndex = (state.searchHintIndex + 1) % SEARCH_HINTS.length;
+      document.querySelectorAll('[data-search-hint]').forEach(el => {
+        el.textContent = SEARCH_HINTS[state.searchHintIndex];
+      });
+    }, 3000);
+
+    renderAll();
+  </script>
+</body>
+</html>

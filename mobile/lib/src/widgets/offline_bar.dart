@@ -66,10 +66,22 @@ class _OfflineBarState extends ConsumerState<OfflineBar>
     final online = ref.watch(isOnlineProvider).value ?? true;
     final showBar = !online || _backOnline;
 
-    final scheme = Theme.of(context).colorScheme;
-    // Dark neutral rather than red: being offline is a state, not a fault.
-    final background = online ? const Color(0xFF1B7F4B) : scheme.inverseSurface;
-    final foreground = online ? Colors.white : scheme.onInverseSurface;
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    final background = online
+        ? const Color(0xFF0F766E)
+        : dark
+        ? const Color(0xFF16213B)
+        : const Color(0xFF0D1F4F);
+    const foreground = Colors.white;
+    final borderColor = online
+        ? Colors.transparent
+        : dark
+        ? const Color(0x3894A3B8)
+        : const Color(0x1AFFFFFF);
+    final animDuration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 180);
 
     // The tree keeps one shape whether or not the bar shows, so the app below never rebuilds.
     return Column(
@@ -82,44 +94,58 @@ class _OfflineBarState extends ConsumerState<OfflineBar>
             child: widget.child,
           ),
         ),
-        if (showBar)
-          Semantics(
-            liveRegion: true,
-            child: Material(
-              color: background,
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        online
-                            ? PhosphorIconsRegular.wifiHigh
-                            : PhosphorIconsRegular.wifiSlash,
-                        size: 18,
-                        color: foreground,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          online ? 'Back online' : "No internet connection. We'll reload when you're back.",
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
+        AnimatedSize(
+          duration: animDuration,
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: showBar
+              ? Semantics(
+                  liveRegion: true,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: background,
+                      border: Border(top: BorderSide(color: borderColor)),
+                    ),
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: SafeArea(
+                        top: false,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                online
+                                    ? PhosphorIconsRegular.wifiHigh
+                                    : PhosphorIconsRegular.wifiSlash,
+                                size: 16,
                                 color: foreground,
-                                fontWeight: FontWeight.w600,
                               ),
+                              const SizedBox(width: 9),
+                              Expanded(
+                                child: Text(
+                                  online
+                                      ? 'Back online'
+                                      : "No internet connection. We'll reload when you're back.",
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: foreground,
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ),
-          ),
+                )
+              : const SizedBox.shrink(),
+        ),
       ],
     );
   }
