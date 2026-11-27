@@ -18,6 +18,7 @@ import 'screens/product_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/saved_screen.dart';
 import 'screens/search_screen.dart';
+import 'screens/settings_screen.dart';
 import 'screens/store_screen.dart';
 import 'widgets/shell.dart';
 
@@ -122,6 +123,10 @@ final appRouter = GoRouter(
       builder: (context, state) => ProfileScreen(
         completing: state.uri.queryParameters['complete'] == '1',
       ),
+    ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const SettingsScreen(),
     ),
   ],
 );

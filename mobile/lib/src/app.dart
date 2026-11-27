@@ -3,25 +3,30 @@ import 'package:clerk_flutter/clerk_flutter.dart';
 // ignore: implementation_imports
 import 'package:clerk_flutter/src/utils/localization_extensions.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'config.dart';
+import 'providers/theme_providers.dart';
 import 'router.dart';
 import 'theme.dart';
 import 'widgets/offline_bar.dart';
 import 'widgets/status_notice.dart';
 
-class JmMartApp extends StatelessWidget {
+class JmMartApp extends ConsumerWidget {
   const JmMartApp({super.key, this.authState});
 
   final ClerkAuthState? authState;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+
     if (!AppConfig.hasClerk || authState == null) {
       return MaterialApp(
         title: 'Everyday Pharmacy',
         theme: buildAppTheme(),
         darkTheme: buildAppTheme(brightness: Brightness.dark),
+        themeMode: themeMode,
         debugShowCheckedModeBanner: false,
         home: const MissingConfigScreen(),
       );
@@ -33,6 +38,7 @@ class JmMartApp extends StatelessWidget {
         title: 'Everyday Pharmacy',
         theme: buildAppTheme(),
         darkTheme: buildAppTheme(brightness: Brightness.dark),
+        themeMode: themeMode,
         debugShowCheckedModeBanner: false,
         routerConfig: appRouter,
         // Shared notices use MaterialApp's ScaffoldMessenger.

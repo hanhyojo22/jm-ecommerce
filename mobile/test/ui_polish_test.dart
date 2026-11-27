@@ -48,11 +48,14 @@ void main() {
     expect(light.navigationBarTheme.indicatorColor, isNot(Colors.transparent));
   });
 
-  testWidgets('JmMartApp wires darkTheme on MaterialApp', (tester) async {
-    await tester.pumpWidget(const JmMartApp());
+  testWidgets('JmMartApp wires darkTheme and themeMode on MaterialApp', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const ProviderScope(child: JmMartApp()));
     final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
     expect(app.darkTheme, isNotNull);
     expect(app.darkTheme?.brightness, Brightness.dark);
+    expect(app.themeMode, ThemeMode.system);
   });
 
   testWidgets('order detail header fits a phone with large text', (
