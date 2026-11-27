@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\MedicationPlanResource;
 use App\Models\MedicationDoseLog;
 use App\Models\MedicationPlan;
+use App\Support\MedicationSupply;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,7 +21,7 @@ class MedicationDoseController extends Controller
      */
     public function store(Request $request, string $plan): JsonResponse
     {
-        $plan = $request->user()->medicationPlans()->findOrFail($plan);
+        $plan = $request->user()->medicationPlans()->with('doseLogs')->findOrFail($plan);
         $data = $request->validate([
             'logs' => ['required', 'array', 'min:1', 'max:50'],
             'logs.*.client_uuid' => ['required', 'uuid'],
@@ -30,17 +31,29 @@ class MedicationDoseController extends Controller
             'logs.*.quantity' => ['nullable', 'numeric', 'min:0.01', 'max:999'],
         ]);
 
-        MedicationDoseLog::query()->insertOrIgnore(array_map(fn (array $log): array => [
-            'id' => (string) Str::ulid(),
-            'medication_plan_id' => $plan->id,
-            'client_uuid' => $log['client_uuid'],
-            'status' => $log['status'],
-            'scheduled_for' => isset($log['scheduled_for']) ? CarbonImmutable::parse($log['scheduled_for'])->setTimezone(config('app.timezone')) : null,
-            'logged_at' => CarbonImmutable::parse($log['logged_at'])->setTimezone(config('app.timezone')),
-            'quantity' => $log['quantity'] ?? $plan->dose_quantity,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ], $data['logs']));
+        $answered = $plan->doseLogs->whereNotNull('scheduled_for')->map(fn (MedicationDoseLog $log): int => $log->scheduled_for->getTimestamp())->all();
+        $rows = [];
+        foreach ($data['logs'] as $log) {
+            $loggedAt = CarbonImmutable::parse($log['logged_at'])->setTimezone(config('app.timezone'));
+            $slot = isset($log['scheduled_for'])
+                ? CarbonImmutable::parse($log['scheduled_for'])->setTimezone(config('app.timezone'))
+                : $this->nearestOpenSlot($plan, $loggedAt, $answered);
+            if ($slot !== null) {
+                $answered[] = $slot->getTimestamp();
+            }
+            $rows[] = [
+                'id' => (string) Str::ulid(),
+                'medication_plan_id' => $plan->id,
+                'client_uuid' => $log['client_uuid'],
+                'status' => $log['status'],
+                'scheduled_for' => $slot,
+                'logged_at' => $loggedAt,
+                'quantity' => $log['quantity'] ?? $plan->dose_quantity,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+        MedicationDoseLog::query()->insertOrIgnore($rows);
 
         $plan->load(['doseLogs', 'careProfile']);
 
@@ -48,6 +61,22 @@ class MedicationDoseController extends Controller
             'warning' => $this->limitWarning($plan),
             'plan' => MedicationPlanResource::make($plan)->resolve($request),
         ]);
+    }
+
+    /**
+     * A dose marked from the app without a reminder ("I took a dose now") answers the closest
+     * unanswered scheduled dose from six hours before to three hours after, so it is neither
+     * counted twice nor reported to a caregiver as unmarked.
+     *
+     * @param  list<int>  $answered  timestamps of slots that already have a log
+     */
+    private function nearestOpenSlot(MedicationPlan $plan, CarbonImmutable $loggedAt, array $answered): ?CarbonImmutable
+    {
+        return collect(MedicationSupply::slots($plan, $loggedAt->subHours(6), $loggedAt->addHours(3)))
+            ->reject(fn (CarbonImmutable $slot): bool => in_array($slot->getTimestamp(), $answered, true))
+            ->sortBy(fn (CarbonImmutable $slot): int => abs($slot->getTimestamp() - $loggedAt->getTimestamp()))
+            ->first()
+            ?->setTimezone(config('app.timezone'));
     }
 
     private function limitWarning(MedicationPlan $plan): ?string

@@ -19,7 +19,6 @@ enum AlarmKind {
 /// One local notification to schedule. [at] is Philippine wall-clock time.
 class PlannedAlarm {
   const PlannedAlarm({
-    required this.id,
     required this.kind,
     required this.at,
     required this.title,
@@ -28,13 +27,16 @@ class PlannedAlarm {
     this.withDoseActions = false,
   });
 
-  final int id;
   final AlarmKind kind;
   final DateTime at;
   final String title;
   final String body;
   final String payload;
   final bool withDoseActions;
+
+  /// Stable for the same reminder and changes when its time or text changes,
+  /// so a sync only touches the reminders that differ.
+  int get id => _id('${kind.name}|$payload|$title|$body', at);
 }
 
 const _directions = "Follow your doctor's or pharmacist's directions.";
@@ -65,7 +67,6 @@ List<PlannedAlarm> buildAlarms(
       return [
         ...alarms,
         PlannedAlarm(
-          id: _id('keep', '', last),
           kind: AlarmKind.keepGoing,
           at: last,
           title: 'Open the app to keep your reminders going',
@@ -116,7 +117,6 @@ List<PlannedAlarm> _alarmsFor(
           if (inWindow(at)) {
             alarms.add(
               PlannedAlarm(
-                id: _id('dose', plan.id, at),
                 kind: AlarmKind.dose,
                 at: at,
                 title: name == null
@@ -133,7 +133,6 @@ List<PlannedAlarm> _alarmsFor(
           if (inWindow(nudge)) {
             alarms.add(
               PlannedAlarm(
-                id: _id('nudge', plan.id, nudge),
                 kind: AlarmKind.nudge,
                 at: nudge,
                 title: name == null
@@ -155,7 +154,6 @@ List<PlannedAlarm> _alarmsFor(
         if (inWindow(done) && _sameDay(lastDose, plan.endsOn!)) {
           alarms.add(
             PlannedAlarm(
-              id: _id('done', plan.id, done),
               kind: AlarmKind.courseComplete,
               at: done,
               title: 'Course complete',
@@ -174,7 +172,6 @@ List<PlannedAlarm> _alarmsFor(
       if (inWindow(at)) {
         alarms.add(
           PlannedAlarm(
-            id: _id('count', plan.id, at),
             kind: AlarmKind.count,
             at: at,
             title: 'How many are left?',
@@ -196,7 +193,6 @@ List<PlannedAlarm> _alarmsFor(
           final today = _sameDay(at, plan.expiresOn!);
           alarms.add(
             PlannedAlarm(
-              id: _id('expiry', plan.id, at),
               kind: AlarmKind.expiry,
               at: at,
               title: today
@@ -244,7 +240,6 @@ List<PlannedAlarm> _reorderAlarms(
     final single = group.length == 1 ? group.single : null;
     alarms.add(
       PlannedAlarm(
-        id: _id('reorder', group.map((plan) => plan.id).join(','), at),
         kind: AlarmKind.reorder,
         at: at,
         title: single == null
@@ -278,9 +273,9 @@ String _manilaIso(DateTime at) =>
     '${at.year}-${_two(at.month)}-${_two(at.day)}T${_two(at.hour)}:${_two(at.minute)}:00+08:00';
 
 /// A stable 31-bit id (FNV-1a), so the same reminder keeps its id across syncs.
-int _id(String kind, String key, DateTime at) {
+int _id(String key, DateTime at) {
   var hash = 0x811c9dc5;
-  for (final unit in '$kind|$key|${at.toIso8601String()}'.codeUnits) {
+  for (final unit in '$key|${at.toIso8601String()}'.codeUnits) {
     hash ^= unit;
     hash = (hash * 0x01000193) & 0xffffffff;
   }
@@ -305,8 +300,33 @@ class MedicationAlarms {
     return tz.getLocation('Asia/Manila');
   }();
 
-  /// Replaces every scheduled medicine reminder with a fresh 14-day window.
+  static Future<void>? _running;
+  static List<MedicationPlan>? _waiting;
+
+  /// Brings the scheduled reminders in line with a fresh 14-day window. One
+  /// sync runs at a time; plans that arrive meanwhile are applied right after,
+  /// so an older sync can never re-add a reminder a newer one removed.
   static Future<void> sync(List<MedicationPlan> plans) async {
+    if (_running != null) {
+      _waiting = plans;
+      return _running;
+    }
+    _running = _apply(plans);
+    try {
+      await _running;
+    } finally {
+      _running = null;
+    }
+    final next = _waiting;
+    _waiting = null;
+    if (next != null) {
+      await sync(next);
+    }
+  }
+
+  /// The plugin rewrites its saved list on every schedule and cancel, so only
+  /// the reminders that changed are touched.
+  static Future<void> _apply(List<MedicationPlan> plans) async {
     try {
       await PushNotifications.initializeLocal();
       await PushNotifications.openLaunchNotification();
@@ -314,13 +334,22 @@ class MedicationAlarms {
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
           >();
-      await cancelMedicineAlarms();
-      final alarms = buildAlarms(plans, _nowInManila());
-      if (alarms.isEmpty) {
-        return;
+      final wanted = {
+        for (final alarm in buildAlarms(plans, _nowInManila())) alarm.id: alarm,
+      };
+      final pending = await _plugin.pendingNotificationRequests();
+      final pendingIds = {for (final request in pending) request.id};
+      for (final request in pending) {
+        if ((request.payload?.startsWith('/medicines') ?? false) &&
+            !wanted.containsKey(request.id)) {
+          await _plugin.cancel(request.id);
+        }
       }
       final exact = await android?.canScheduleExactNotifications() ?? false;
-      for (final alarm in alarms) {
+      for (final alarm in wanted.values) {
+        if (pendingIds.contains(alarm.id)) {
+          continue;
+        }
         await _plugin.zonedSchedule(
           alarm.id,
           alarm.title,
@@ -344,7 +373,10 @@ class MedicationAlarms {
       }
     } catch (error, stack) {
       // Reminders must never break the app; the next sync tries again.
-      debugPrint('[Medicine] alarm sync failed: $error\n$stack');
+      debugPrint(
+        '[Medicine] alarm sync failed: $error '
+        '$stack',
+      );
     }
   }
 

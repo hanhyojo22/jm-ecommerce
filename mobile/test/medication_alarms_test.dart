@@ -144,6 +144,19 @@ void main() {
     expect(alarms.map((a) => a.id).toSet(), hasLength(alarms.length));
   });
 
+  test('an alarm keeps its id until its time or text changes', () {
+    final first = buildAlarms([plan()], now).first;
+    final again = buildAlarms([plan()], now).first;
+    final renamed = buildAlarms([plan(showName: true)], now).first;
+    final moved = buildAlarms([
+      plan(times: const ['09:00', '20:00']),
+    ], now).first;
+
+    expect(again.id, first.id);
+    expect(renamed.id, isNot(first.id));
+    expect(moved.id, isNot(first.id));
+  });
+
   test('caps alarms at 400', () {
     final plans = [
       for (var index = 0; index < 6; index++)

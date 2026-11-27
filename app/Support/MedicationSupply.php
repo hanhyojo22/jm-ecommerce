@@ -70,7 +70,8 @@ class MedicationSupply
         $answered = $logs->filter(fn (MedicationDoseLog $log): bool => $log->scheduled_for !== null)
             ->map(fn (MedicationDoseLog $log): int => $log->scheduled_for->getTimestamp())
             ->flip();
-        $assumed = collect(self::slots($plan, $anchoredAt, $now->subDay()))
+        // A paused plan is re-anchored when paused, so nothing after that is assumed taken.
+        $assumed = $plan->status === 'paused' ? 0 : collect(self::slots($plan, $anchoredAt, $now->subDay()))
             ->reject(fn (CarbonImmutable $slot): bool => $answered->has($slot->getTimestamp()))
             ->count();
 

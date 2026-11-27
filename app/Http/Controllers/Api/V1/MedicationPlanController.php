@@ -76,8 +76,8 @@ class MedicationPlanController extends Controller
     }
 
     /**
-     * A new dose or schedule only applies from now: the supply is re-anchored first so past
-     * doses are counted with the schedule they were taken on.
+     * A new dose, schedule or pause only applies from now: the supply is re-anchored first so
+     * past doses are counted with the schedule they were taken on, and paused days use none.
      */
     public function update(Request $request, string $plan): MedicationPlanResource
     {
@@ -88,7 +88,8 @@ class MedicationPlanController extends Controller
             ...collect($this->doseRules())->map(fn (array $rules): array => ['sometimes', ...array_diff($rules, ['required'])])->all(),
         ]);
 
-        if (array_key_exists('dose_times', $data) || array_key_exists('dose_quantity', $data)) {
+        $statusChanges = array_key_exists('status', $data) && $data['status'] !== $plan->status;
+        if ($statusChanges || array_key_exists('dose_times', $data) || array_key_exists('dose_quantity', $data)) {
             $data['units_anchor'] = MedicationSupply::summary($plan, now())['units_left'];
             $data['anchored_at'] = now();
         }

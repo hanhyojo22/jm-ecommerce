@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Actions\DeleteCustomerAccount;
 use App\Models\CaregiverLink;
 use App\Models\InventoryBatch;
+use App\Models\MedicationDoseLog;
 use App\Models\MedicationPlan;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -12,6 +13,7 @@ use App\Models\Product;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -153,6 +155,37 @@ class MedicationPlanApiTest extends TestCase
         }
 
         $this->getJson(route('api.v1.medication-plans.index'))->assertJsonPath('data.0.recent_dose_days', 3);
+    }
+
+    public function test_a_dose_marked_without_a_slot_answers_the_nearest_scheduled_dose(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-12-10 07:00', 'Asia/Manila'));
+        [$buyer, $item] = $this->deliveredItem();
+        $this->consent($buyer);
+        $planId = $this->postJson(route('api.v1.medication-plans.store'), $this->planBody($item, ['dose_times' => ['08:00'], 'starts_on' => '2026-12-10']))->json('data.id');
+
+        $this->travelTo(CarbonImmutable::parse('2026-12-10 08:40', 'Asia/Manila'));
+        $this->postJson(route('api.v1.medication-plans.doses.store', $planId), ['logs' => [
+            ['client_uuid' => (string) Str::uuid(), 'status' => 'taken', 'logged_at' => now()->toIso8601String()],
+        ]])->assertOk();
+
+        $this->assertSame('2026-12-10 08:00:00', MedicationDoseLog::query()->sole()->scheduled_for->setTimezone('Asia/Manila')->format('Y-m-d H:i:s'));
+        $this->travelTo(CarbonImmutable::parse('2026-12-12 12:00', 'Asia/Manila'));
+        // Dec 10 was marked; Dec 11 is assumed taken; Dec 12 isn't a day old yet.
+        $this->getJson(route('api.v1.medication-plans.index'))->assertJsonPath('data.0.units_left', 28);
+    }
+
+    public function test_pausing_keeps_the_supply(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-12-10 07:00', 'Asia/Manila'));
+        [$buyer, $item] = $this->deliveredItem();
+        $this->consent($buyer);
+        $planId = $this->postJson(route('api.v1.medication-plans.store'), $this->planBody($item, ['dose_times' => ['08:00'], 'starts_on' => '2026-12-10']))->json('data.id');
+
+        $this->patchJson(route('api.v1.medication-plans.update', $planId), ['status' => 'paused'])->assertOk();
+        $this->travel(5)->days();
+        $this->getJson(route('api.v1.medication-plans.index'))->assertJsonPath('data.0.units_left', 30);
+        $this->patchJson(route('api.v1.medication-plans.update', $planId), ['status' => 'active'])->assertOk()->assertJsonPath('data.units_left', 30);
     }
 
     public function test_count_resets_the_supply(): void
