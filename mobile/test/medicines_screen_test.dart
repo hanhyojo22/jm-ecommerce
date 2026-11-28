@@ -6,9 +6,11 @@ import 'package:jmmart/src/core/api_client.dart';
 import 'package:jmmart/src/models/medication.dart';
 import 'package:jmmart/src/models/models.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
+import 'package:jmmart/src/screens/medicine_history_screen.dart';
 import 'package:jmmart/src/screens/medicine_people_screen.dart';
 import 'package:jmmart/src/screens/medicine_setup_screen.dart';
 import 'package:jmmart/src/screens/medicines_screen.dart';
+import 'package:jmmart/src/theme.dart';
 
 void main() {
   testWidgets('the consent screen comes first and opting in shows the list', (
@@ -162,14 +164,169 @@ void main() {
     expect(find.text('Amlodipine 5 mg Tablet is running low.'), findsOneWidget);
     expect(find.text('Reorder'), findsOneWidget);
   });
+
+  testWidgets('tapping a dose time pill logs that scheduled slot', (
+    tester,
+  ) async {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final eightAm = DateTime(today.year, today.month, today.day, 8, 0);
+    final api = _MedicineApi(
+      consented: true,
+      plans: [
+        _plan(
+          startsOn: today.subtract(const Duration(days: 1)),
+          times: const ['08:00', '20:00'],
+          answeredSlots: [eightAm],
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      _app(api, const MedicinesScreen(), theme: buildAppTheme()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 of 2 doses marked today'), findsOneWidget);
+
+    await tester.tap(find.text('8:00 PM'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mark as taken'), findsOneWidget);
+
+    await tester.tap(find.text('Mark as taken'));
+    await tester.pumpAndSettle();
+
+    expect(api.logged, hasLength(1));
+    expect(api.logged.single['status'], 'taken');
+    expect(api.logged.single['scheduled_for'], contains('T20:00:00+08:00'));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('dose history renders adherence and legend in dark theme', (
+    tester,
+  ) async {
+    final api = _MedicineApi(
+      consented: true,
+      history: [
+        DoseHistory(
+          planId: 'plan-1',
+          productName: 'Amlodipine 5 mg Tablet',
+          medicineKind: 'maintenance',
+          takenCount: 1,
+          adherence: 0.5,
+          slots: [
+            DoseSlot(
+              scheduledFor: DateTime(2026, 11, 28, 8, 0),
+              status: 'taken',
+            ),
+            DoseSlot(
+              scheduledFor: DateTime(2026, 11, 28, 20, 0),
+              status: 'not_marked',
+            ),
+          ],
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      _app(
+        api,
+        const MedicineHistoryScreen(),
+        theme: buildAppTheme(brightness: Brightness.dark),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('50%'), findsOneWidget);
+    expect(find.text('Taken'), findsOneWidget);
+    expect(find.text('Skipped'), findsOneWidget);
+    expect(find.text('Not marked'), findsOneWidget);
+    expect(find.text('8:00 AM'), findsOneWidget);
+    expect(find.text('8:00 PM'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('adding a family member uses relationship chips and saves', (
+    tester,
+  ) async {
+    final api = _MedicineApi(consented: true);
+    await tester.pumpWidget(
+      _app(api, const MedicinePeopleScreen(), theme: buildAppTheme()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('No family profiles yet'), findsOneWidget);
+    await tester.tap(find.text('Add family member'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, 'Rosa Cruz');
+    await tester.tap(find.text('Lola'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add family member').last);
+    await tester.pumpAndSettle();
+
+    expect(api.savedProfiles, hasLength(1));
+    expect(api.savedProfiles.single.name, 'Rosa Cruz');
+    expect(api.savedProfiles.single.relation, 'Lola');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('inviting a caregiver previews privacy and sends invite', (
+    tester,
+  ) async {
+    final api = _MedicineApi(
+      consented: true,
+      profiles: const [CareProfile(id: 'p1', name: 'Lola Rosa', relation: 'Lola')],
+      plans: [_plan(profileId: 'p1')],
+    );
+    await tester.pumpWidget(
+      _app(
+        api,
+        const MedicinePeopleScreen(),
+        theme: buildAppTheme(brightness: Brightness.dark),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lola Rosa'), findsOneWidget);
+    expect(find.text('Lola · 1 reminder'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Invite a caregiver'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Invite a caregiver'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('"You haven\'t marked your 8:00 AM medicine as taken."'),
+      findsOneWidget,
+    );
+
+    await tester.enterText(
+      find.byType(TextFormField),
+      'caregiver@example.com',
+    );
+    await tester.tap(find.text('Include medicine names in alerts'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('"You haven\'t marked your 8:00 AM Amlodipine as taken."'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Send invitation'));
+    await tester.pumpAndSettle();
+
+    expect(api.invitedCaregivers, hasLength(1));
+    expect(api.invitedCaregivers.single.email, 'caregiver@example.com');
+    expect(api.invitedCaregivers.single.shareNames, true);
+    expect(tester.takeException(), isNull);
+  });
 }
 
-Widget _app(_MedicineApi api, Widget home) => ProviderScope(
+Widget _app(_MedicineApi api, Widget home, {ThemeData? theme}) => ProviderScope(
   overrides: [
     isSignedInProvider.overrideWithValue(true),
     apiClientProvider.overrideWithValue(api),
   ],
-  child: MaterialApp(home: home),
+  child: MaterialApp(theme: theme, home: home),
 );
 
 MedicationPlan _plan({
@@ -177,19 +334,24 @@ MedicationPlan _plan({
   List<String> times = const ['08:00'],
   int? minHours,
   DateTime? reorderOn,
+  DateTime? startsOn,
+  List<DateTime> answeredSlots = const [],
+  String? profileId,
 }) => MedicationPlan(
   id: 'plan-1',
   productId: 'prod-1',
   productName: 'Amlodipine 5 mg Tablet',
+  profileId: profileId,
   medicineKind: kind,
   doseQuantity: 1,
   doseUnit: 'tablet',
   doseTimes: times,
-  startsOn: DateTime(2026, 12, 1),
+  startsOn: startsOn ?? DateTime(2026, 12, 1),
   status: 'active',
   unitsLeft: 10,
   minHoursBetween: minHours,
   reorderOn: reorderOn,
+  answeredSlots: answeredSlots,
 );
 
 class _MedicineApi extends ApiClient {
@@ -198,15 +360,21 @@ class _MedicineApi extends ApiClient {
     this.plans = const [],
     this.warning,
     this.invitations = const [],
+    this.history = const [],
+    this.profiles = const [],
   }) : super(baseUrl: 'http://localhost', tokenProvider: () async => null);
 
   bool consented;
   final List<MedicationPlan> plans;
   final String? warning;
   final List<CaregiverLink> invitations;
+  final List<DoseHistory> history;
+  final List<CareProfile> profiles;
   final accepted = <String>[];
   final consentCalls = <bool>[];
   final logged = <Map<String, dynamic>>[];
+  final savedProfiles = <({String? id, String name, String? relation})>[];
+  final invitedCaregivers = <({String email, bool shareNames})>[];
   Map<String, dynamic>? started;
 
   @override
@@ -233,11 +401,35 @@ class _MedicineApi extends ApiClient {
   Future<List<MedicationSuggestion>> medicationSuggestions() async => const [];
 
   @override
-  Future<List<CareProfile>> careProfiles() async => const [];
+  Future<List<CareProfile>> careProfiles() async => profiles;
+
+  @override
+  Future<CareProfile> saveCareProfile({
+    String? id,
+    required String name,
+    String? relation,
+  }) async {
+    savedProfiles.add((id: id, name: name, relation: relation));
+    return CareProfile(id: id ?? 'p-new', name: name, relation: relation);
+  }
+
+  @override
+  Future<void> inviteCaregiver({
+    required String email,
+    bool shareMedicineNames = false,
+  }) async {
+    invitedCaregivers.add((email: email, shareNames: shareMedicineNames));
+  }
 
   @override
   Future<Caregivers> caregivers() async =>
       Caregivers(caregivers: const [], invitations: invitations);
+
+  @override
+  Future<List<DoseHistory>> medicationHistory({
+    String? profileId,
+    int days = 30,
+  }) async => history;
 
   @override
   Future<void> acceptCaregiver(String id) async => accepted.add(id);

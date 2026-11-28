@@ -116,6 +116,36 @@ void main() {
     expect(api.deleteCalls, 1);
     expect(find.text('You have an order in progress.'), findsOneWidget);
   });
+
+  testWidgets('selecting sex on the segmented track saves the chosen value', (
+    tester,
+  ) async {
+    final api = _ProfileApi();
+    await _open(tester, api, completing: true);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Full name'),
+      'Maria Santos',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Mobile number'),
+      '09171234567',
+    );
+    await tester.tap(find.widgetWithText(TextFormField, 'Birth date'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('15'));
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Female'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(api.saved?.sex, 'female');
+    expect(tester.takeException(), isNull);
+  });
 }
 
 class _ProfileApi extends ApiClient {
