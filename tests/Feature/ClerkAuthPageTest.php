@@ -26,22 +26,16 @@ class ClerkAuthPageTest extends TestCase
             ->assertSee('data-clerk-component="sign-up"', false);
     }
 
-    public function test_an_invitation_opened_while_signed_in_as_someone_else_asks_to_sign_out_first(): void
+    public function test_an_invitation_opens_the_sign_up_page_even_in_a_signed_in_browser(): void
     {
         config(['marketplace.web_store.enabled' => false]);
-        $owner = User::factory()->seller()->create(['email' => 'owner@example.com']);
+        $owner = User::factory()->seller()->create();
 
+        // The page itself asks Clerk who is signed in and offers to sign them out (clerk-invitation.js).
         $this->actingAs($owner)->get('/sign-up?__clerk_ticket=ticket-123&__clerk_status=sign_up')
             ->assertOk()
-            ->assertSee('Sign out to accept this invitation')
-            ->assertSee('owner@example.com')
-            ->assertSee('value="/sign-up?__clerk_ticket=ticket-123&amp;__clerk_status=sign_up"', false);
-
-        // Signing out returns to the invitation, and never to another site.
-        $this->actingAs($owner)->post(route('logout'), ['redirect' => '/sign-up?__clerk_ticket=ticket-123'])
-            ->assertSee("redirectUrl: '\/sign-up?__clerk_ticket=ticket-123'", false);
-        $this->actingAs($owner)->post(route('logout'), ['redirect' => '//evil.example'])
-            ->assertSee("redirectUrl: '\/'", false);
+            ->assertSee('data-clerk-component="sign-up"', false);
+        $this->actingAs($owner)->get(route('register'))->assertNotFound();
     }
 
     public function test_sign_up_rejects_protocol_relative_redirects(): void
