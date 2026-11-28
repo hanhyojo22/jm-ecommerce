@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -13,6 +14,34 @@ class ClerkAuthPageTest extends TestCase
     {
         $this->get(route('login'))->assertOk()->assertSee('data-clerk-component="sign-in"', false);
         $this->get(route('register'))->assertOk()->assertSee('data-clerk-component="sign-up"', false);
+    }
+
+    public function test_with_the_web_store_closed_sign_up_opens_only_for_an_invitation(): void
+    {
+        config(['marketplace.web_store.enabled' => false]);
+
+        $this->get(route('register'))->assertNotFound();
+        $this->get(route('register', ['__clerk_ticket' => 'ticket-123', '__clerk_status' => 'sign_up']))
+            ->assertOk()
+            ->assertSee('data-clerk-component="sign-up"', false);
+    }
+
+    public function test_an_invitation_opened_while_signed_in_as_someone_else_asks_to_sign_out_first(): void
+    {
+        config(['marketplace.web_store.enabled' => false]);
+        $owner = User::factory()->seller()->create(['email' => 'owner@example.com']);
+
+        $this->actingAs($owner)->get('/sign-up?__clerk_ticket=ticket-123&__clerk_status=sign_up')
+            ->assertOk()
+            ->assertSee('Sign out to accept this invitation')
+            ->assertSee('owner@example.com')
+            ->assertSee('value="/sign-up?__clerk_ticket=ticket-123&amp;__clerk_status=sign_up"', false);
+
+        // Signing out returns to the invitation, and never to another site.
+        $this->actingAs($owner)->post(route('logout'), ['redirect' => '/sign-up?__clerk_ticket=ticket-123'])
+            ->assertSee("redirectUrl: '\/sign-up?__clerk_ticket=ticket-123'", false);
+        $this->actingAs($owner)->post(route('logout'), ['redirect' => '//evil.example'])
+            ->assertSee("redirectUrl: '\/'", false);
     }
 
     public function test_sign_up_rejects_protocol_relative_redirects(): void

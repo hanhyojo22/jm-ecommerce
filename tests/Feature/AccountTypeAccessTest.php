@@ -79,7 +79,7 @@ class AccountTypeAccessTest extends TestCase
             ->assertSee('Send Clerk invitation');
         Http::assertSent(fn ($request) => $request->data() === [
             'email_address' => 'operations@example.com',
-            'redirect_url' => url('/sign-in'),
+            'redirect_url' => url('/sign-up'),
         ]);
 
         $this->actingAs($owner)->patch(route('admin.accounts.deactivate', $administrator))

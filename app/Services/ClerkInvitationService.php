@@ -8,9 +8,13 @@ use RuntimeException;
 
 class ClerkInvitationService
 {
+    /**
+     * Invitations land on the sign-up page, where Clerk's sign-up form accepts the ticket and creates the
+     * login; the first sign-in then links it to the account made here by email.
+     */
     public function inviteAdministrator(string $email): void
     {
-        $this->invite(['email_address' => $email, 'redirect_url' => url('/sign-in')]);
+        $this->invite(['email_address' => $email, 'redirect_url' => url('/sign-up')]);
     }
 
     /**
@@ -21,7 +25,7 @@ class ClerkInvitationService
     {
         $this->invite([
             'email_address' => $email,
-            'redirect_url' => url('/sign-in'),
+            'redirect_url' => url('/sign-up'),
             'expires_in_days' => TenantMember::INVITATION_DAYS,
             'ignore_existing' => true,
         ]);
