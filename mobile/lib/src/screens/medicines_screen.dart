@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
+import 'package:phosphor_icons/phosphor_icons.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/api_exception.dart';
@@ -12,21 +12,18 @@ import '../models/medication.dart';
 import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../providers/medication_providers.dart';
+import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/grouped_list_card.dart';
+import '../widgets/medicine_ui.dart';
 import '../widgets/status_notice.dart';
 
-const directionsDisclaimer =
-    "Follow your doctor's or pharmacist's directions. Reminders don't replace medical advice.";
+const directionsDisclaimer = medicineDirectionsDisclaimer;
 
-final _day = DateFormat('EEE, MMM d');
-
-String _number(double value) =>
-    value == value.roundToDouble() ? '${value.toInt()}' : '$value';
-
-String _time(String hhmm) {
-  final parts = hhmm.split(':');
-  return DateFormat('h:mm a')
-      .format(DateTime(2000, 1, 1, int.parse(parts[0]), int.parse(parts[1])));
+String _manilaSlotIso(DateTime slot) {
+  String two(int value) => value.toString().padLeft(2, '0');
+  return '${slot.year}-${two(slot.month)}-${two(slot.day)}'
+      'T${two(slot.hour)}:${two(slot.minute)}:00+08:00';
 }
 
 /// Logs one dose now and refreshes everything that depends on the supply.
@@ -66,27 +63,62 @@ class MedicinesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final account = ref.watch(meProvider);
+    final optedIn = account.value?.medicationReminders ?? false;
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Medicine reminders'),
         actions: [
-          if (account.value?.medicationReminders ?? false)
+          if (optedIn) ...[
+            IconButton(
+              tooltip: 'Dose history',
+              onPressed: () => context.push('/medicines/history'),
+              icon: const Icon(
+                PhosphorIconsRegular.clockCounterClockwise,
+                size: 22,
+              ),
+            ),
+            IconButton(
+              tooltip: 'Family and caregivers',
+              onPressed: () => context.push('/medicines/people'),
+              icon: const Icon(PhosphorIconsRegular.users, size: 22),
+            ),
             PopupMenuButton<String>(
+              tooltip: 'More options',
+              icon: const Icon(PhosphorIconsRegular.dotsThreeVertical, size: 22),
               onSelected: (choice) => switch (choice) {
                 'history' => context.push('/medicines/history'),
                 'people' => context.push('/medicines/people'),
                 _ => _turnOff(context, ref),
               },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'history', child: Text('Dose history')),
-                PopupMenuItem(
-                  value: 'people',
-                  child: Text('Family and caregivers'),
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'history',
+                  child: _MenuRow(
+                    icon: PhosphorIconsRegular.clockCounterClockwise,
+                    label: 'Dose history',
+                  ),
                 ),
-                PopupMenuItem(value: 'off', child: Text('Turn off reminders')),
+                const PopupMenuItem(
+                  value: 'people',
+                  child: _MenuRow(
+                    icon: PhosphorIconsRegular.users,
+                    label: 'Family and caregivers',
+                  ),
+                ),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  value: 'off',
+                  child: _MenuRow(
+                    icon: PhosphorIconsRegular.trash,
+                    label: 'Turn off reminders',
+                    color: scheme.error,
+                  ),
+                ),
               ],
             ),
+          ],
         ],
       ),
       body: AsyncView(
@@ -102,22 +134,30 @@ class MedicinesScreen extends ConsumerWidget {
   Future<void> _turnOff(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Turn off medicine reminders?'),
-        content: const Text(
-          'This deletes your reminders, dose history, family profiles and caregivers.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep'),
+      builder: (dialogContext) {
+        final scheme = Theme.of(dialogContext).colorScheme;
+        return AlertDialog(
+          title: const Text('Turn off medicine reminders?'),
+          content: const Text(
+            'This deletes your reminders, dose history, family profiles, and caregivers.',
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Turn off and delete'),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Keep'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(0, 44),
+                backgroundColor: scheme.error,
+                foregroundColor: scheme.onError,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Turn off and delete'),
+            ),
+          ],
+        );
+      },
     );
     if (confirmed != true || !context.mounted) {
       return;
@@ -131,6 +171,26 @@ class MedicinesScreen extends ConsumerWidget {
     } on ApiException catch (error) {
       notice.show(error.friendly);
     }
+  }
+}
+
+class _MenuRow extends StatelessWidget {
+  const _MenuRow({required this.icon, required this.label, this.color});
+
+  final IconData icon;
+  final String label;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final effective = color ?? Theme.of(context).colorScheme.onSurface;
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: effective),
+        const SizedBox(width: 12),
+        Text(label, style: TextStyle(color: effective)),
+      ],
+    );
   }
 }
 
@@ -148,61 +208,118 @@ class _MedicineConsentState extends ConsumerState<MedicineConsent> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brand = AppBrandColors.of(context);
+    final invitations =
+        ref.watch(caregiversProvider).value?.invitations ?? const [];
 
-    return ListView(
-      padding: const EdgeInsets.all(24),
+    return Column(
       children: [
-        Icon(
-          Icons.alarm_on_rounded,
-          size: 48,
-          color: theme.colorScheme.primary,
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+            children: [
+              if (invitations.isNotEmpty) ...[
+                GroupedCard(
+                  children: [
+                    GroupedRowTile(
+                      icon: PhosphorIconsRegular.heart,
+                      tone: GroupedIconTone.teal,
+                      title: 'Someone asked you to be their caregiver',
+                      subtitle: 'Review and respond to the invitation',
+                      onTap: () => context.push('/medicines/people'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+              MedicineCardShell(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: brand.careTealSoft,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        PhosphorIconsFill.alarm,
+                        size: 26,
+                        color: brand.careTeal,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Never miss a dose',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Get on-time reminders for your medicines, a heads-up before you run out, and expiry alerts. You can also manage schedules for family.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              const MedicineSectionHeader(title: 'Your privacy & control'),
+              const GroupedCard(
+                dividerIndent: 62,
+                children: [
+                  _ConsentPointRow(
+                    icon: PhosphorIconsRegular.lockSimple,
+                    tone: GroupedIconTone.primary,
+                    title: 'Stored only for your reminders',
+                    subtitle:
+                        'We store the medicines, doses, and times you set, plus the doses you mark. Medicine details are sensitive personal information under the Data Privacy Act.',
+                  ),
+                  _ConsentPointRow(
+                    icon: PhosphorIconsRegular.eyeSlash,
+                    tone: GroupedIconTone.teal,
+                    title: 'Private by default',
+                    subtitle:
+                        "Only you see your plans. The pharmacy doesn't, and a caregiver only gets an alert when a dose isn't marked.",
+                  ),
+                  _ConsentPointRow(
+                    icon: PhosphorIconsRegular.trash,
+                    tone: GroupedIconTone.neutral,
+                    title: 'Delete everything anytime',
+                    subtitle:
+                        'Turn reminders off at any time to permanently erase all plans, logs, profiles, and caregiver links.',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const MedicineDisclaimerNote(),
+            ],
+          ),
         ),
-        if ((ref.watch(caregiversProvider).value?.invitations ?? const [])
-            .isNotEmpty)
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.favorite_outline_rounded),
-              title: const Text('Someone asked you to be their caregiver'),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => context.push('/medicines/people'),
+        MedicineBottomBar(
+          child: FilledButton(
+            onPressed: _saving ? null : _accept,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
             ),
+            child: _saving
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      color: scheme.onPrimary,
+                    ),
+                  )
+                : const Text('I agree, turn on reminders'),
           ),
-        const SizedBox(height: 16),
-        Text(
-          'Never miss a dose',
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Get reminders to take your medicine, a heads-up before it runs out, '
-          'and an alert before it expires. You can also set reminders for family.',
-        ),
-        const SizedBox(height: 20),
-        const _ConsentPoint(
-          icon: Icons.lock_outline_rounded,
-          text:
-              'We store the medicines, doses and times you set, and the doses you mark. '
-              'Medicine details are sensitive personal information under the Data Privacy Act.',
-        ),
-        const _ConsentPoint(
-          icon: Icons.visibility_off_outlined,
-          text:
-              "Only you see them. The pharmacy doesn't, and a caregiver only gets an alert "
-              "when a dose isn't marked.",
-        ),
-        const _ConsentPoint(
-          icon: Icons.delete_outline_rounded,
-          text: 'Turn reminders off at any time to delete all of it.',
-        ),
-        const SizedBox(height: 8),
-        Text(directionsDisclaimer, style: theme.textTheme.bodySmall),
-        const SizedBox(height: 24),
-        FilledButton(
-          onPressed: _saving ? null : _accept,
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
-          child: const Text('I agree, turn on reminders'),
         ),
       ],
     );
@@ -225,24 +342,58 @@ class _MedicineConsentState extends ConsumerState<MedicineConsent> {
   }
 }
 
-class _ConsentPoint extends StatelessWidget {
-  const _ConsentPoint({required this.icon, required this.text});
+class _ConsentPointRow extends StatelessWidget {
+  const _ConsentPointRow({
+    required this.icon,
+    required this.tone,
+    required this.title,
+    required this.subtitle,
+  });
 
   final IconData icon;
-  final String text;
+  final GroupedIconTone tone;
+  final String title;
+  final String subtitle;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 14),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(width: 12),
-        Expanded(child: Text(text)),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GroupedIconBadge(icon: icon, tone: tone),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 12.5,
+                    height: 1.45,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _MedicineList extends ConsumerStatefulWidget {
@@ -274,6 +425,10 @@ class _MedicineListState extends ConsumerState<_MedicineList> {
   Widget build(BuildContext context) {
     final plans = ref.watch(medicationPlansProvider);
     final suggestions = ref.watch(medicationSuggestionsProvider).value ?? [];
+    final pendingInvitations =
+        (ref.watch(caregiversProvider).value?.invitations ?? const [])
+            .where((link) => !link.isAccepted)
+            .length;
 
     return AsyncView(
       value: plans,
@@ -294,6 +449,26 @@ class _MedicineListState extends ConsumerState<_MedicineList> {
           groups.putIfAbsent(plan.profileName ?? 'Me', () => []).add(plan);
         }
 
+        final activePlans = plans.where((p) => p.isActive).toList();
+        var todayTotal = 0;
+        var todayAnswered = 0;
+        for (final plan in activePlans) {
+          if (plan.isAsNeeded) {
+            continue;
+          }
+          if (today.isBefore(plan.startsOn) ||
+              (plan.endsOn != null && today.isAfter(plan.endsOn!))) {
+            continue;
+          }
+          for (final hhmm in plan.doseTimes) {
+            final slot = _todaySlot(today, hhmm);
+            todayTotal++;
+            if (plan.answeredSlots.contains(slot)) {
+              todayAnswered++;
+            }
+          }
+        }
+
         return RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(medicationPlansProvider);
@@ -301,55 +476,103 @@ class _MedicineListState extends ConsumerState<_MedicineList> {
             await ref.read(medicationPlansProvider.future);
           },
           child: ListView(
-            padding: const EdgeInsets.only(bottom: 32),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             children: [
-              if (runningLow.isNotEmpty)
-                _Banner(
-                  icon: Icons.inventory_2_outlined,
+              if (plans.isNotEmpty) ...[
+                _TodayOverviewCard(
+                  today: today,
+                  activeCount: activePlans.length,
+                  todayAnswered: todayAnswered,
+                  todayTotal: todayTotal,
+                ),
+                const SizedBox(height: 12),
+                _QuickNavRow(pendingInvitations: pendingInvitations),
+              ],
+              if (pendingInvitations > 0 && plans.isEmpty) ...[
+                GroupedCard(
+                  children: [
+                    GroupedRowTile(
+                      icon: PhosphorIconsRegular.heart,
+                      tone: GroupedIconTone.teal,
+                      title: 'Caregiver invitation waiting',
+                      subtitle: 'Tap to review and accept',
+                      trailing: GroupedStatusPill(
+                        label: '$pendingInvitations',
+                        tone: GroupedPillTone.unread,
+                      ),
+                      onTap: () => context.push('/medicines/people'),
+                    ),
+                  ],
+                ),
+              ],
+              if (runningLow.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _RunningLowBanner(
                   text: runningLow.length == 1
                       ? '${runningLow.single.productName} is running low.'
                       : '${runningLow.length} medicines are running low.',
-                  action: 'Reorder',
                   onTap: () => context.push(
                     '/medicines/reorder?plans=${runningLow.map((plan) => plan.id).join(',')}',
                   ),
                 ),
+              ],
               if (suggestions.isNotEmpty) ...[
-                const SectionTitle(title: 'From your orders'),
-                for (final suggestion in suggestions.take(5))
-                  ListTile(
-                    leading: const Icon(Icons.medication_outlined),
-                    title: Text(suggestion.productName),
-                    subtitle: Text(
-                      suggestion.directions == null
-                          ? 'Enter the dose from the box or your doctor'
-                          : 'Directions from the pharmacy are ready',
-                    ),
-                    trailing: const Text('Set up'),
-                    onTap: () =>
-                        context.push('/medicines/setup', extra: suggestion),
-                  ),
-              ],
-              if (plans.isEmpty && suggestions.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(top: 48),
-                  child: EmptyState(
-                    icon: Icons.medication_outlined,
-                    title: 'No reminders yet',
-                    message: 'When medicine from your orders is delivered, it shows up here to set up.',
-                  ),
+                const SizedBox(height: 20),
+                MedicineSectionHeader(
+                  title: 'From your orders',
+                  count: suggestions.length,
                 ),
+                GroupedCard(
+                  dividerIndent: 62,
+                  children: [
+                    for (final suggestion in suggestions.take(5))
+                      GroupedRowTile(
+                        icon: PhosphorIconsRegular.pill,
+                        tone: suggestion.directions != null
+                            ? GroupedIconTone.teal
+                            : GroupedIconTone.primary,
+                        title: suggestion.productName,
+                        subtitle: suggestion.directions == null
+                            ? 'Enter the dose from the box or your doctor'
+                            : 'Directions from the pharmacy are ready',
+                        trailing: const GroupedStatusPill(
+                          label: 'Set up',
+                          tone: GroupedPillTone.primary,
+                        ),
+                        onTap: () =>
+                            context.push('/medicines/setup', extra: suggestion),
+                      ),
+                  ],
+                ),
+              ],
+              if (plans.isEmpty && suggestions.isEmpty) ...[
+                const SizedBox(height: 28),
+                const EmptyState(
+                  icon: PhosphorIconsRegular.pill,
+                  title: 'No reminders yet',
+                  message:
+                      'When medicine from your orders is delivered, it shows up here to set up.',
+                ),
+                const SizedBox(height: 16),
+                _QuickNavRow(pendingInvitations: pendingInvitations),
+              ],
               for (final entry in groups.entries) ...[
-                SectionTitle(title: entry.key),
-                for (final plan in entry.value) _PlanCard(plan: plan),
-              ],
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-                child: Text(
-                  directionsDisclaimer,
-                  style: Theme.of(context).textTheme.bodySmall,
+                const SizedBox(height: 20),
+                MedicineSectionHeader(
+                  title: entry.key,
+                  count: entry.value.length,
                 ),
-              ),
+                for (var i = 0; i < entry.value.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 10),
+                  _PlanCard(
+                    key: ValueKey(entry.value[i].id),
+                    plan: entry.value[i],
+                    today: today,
+                  ),
+                ],
+              ],
+              const SizedBox(height: 20),
+              const MedicineDisclaimerNote(),
             ],
           ),
         );
@@ -374,24 +597,252 @@ class _MedicineListState extends ConsumerState<_MedicineList> {
   }
 }
 
+DateTime _todaySlot(DateTime today, String hhmm) {
+  final parts = hhmm.split(':');
+  return DateTime(
+    today.year,
+    today.month,
+    today.day,
+    int.parse(parts[0]),
+    int.parse(parts[1]),
+  );
+}
+
+class _TodayOverviewCard extends StatelessWidget {
+  const _TodayOverviewCard({
+    required this.today,
+    required this.activeCount,
+    required this.todayAnswered,
+    required this.todayTotal,
+  });
+
+  final DateTime today;
+  final int activeCount;
+  final int todayAnswered;
+  final int todayTotal;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brand = AppBrandColors.of(context);
+    final allDone = todayTotal > 0 && todayAnswered >= todayTotal;
+    final progress = todayTotal > 0 ? (todayAnswered / todayTotal).clamp(0.0, 1.0) : 0.0;
+
+    return MedicineCardShell(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: allDone ? brand.careTealSoft : scheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  allDone
+                      ? PhosphorIconsFill.checkCircle
+                      : PhosphorIconsFill.pill,
+                  size: 20,
+                  color: allDone ? brand.careTeal : scheme.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      formatMedicineDay(today),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      todayTotal == 0
+                          ? '$activeCount active ${activeCount == 1 ? 'medicine' : 'medicines'}'
+                          : allDone
+                          ? 'All scheduled doses marked today'
+                          : '$todayAnswered of $todayTotal doses marked today',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (todayTotal > 0) ...[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 6,
+                backgroundColor: scheme.surfaceContainerHighest,
+                valueColor: AlwaysStoppedAnimation(
+                  allDone ? brand.careTeal : scheme.primary,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickNavRow extends StatelessWidget {
+  const _QuickNavRow({required this.pendingInvitations});
+
+  final int pendingInvitations;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _QuickNavTile(
+            icon: PhosphorIconsRegular.clockCounterClockwise,
+            tone: GroupedIconTone.primary,
+            title: 'Dose history',
+            subtitle: 'For your doctor',
+            onTap: () => context.push('/medicines/history'),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _QuickNavTile(
+            icon: PhosphorIconsRegular.users,
+            tone: GroupedIconTone.teal,
+            title: 'Family & care',
+            subtitle: pendingInvitations > 0
+                ? '$pendingInvitations pending invite'
+                : 'Profiles & alerts',
+            badge: pendingInvitations > 0 ? '$pendingInvitations' : null,
+            onTap: () => context.push('/medicines/people'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickNavTile extends StatelessWidget {
+  const _QuickNavTile({
+    required this.icon,
+    required this.tone,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.badge,
+  });
+
+  final IconData icon;
+  final GroupedIconTone tone;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final String? badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return MedicineCardShell(
+      onTap: onTap,
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          GroupedIconBadge(icon: icon, tone: tone),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        title,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (badge != null) ...[
+                      const SizedBox(width: 6),
+                      GroupedStatusPill(
+                        label: badge!,
+                        tone: GroupedPillTone.unread,
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 11.5,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 Future<void> askHowManyLeft(
   BuildContext context,
   WidgetRef ref,
   MedicationPlan plan,
 ) async {
-  final controller = TextEditingController(text: _number(plan.unitsLeft));
+  final controller = TextEditingController(
+    text: formatMedicineNumber(plan.unitsLeft),
+  );
   final value = await showDialog<double>(
     context: context,
     builder: (context) => AlertDialog(
       title: Text('How many ${plan.doseUnit}s are left?'),
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: InputDecoration(
-          labelText: plan.productName,
-          suffixText: plan.doseUnit,
-        ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Updating your count keeps run-out and reorder reminders accurate.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: plan.productName,
+              suffixText: plan.doseUnit,
+            ),
+          ),
+        ],
       ),
       actions: [
         TextButton(
@@ -399,6 +850,7 @@ Future<void> askHowManyLeft(
           child: const Text('Cancel'),
         ),
         FilledButton(
+          style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
           onPressed: () =>
               Navigator.pop(context, double.tryParse(controller.text.trim())),
           child: const Text('Save'),
@@ -420,78 +872,309 @@ Future<void> askHowManyLeft(
 }
 
 class _PlanCard extends ConsumerWidget {
-  const _PlanCard({required this.plan});
+  const _PlanCard({super.key, required this.plan, required this.today});
 
   final MedicationPlan plan;
+  final DateTime today;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final details = <String>[
-      plan.isAsNeeded
-          ? '${plan.doseLabel} when needed'
-          : '${plan.doseLabel} at ${plan.doseTimes.map(_time).join(', ')}',
-      if (plan.medicineKind == 'course' && plan.endsOn != null)
-        'Course ends ${_day.format(plan.endsOn!)}'
-      else if (plan.runOutOn != null)
-        'About ${plan.unitsLeftLabel} left · runs out ${_day.format(plan.runOutOn!)}'
-      else
-        'About ${plan.unitsLeftLabel} left',
-      if (!plan.isActive) 'Paused',
-    ];
+    final scheme = theme.colorScheme;
+    final brand = AppBrandColors.of(context);
+    final isLow =
+        plan.reorderOn != null && !plan.reorderOn!.isAfter(today);
 
-    return Card(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+    final supplyText = plan.medicineKind == 'course' && plan.endsOn != null
+        ? 'Course ends ${formatMedicineDay(plan.endsOn!)}'
+        : plan.runOutOn != null
+        ? 'About ${plan.unitsLeftLabel} left · runs out ${formatMedicineDay(plan.runOutOn!)}'
+        : 'About ${plan.unitsLeftLabel} left';
+
+    return Opacity(
+      opacity: plan.isActive ? 1.0 : 0.72,
+      child: MedicineCardShell(
         onTap: () => _showActions(context, ref),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                plan.productName,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 4),
-              for (final line in details)
-                Text(line, style: theme.textTheme.bodySmall),
-              if (plan.expiresBeforeRunOut && plan.expiresOn != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    'Part of this supply expires ${_day.format(plan.expiresOn!)}, before you finish it.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.error,
-                    ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        plan.productName,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w700,
+                          height: 1.25,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          MedicineKindBadge(
+                            medicineKind: plan.medicineKind,
+                            isActive: plan.isActive,
+                          ),
+                          Text(
+                            plan.isAsNeeded
+                                ? '${plan.doseLabel} when needed'
+                                : plan.doseLabel,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-              if ((plan.recentDoseDays ?? 0) >= 3)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    "You've needed this 3 days in a row. Still feeling unwell? Talk to a pharmacist or doctor.",
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.error,
-                    ),
+                const SizedBox(width: 4),
+                IconButton(
+                  tooltip: 'Reminder options',
+                  visualDensity: VisualDensity.compact,
+                  constraints: const BoxConstraints(
+                    minWidth: 36,
+                    minHeight: 36,
                   ),
-                ),
-              if (plan.isAsNeeded && plan.isActive) ...[
-                const SizedBox(height: 10),
-                FilledButton.tonalIcon(
-                  onPressed: () => _tookOne(context, ref),
-                  icon: const Icon(Icons.check_rounded),
-                  label: const Text('I took one'),
+                  padding: EdgeInsets.zero,
+                  onPressed: () => _showActions(context, ref),
+                  icon: Icon(
+                    PhosphorIconsRegular.dotsThree,
+                    size: 20,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
+            ),
+            if (plan.directionsNote != null &&
+                plan.directionsNote!.trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: Icon(
+                      PhosphorIconsRegular.prescription,
+                      size: 14,
+                      color: brand.careTeal,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      plan.directionsNote!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 12.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
-          ),
+            if (!plan.isAsNeeded && plan.doseTimes.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final hhmm in plan.doseTimes)
+                    _DoseTimePill(
+                      timeLabel: formatMedicineTime(hhmm),
+                      answered: plan.answeredSlots.contains(
+                        _todaySlot(today, hhmm),
+                      ),
+                      enabled: plan.isActive,
+                      onTap: plan.isActive
+                          ? () => _showSlotSheet(
+                                context,
+                                ref,
+                                _todaySlot(today, hhmm),
+                              )
+                          : null,
+                    ),
+                ],
+              ),
+            ],
+            if (plan.isAsNeeded && plan.isActive) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 40,
+                child: FilledButton.tonalIcon(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    backgroundColor: brand.careTealSoft,
+                    foregroundColor: brand.careTeal,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () => _tookOne(context, ref),
+                  icon: const Icon(PhosphorIconsRegular.checkCircle, size: 18),
+                  label: const Text('I took one'),
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Divider(height: 1, thickness: 1, color: scheme.outlineVariant),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(
+                  plan.medicineKind == 'course'
+                      ? PhosphorIconsRegular.calendarCheck
+                      : PhosphorIconsRegular.package,
+                  size: 15,
+                  color: isLow ? statusColour(context, 'pending') : scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    supplyText,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 12.5,
+                      color: isLow
+                          ? statusColour(context, 'pending')
+                          : scheme.onSurfaceVariant,
+                      fontWeight: isLow ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ),
+                if (isLow)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.brightness == Brightness.dark
+                          ? const Color(0xFF2B2210)
+                          : sunWash,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      'Low',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: statusColour(context, 'pending'),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            if (plan.expiresBeforeRunOut && plan.expiresOn != null) ...[
+              const SizedBox(height: 10),
+              MedicineInlineAlert(
+                icon: PhosphorIconsRegular.warningCircle,
+                tone: MedicineAlertTone.danger,
+                text:
+                    'Part of this supply expires ${formatMedicineDay(plan.expiresOn!)}, before you finish it.',
+              ),
+            ],
+            if ((plan.recentDoseDays ?? 0) >= 3) ...[
+              const SizedBox(height: 10),
+              const MedicineInlineAlert(
+                icon: PhosphorIconsRegular.stethoscope,
+                tone: MedicineAlertTone.danger,
+                text:
+                    "You've needed this 3 days in a row. Still feeling unwell? Talk to a pharmacist or doctor.",
+              ),
+            ],
+          ],
         ),
       ),
     );
+  }
+
+  Future<void> _showSlotSheet(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime slot,
+  ) async {
+    final alreadyAnswered = plan.answeredSlots.contains(slot);
+    if (alreadyAnswered) {
+      AppNotice.of(context).show(
+        '${formatMedicineClock(slot)} dose is already marked today.',
+        kind: NoticeKind.info,
+      );
+      return;
+    }
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+        final scheme = theme.colorScheme;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  plan.productName,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Take ${plan.doseLabel} · ${formatMedicineClock(slot)}',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () => Navigator.pop(sheetContext, 'taken'),
+                  icon: const Icon(PhosphorIconsRegular.check, size: 18),
+                  label: const Text('Mark as taken'),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.pop(sheetContext, 'skipped'),
+                  icon: const Icon(PhosphorIconsRegular.minusCircle, size: 18),
+                  label: const Text('Skip this dose'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (choice == null || !context.mounted) {
+      return;
+    }
+    final notice = AppNotice.of(context);
+    final slotIso = _manilaSlotIso(slot);
+    try {
+      await logDose(ref, plan, status: choice, scheduledFor: slotIso);
+      unawaited(
+        MedicationAlarms.cancelNudge(
+          '/medicines/dose?plan=${plan.id}&slot=${Uri.encodeQueryComponent(slotIso)}',
+        ),
+      );
+      notice.show(
+        choice == 'taken' ? 'Dose recorded.' : 'Dose skipped.',
+        kind: NoticeKind.success,
+      );
+    } on ApiException catch (error) {
+      notice.show(error.friendly);
+    }
   }
 
   Future<void> _tookOne(BuildContext context, WidgetRef ref) async {
@@ -512,36 +1195,87 @@ class _PlanCard extends ConsumerWidget {
     final choice = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
-      builder: (context) {
-        Widget option(IconData icon, String label, String value) => ListTile(
-          leading: Icon(icon),
-          title: Text(label),
-          onTap: () => Navigator.pop(context, value),
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+        final scheme = theme.colorScheme;
+
+        Widget option(
+          IconData icon,
+          String label,
+          String value, {
+          bool danger = false,
+        }) => ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+          leading: GroupedIconBadge(
+            icon: icon,
+            tone: danger ? GroupedIconTone.danger : GroupedIconTone.neutral,
+          ),
+          title: Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: danger ? scheme.error : scheme.onSurface,
+            ),
+          ),
+          onTap: () => Navigator.pop(sheetContext, value),
         );
 
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      plan.productName,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${plan.doseLabel} · About ${plan.unitsLeftLabel} left',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, thickness: 1, color: scheme.outlineVariant),
+              const SizedBox(height: 4),
               if (!plan.isAsNeeded)
                 option(
-                  Icons.check_circle_outline_rounded,
+                  PhosphorIconsRegular.checkCircle,
                   'I took a dose now',
                   'taken',
                 ),
               option(
-                Icons.numbers_rounded,
+                PhosphorIconsRegular.hash,
                 'Update how many are left',
                 'count',
               ),
               option(
                 plan.isActive
-                    ? Icons.pause_circle_outline_rounded
-                    : Icons.play_circle_outline_rounded,
+                    ? PhosphorIconsRegular.pauseCircle
+                    : PhosphorIconsRegular.playCircle,
                 plan.isActive ? 'Pause reminders' : 'Resume reminders',
                 'pause',
               ),
-              option(Icons.delete_outline_rounded, 'Delete', 'delete'),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                child: Divider(height: 1),
+              ),
+              option(
+                PhosphorIconsRegular.trash,
+                'Delete reminder',
+                'delete',
+                danger: true,
+              ),
+              const SizedBox(height: 8),
             ],
           ),
         );
@@ -564,10 +1298,45 @@ class _PlanCard extends ConsumerWidget {
             'status': plan.isActive ? 'paused' : 'active',
           });
           ref.invalidate(medicationPlansProvider);
+          notice.show(
+            plan.isActive ? 'Reminders paused.' : 'Reminders resumed.',
+            kind: NoticeKind.info,
+          );
         case 'delete':
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (dialogContext) {
+              final scheme = Theme.of(dialogContext).colorScheme;
+              return AlertDialog(
+                title: const Text('Delete this reminder?'),
+                content: Text(
+                  '${plan.productName} and its scheduled alarms will be removed.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext, false),
+                    child: const Text('Cancel'),
+                  ),
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 44),
+                      backgroundColor: scheme.error,
+                      foregroundColor: scheme.onError,
+                    ),
+                    onPressed: () => Navigator.pop(dialogContext, true),
+                    child: const Text('Delete'),
+                  ),
+                ],
+              );
+            },
+          );
+          if (confirmed != true || !context.mounted) {
+            return;
+          }
           await api.deleteMedicationPlan(plan.id);
           ref.invalidate(medicationPlansProvider);
           ref.invalidate(medicationSuggestionsProvider);
+          notice.show('Reminder deleted.', kind: NoticeKind.info);
       }
     } on ApiException catch (error) {
       notice.show(error.friendly);
@@ -575,42 +1344,109 @@ class _PlanCard extends ConsumerWidget {
   }
 }
 
-class _Banner extends StatelessWidget {
-  const _Banner({
-    required this.icon,
-    required this.text,
-    required this.action,
-    required this.onTap,
+/// Signature pill-schedule chip showing a scheduled dose time and today's taken state.
+class _DoseTimePill extends StatelessWidget {
+  const _DoseTimePill({
+    required this.timeLabel,
+    required this.answered,
+    required this.enabled,
+    this.onTap,
   });
 
-  final IconData icon;
+  final String timeLabel;
+  final bool answered;
+  final bool enabled;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brand = AppBrandColors.of(context);
+
+    final bg = answered
+        ? brand.careTealSoft
+        : scheme.surfaceContainer.withValues(alpha: 0.75);
+    final border = answered
+        ? brand.careTeal.withValues(alpha: 0.35)
+        : scheme.outlineVariant;
+    final fg = answered ? brand.careTeal : scheme.onSurface;
+
+    return Semantics(
+      button: onTap != null,
+      label: answered ? '$timeLabel marked today' : '$timeLabel scheduled',
+      child: Material(
+        color: bg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  answered
+                      ? PhosphorIconsFill.checkCircle
+                      : PhosphorIconsRegular.clock,
+                  size: 15,
+                  color: answered ? brand.careTeal : scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  timeLabel,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: fg,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RunningLowBanner extends StatelessWidget {
+  const _RunningLowBanner({required this.text, required this.onTap});
+
   final String text;
-  final String action;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    final accent = dark ? const Color(0xFFFFC94A) : const Color(0xFF945E00);
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
-      decoration: BoxDecoration(
-        color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: scheme.onPrimaryContainer),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(color: scheme.onPrimaryContainer),
-            ),
+    return MedicineInlineAlert(
+      icon: PhosphorIconsRegular.package,
+      tone: MedicineAlertTone.warning,
+      title: 'Refill heads-up',
+      text: text,
+      trailing: FilledButton(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(0, 38),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          backgroundColor: accent,
+          foregroundColor: dark ? const Color(0xFF1F1600) : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
           ),
-          TextButton(onPressed: onTap, child: Text(action)),
-        ],
+          textStyle: theme.textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        onPressed: onTap,
+        child: const Text('Reorder'),
       ),
     );
   }
@@ -641,6 +1477,9 @@ class _MedicineDoseScreenState extends ConsumerState<MedicineDoseScreen> {
   @override
   Widget build(BuildContext context) {
     final plans = ref.watch(medicationPlansProvider);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brand = AppBrandColors.of(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Medicine reminder')),
@@ -653,7 +1492,7 @@ class _MedicineDoseScreenState extends ConsumerState<MedicineDoseScreen> {
               .firstOrNull;
           if (plan == null) {
             return const EmptyState(
-              icon: Icons.medication_outlined,
+              icon: PhosphorIconsRegular.pill,
               title: 'This reminder was removed',
             );
           }
@@ -666,39 +1505,124 @@ class _MedicineDoseScreenState extends ConsumerState<MedicineDoseScreen> {
           }
           final slot = DateTime.tryParse(widget.slot)?.toLocal();
 
-          return ListView(
-            padding: const EdgeInsets.all(24),
+          return Column(
             children: [
-              Text(
-                plan.productName,
-                style: Theme.of(context).textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Take ${plan.doseLabel}${slot == null ? '' : ' · ${DateFormat('h:mm a').format(slot)}'}',
-              ),
-              if (plan.directionsNote != null) Text(plan.directionsNote!),
-              const SizedBox(height: 8),
-              Text(
-                directionsDisclaimer,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: _saving ? null : () => _record(plan, 'taken'),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(52),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                  children: [
+                    MedicineCardShell(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: brand.careTealSoft,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                alignment: Alignment.center,
+                                child: Icon(
+                                  PhosphorIconsFill.alarm,
+                                  size: 22,
+                                  color: brand.careTeal,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Wrap(
+                                  spacing: 8,
+                                  runSpacing: 6,
+                                  children: [
+                                    if (slot != null)
+                                      GroupedStatusPill(
+                                        label: formatMedicineClock(slot),
+                                        tone: GroupedPillTone.teal,
+                                      ),
+                                    if (plan.profileName != null)
+                                      GroupedStatusPill(
+                                        label: 'For ${plan.profileName}',
+                                        tone: GroupedPillTone.primary,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            plan.productName,
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Take ${plan.doseLabel}${slot == null ? '' : ' · ${formatMedicineClock(slot)}'}',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                          if (plan.directionsNote != null &&
+                              plan.directionsNote!.trim().isNotEmpty) ...[
+                            const SizedBox(height: 14),
+                            MedicineInlineAlert(
+                              icon: PhosphorIconsRegular.prescription,
+                              tone: MedicineAlertTone.teal,
+                              title: 'Directions',
+                              text: plan.directionsNote!,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const MedicineDisclaimerNote(),
+                  ],
                 ),
-                child: const Text('Taken'),
               ),
-              const SizedBox(height: 10),
-              OutlinedButton(
-                onPressed: _saving ? null : () => _record(plan, 'skipped'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(52),
+              MedicineBottomBar(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: _saving ? null : () => _record(plan, 'taken'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(52),
+                      ),
+                      icon: _saving
+                          ? SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.2,
+                                color: scheme.onPrimary,
+                              ),
+                            )
+                          : const Icon(PhosphorIconsRegular.check, size: 20),
+                      label: const Text('Taken'),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed:
+                          _saving ? null : () => _record(plan, 'skipped'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      icon: const Icon(
+                        PhosphorIconsRegular.minusCircle,
+                        size: 20,
+                      ),
+                      label: const Text('Skip this dose'),
+                    ),
+                  ],
                 ),
-                child: const Text('Skip this dose'),
               ),
             ],
           );
@@ -752,6 +1676,7 @@ class _MedicineReorderScreenState extends ConsumerState<MedicineReorderScreen> {
   @override
   Widget build(BuildContext context) {
     final plans = ref.watch(medicationPlansProvider);
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Reorder medicine')),
@@ -767,38 +1692,69 @@ class _MedicineReorderScreenState extends ConsumerState<MedicineReorderScreen> {
               .toList();
           if (chosen.isEmpty) {
             return const EmptyState(
-              icon: Icons.inventory_2_outlined,
+              icon: PhosphorIconsRegular.package,
               title: 'Nothing to reorder',
             );
           }
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
+          return Column(
             children: [
-              for (final plan in chosen)
-                ListTile(
-                  leading: const Icon(Icons.medication_outlined),
-                  title: Text(plan.productName),
-                  subtitle: Text(
-                    plan.runOutOn == null
-                        ? 'About ${plan.unitsLeftLabel} left'
-                        : 'About ${plan.unitsLeftLabel} left · runs out ${_day.format(plan.runOutOn!)}',
-                  ),
-                ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _adding ? null : () => _addAll(chosen),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(52),
-                ),
-                child: Text(
-                  chosen.length == 1 ? 'Add to cart' : 'Add all to cart',
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                  children: [
+                    MedicineSectionHeader(
+                      title: chosen.length == 1
+                          ? 'Running low'
+                          : 'Running low together',
+                      count: chosen.length,
+                    ),
+                    GroupedCard(
+                      dividerIndent: 62,
+                      children: [
+                        for (final plan in chosen)
+                          GroupedRowTile(
+                            icon: PhosphorIconsRegular.pill,
+                            tone: GroupedIconTone.teal,
+                            title: plan.productName,
+                            subtitle: plan.runOutOn == null
+                                ? 'About ${plan.unitsLeftLabel} left'
+                                : 'About ${plan.unitsLeftLabel} left · runs out ${formatMedicineDay(plan.runOutOn!)}',
+                            showChevron: false,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const MedicineDisclaimerNote(
+                      text:
+                          'Prescription medicines still need a valid prescription at checkout.',
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Prescription medicines still need a valid prescription at checkout.',
-                style: Theme.of(context).textTheme.bodySmall,
+              MedicineBottomBar(
+                child: FilledButton.icon(
+                  onPressed: _adding ? null : () => _addAll(chosen),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                  ),
+                  icon: _adding
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            color: scheme.onPrimary,
+                          ),
+                        )
+                      : const Icon(
+                          PhosphorIconsRegular.shoppingCartSimple,
+                          size: 20,
+                        ),
+                  label: Text(
+                    chosen.length == 1 ? 'Add to cart' : 'Add all to cart',
+                  ),
+                ),
               ),
             ],
           );

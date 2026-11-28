@@ -1,6 +1,6 @@
 @php
     $editing = $product !== null;
-    $existingVariants = $product?->variants?->sortBy('id')->map(fn ($variant) => [...$variant->only(['id', 'color', 'color_hex', 'size', 'sku', 'stock_quantity', 'price']), 'photos' => $product->colorPhotos($variant->color)->map(fn ($image) =>['id' => $image->id, 'url' => Storage::disk('product_images')->url($image->path)])->values()->all()])->all() ?? [];
+    $existingVariants = $product?->variants?->sortBy('id')->map(fn ($variant) => [...$variant->only(['id', 'color', 'size', 'sku', 'stock_quantity', 'price', 'pack_units']), 'photos' => $product->colorPhotos($variant->color)->map(fn ($image) =>['id' => $image->id, 'url' => Storage::disk('product_images')->url($image->path)])->values()->all()])->all() ?? [];
     $existingPhotos = $product?->images?->whereNull('color')->map(fn ($image) => ['id' => $image->id, 'url' => Storage::disk('product_images')->url($image->path)])->values()->all() ?? [];
     $savedColorPhotos = collect($existingVariants)->pluck('photos', 'color');
     $variantRows = collect(old('variants', $existingVariants))
@@ -11,7 +11,9 @@
         'name' => (string) old('name', $product?->name),
         'sku' => (string) old('sku', $product?->sku),
         'categoryId' => (string) old('category_id', $product?->category_id),
-        'condition' => (string) old('condition', $product?->condition ?? 'new'),
+        'drugClass' => (string) old('drug_class', $product?->drug_class),
+        'genericName' => (string) old('generic_name', $product?->generic_name),
+        'fdaNumber' => (string) old('fda_registration_number', $product?->fda_registration_number),
         'description' => (string) old('description', $product?->description),
         'price' => (string) old('price', $product?->price),
         'comparePrice' => (string) old('compare_at_price', $product?->compare_at_price),
@@ -35,13 +37,12 @@
                 get keptPhotos() { return this.photos.filter(photo => ! this.removed.includes(photo.id)) },
                 get photoCount() { return this.keptPhotos.length + this.newFiles.length },
                 {{-- Variants: up to two options (Color, Size). Every combination of their values becomes a row; rows are kept by combination so edits survive option changes. --}}
-                options: [], rows: {}, swatches: {}, swatchGuesses: @js(\App\Models\ProductVariant::SWATCHES), excluded: [], collapsed: [], expanded: [], rowPreviews: {}, variantPhotoNotice: '', maxVariants: 30,
+                options: [], rows: {}, excluded: [], collapsed: [], expanded: [], rowPreviews: {}, variantPhotoNotice: '', maxVariants: 30,
                 keyOf(color, size) { return (color || '').trim().toLowerCase() + '|' + (size || '').trim().toLowerCase() },
                 distinct(values) { const seen = new Set(); return values.map(value => (value ?? '').trim()).filter(value => value && ! seen.has(value.toLowerCase()) && seen.add(value.toLowerCase())) },
                 valuesOf(name) { return this.distinct(this.options.find(option => option.name === name)?.values ?? []) },
-                {{-- Each color value gets a swatch: the seller's pick, else a guess from its name. --}}
-                swatchFor(color) { const name = (color || '').trim().toLowerCase(); return this.swatches[name] || this.swatchGuesses[name.split(/\s+/).pop()] || '' },
-                setSwatch(color, hex) { this.swatches[color.trim().toLowerCase()] = hex; this.dirty = true },
+                {{-- Stored as color and size; a pharmacy sells them as a flavor or type and a pack size. --}}
+                optionLabel(name) { return name === 'Size' ? 'Pack size' : 'Flavor / type' },
                 get hasSavedVariants() { return Object.values(this.rows).some(row => row.id) },
                 combos() {
                     const colors = this.valuesOf('Color'), sizes = this.valuesOf('Size');
@@ -57,7 +58,7 @@
                     this.combos().forEach(combo => {
                         if (this.rows[combo.key]) return;
                         const suffix = [combo.color, combo.size].filter(Boolean).join('-');
-                        this.rows[combo.key] = { id: null, color: combo.color, size: combo.size, sku: this.sku.trim() ? (this.sku.trim() + '-' + suffix).toUpperCase().replace(/\s+/g, '-') : '', stock_quantity: 0, price: '', photos: [] };
+                        this.rows[combo.key] = { id: null, color: combo.color, size: combo.size, sku: this.sku.trim() ? (this.sku.trim() + '-' + suffix).toUpperCase().replace(/\s+/g, '-') : '', stock_quantity: 0, price: '', pack_units: '', photos: [] };
                     });
                 },
                 get grouped() { return this.valuesOf('Color').length > 0 && this.valuesOf('Size').length > 0 },
@@ -115,7 +116,7 @@
                     const files = picked.filter(file => ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)).slice(0, room);
                     if (files.length < picked.length) {
                         const transfer = new DataTransfer(); files.forEach(file => transfer.items.add(file)); input.files = transfer.files;
-                        this.variantPhotoNotice = `Each color can have up to 4 photos. ${files.length} ${files.length === 1 ? 'photo was' : 'photos were'} added for ${item.row.color}.`;
+                        this.variantPhotoNotice = `Each flavor or type can have up to 4 photos. ${files.length} ${files.length === 1 ? 'photo was' : 'photos were'} added for ${item.row.color}.`;
                     } else {
                         this.variantPhotoNotice = '';
                     }
@@ -128,8 +129,7 @@
                 rowThumb(item) { return this.colorPhotos(item).find(photo => ! this.removed.includes(photo.id))?.url ?? this.rowPreviews[this.colorKey(item)]?.[0] ?? null },
                 rowPhotoCount(item) { return this.colorPhotos(item).filter(photo => ! this.removed.includes(photo.id)).length + (this.rowPreviews[this.colorKey(item)]?.length || 0) },
                 initVariants(list) {
-                    list.forEach(variant => { if (variant.color && variant.color_hex) this.swatches[variant.color.trim().toLowerCase()] = variant.color_hex });
-                    list.forEach(variant => { this.rows[this.keyOf(variant.color, variant.size)] = { id: variant.id ?? null, color: variant.color ?? '', size: variant.size ?? '', sku: variant.sku ?? '', stock_quantity: variant.stock_quantity ?? 0, price: variant.price ?? '', photos: variant.photos ?? [] } });
+                    list.forEach(variant => { this.rows[this.keyOf(variant.color, variant.size)] = { id: variant.id ?? null, color: variant.color ?? '', size: variant.size ?? '', sku: variant.sku ?? '', stock_quantity: variant.stock_quantity ?? 0, price: variant.price ?? '', pack_units: variant.pack_units ?? '', photos: variant.photos ?? [] } });
                     ['Color', 'Size'].forEach(name => {
                         const values = this.distinct(list.map(variant => variant[name.toLowerCase()]));
                         if (values.length) this.options.push({ name, values: [...values, ''], open: false });
@@ -143,6 +143,10 @@
                     { label: 'Category', done: this.categoryId !== '', target: 'category_id' },
                     { label: 'Description', done: this.description.trim() !== '', target: 'description' },
                     { label: 'Price', done: Number(this.price) > 0, target: 'price' },
+                    ...(this.drugClass ? [
+                        { label: 'Generic name', done: this.genericName.trim() !== '', target: 'generic_name' },
+                        { label: 'FDA registration number', done: this.fdaNumber.trim() !== '', target: 'fda_registration_number' },
+                    ] : []),
                 ] },
                 get discountPreview() {
                     const regular = Number(this.comparePrice), sale = Number(this.price);
@@ -199,7 +203,7 @@
             <div class="ps-main">
                 <section class="ps-card" aria-labelledby="product-details-heading">
                     <div class="ps-card-head mb-4"><div><h2 id="product-details-heading">Product details</h2><p>Name and directions customers read before ordering.</p></div></div>
-                    <div><label for="name" class="pe-label">Title</label><input id="name" name="name" x-model="name" value="{{ $listing['name'] }}" required autofocus maxlength="255" placeholder="e.g. Biogesic 500 mg Caplet (10s)" class="pe-input"><x-input-error :messages="$errors->get('name')" class="mt-2" /></div>
+                    <div><label for="name" class="pe-label">Title</label><input id="name" name="name" x-model="name" value="{{ $listing['name'] }}" required autofocus maxlength="150" placeholder="e.g. Biogesic 500 mg Caplet (10s)" class="pe-input"><x-input-error :messages="$errors->get('name')" class="mt-2" /></div>
                     <div class="mt-4">
                         <div class="flex items-baseline justify-between gap-3"><label for="description" class="pe-label">Description</label><span class="pe-count" x-text="description.length.toLocaleString() + ' / 5,000'"></span></div>
                         <textarea id="description" name="description" rows="7" maxlength="5000" x-model="description" placeholder="What it is used for, directions, warnings, and how many are in a pack." class="pe-input">{{ $listing['description'] }}</textarea>
@@ -270,15 +274,15 @@
                     <div class="ps-card-head"><div><h2 id="product-inventory-heading">Inventory</h2><p>How you identify and count this product.</p></div></div>
                     <div class="pe-grid mt-4">
                         <div><label for="sku" class="pe-label">SKU (Stock Keeping Unit)</label><input id="sku" name="sku" x-model="sku" value="{{ $listing['sku'] }}" required maxlength="100" placeholder="e.g. BIO-500-10S" class="pe-input"><x-input-error :messages="$errors->get('sku')" class="mt-2" /></div>
-                        <div x-show="variantCount === 0"><label for="stock_quantity" class="pe-label">Stock quantity</label><input id="stock_quantity" name="stock_quantity" type="number" min="0" x-model="stock" value="{{ $listing['stock'] }}" :disabled="variantCount > 0" :required="variantCount === 0" @readonly($editing) aria-describedby="stock-hint" class="pe-input"><p id="stock-hint" class="pe-hint">@if ($editing)Total across all branches. Change counts on <a href="{{ route('seller.branch-stock.index') }}" class="font-semibold text-brand">Branch stock</a>.@else Opening stock at {{ $store->name }}. Other branches count theirs on Branch stock.@endif</p><x-input-error :messages="$errors->get('stock_quantity')" class="mt-2" /></div>
+                        <div x-show="variantCount === 0"><label for="stock_quantity" class="pe-label">Stock quantity</label><input id="stock_quantity" name="stock_quantity" type="number" min="0" x-model="stock" value="{{ $listing['stock'] }}" :disabled="variantCount > 0" readonly aria-describedby="stock-hint" class="pe-input"><p id="stock-hint" class="pe-hint">@if ($editing)Total across all branches. Change counts on <a href="{{ route('seller.branch-stock.index') }}" class="font-semibold text-brand">Branch stock</a>.@else Starts at 0. After saving, receive stock with its lot number and expiry date on <a href="{{ route('seller.branch-stock.index') }}" class="font-semibold text-brand">Branch stock</a>.@endif</p><x-input-error :messages="$errors->get('stock_quantity')" class="mt-2" /></div>
                     </div>
-                    <p x-show="variantCount > 0" x-cloak class="pe-hint">@if ($editing)Stock per variant is counted per branch on <a href="{{ route('seller.branch-stock.index') }}" class="font-semibold text-brand">Branch stock</a>.@else Opening stock for each variant below goes to {{ $store->name }}.@endif</p>
+                    <p x-show="variantCount > 0" x-cloak class="pe-hint">@if ($editing)Stock per variant is counted per branch on <a href="{{ route('seller.branch-stock.index') }}" class="font-semibold text-brand">Branch stock</a>.@else Each variant starts at 0. After saving, receive stock with its lot number and expiry date on <a href="{{ route('seller.branch-stock.index') }}" class="font-semibold text-brand">Branch stock</a>.@endif</p>
                 </section>
 
                 <section class="ps-card is-flush" aria-labelledby="product-variants-heading">
-                    <div class="ps-card-head ps-card-pad"><div><h2 id="product-variants-heading">Variants</h2><p>Sell the same product in different colors or sizes.</p></div></div>
+                    <div class="ps-card-head ps-card-pad"><div><h2 id="product-variants-heading">Variants</h2><p>Sell the same medicine in different pack sizes, flavors or types.</p></div></div>
 
-                    <button type="button" x-show="options.length === 0" @click="addOption()" class="ps-add-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add options like size or color</button>
+                    <button type="button" x-show="options.length === 0" @click="addOption()" class="ps-add-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add pack sizes or flavors</button>
 
                     <div class="ps-options" x-show="options.length" x-cloak>
                         <template x-for="(option, optionIndex) in options" :key="optionIndex">
@@ -287,15 +291,14 @@
                                     <div>
                                         <label class="pe-label" :for="'option-name-' + optionIndex">Option name</label>
                                         <select :id="'option-name-' + optionIndex" x-model="option.name" @change="syncRows()" :disabled="option.values.some(value => isLocked(option, value))" class="pe-input">
-                                            <template x-for="name in ['Color', 'Size']" :key="name"><option :value="name" :disabled="options.some((other, otherIndex) => otherIndex !== optionIndex && other.name === name)" x-text="name" :selected="option.name === name"></option></template>
+                                            <template x-for="name in ['Color', 'Size']" :key="name"><option :value="name" :disabled="options.some((other, otherIndex) => otherIndex !== optionIndex && other.name === name)" x-text="optionLabel(name)" :selected="option.name === name"></option></template>
                                         </select>
                                         <p class="pe-label mt-4" :id="'option-values-' + optionIndex">Option values</p>
                                         <div class="ps-values" role="group" :aria-labelledby="'option-values-' + optionIndex">
                                             <template x-for="(value, valueIndex) in option.values" :key="optionIndex + '-' + valueIndex">
                                                 <div>
                                                     <div class="ps-value">
-                                                        <input type="color" x-show="option.name === 'Color' && value.trim()" :value="swatchFor(value) || '#97a0af'" @input="setSwatch(value, $event.target.value)" :aria-label="'Swatch for ' + value" class="ps-swatch-input">
-                                                        <input x-model="option.values[valueIndex]" @input="typedValue(option, valueIndex)" @keydown.enter.prevent="$event.target.closest('.ps-values').querySelectorAll('input')[valueIndex + 1]?.focus()" :readonly="isLocked(option, value)" maxlength="60" :aria-label="option.name + ' value ' + (valueIndex + 1)" :aria-invalid="isDuplicate(option, valueIndex)" :placeholder="valueIndex === option.values.length - 1 ? (valueIndex === 0 ? (option.name === 'Color' ? 'Navy' : 'Medium') : 'Add another value') : ''" class="pe-input">
+                                                        <input x-model="option.values[valueIndex]" @input="typedValue(option, valueIndex)" @keydown.enter.prevent="$event.target.closest('.ps-values').querySelectorAll('input:not([type=color])')[valueIndex + 1]?.focus()" :readonly="isLocked(option, value)" maxlength="60" :aria-label="optionLabel(option.name) + ' value ' + (valueIndex + 1)" :aria-invalid="isDuplicate(option, valueIndex)" :placeholder="valueIndex === option.values.length - 1 ? (valueIndex === 0 ? (option.name === 'Color' ? 'Orange' : '10s') : 'Add another value') : ''" class="pe-input">
                                                         <button type="button" x-show="valueIndex < option.values.length - 1 && ! isLocked(option, value)" @click="removeValue(option, valueIndex)" :aria-label="'Delete ' + value" class="ps-icon-button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
                                                     </div>
                                                     <p x-show="isDuplicate(option, valueIndex)" class="mt-1 text-sm text-danger" x-text="'You’ve already used the option value “' + value.trim() + '”.'"></p>
@@ -303,7 +306,7 @@
                                             </template>
                                         </div>
                                         <p x-show="option.values.some(value => isLocked(option, value))" class="pe-hint">Values used by saved variants can’t be changed. Set their stock to 0 to stop selling them.</p>
-                                        <p x-show="hasSavedVariants && ! option.values.some(value => isLocked(option, value))" class="pe-hint" x-text="'Each saved variant becomes the first ' + option.name.toLowerCase() + ' you add, keeping its stock, SKU and photos. The other ' + option.name.toLowerCase() + 's are added as new variants.'"></p>
+                                        <p x-show="hasSavedVariants && ! option.values.some(value => isLocked(option, value))" class="pe-hint" x-text="'Each saved variant becomes the first ' + optionLabel(option.name).toLowerCase() + ' you add, keeping its stock, SKU and photos. The others are added as new variants.'"></p>
                                         <div class="ps-option-actions">
                                             <button type="button" x-show="! option.values.some(value => isLocked(option, value))" @click="removeOption(optionIndex)" class="pe-remove">Delete</button>
                                             <button type="button" @click="finishOption(optionIndex)" :disabled="option.values.some((value, valueIndex) => isDuplicate(option, valueIndex))" class="seller-outline-button !min-h-9">Done</button>
@@ -311,9 +314,9 @@
                                     </div>
                                 </template>
                                 <template x-if="! option.open">
-                                    <button type="button" class="ps-option-summary" @click="option.open = true" :aria-label="'Edit ' + option.name + ' option'">
-                                        <span class="ps-option-name" x-text="option.name"></span>
-                                        <span class="ps-pills"><template x-for="value in distinct(option.values)" :key="value"><span class="ps-pill"><i x-show="option.name === 'Color'" class="ps-swatch" :style="{ background: swatchFor(value) || '#97a0af' }" aria-hidden="true"></i><span x-text="value"></span></span></template></span>
+                                    <button type="button" class="ps-option-summary" @click="option.open = true" :aria-label="'Edit ' + optionLabel(option.name) + ' option'">
+                                        <span class="ps-option-name" x-text="optionLabel(option.name)"></span>
+                                        <span class="ps-pills"><template x-for="value in distinct(option.values)" :key="value"><span class="ps-pill"><span x-text="value"></span></span></template></span>
                                     </button>
                                 </template>
                             </div>
@@ -322,12 +325,12 @@
                     </div>
 
                     <div class="ps-variants" x-show="variantCount > 0" x-cloak>
-                        <div class="ps-variant-head" aria-hidden="true"><span>Variant</span><span>Price</span><span>Available</span><span>SKU</span><span></span></div>
+                        <div class="ps-variant-head" aria-hidden="true"><span>Variant</span><span>Price</span><span>Units/pack</span><span>Available</span><span>SKU</span><span></span></div>
                         <template x-for="item in tableItems" :key="item.key">
                             <div>
                                 <template x-if="item.type === 'group'">
                                     <button type="button" class="ps-group" @click="collapsed = collapsed.includes(item.label) ? collapsed.filter(label => label !== item.label) : [...collapsed, item.label]" :aria-expanded="! collapsed.includes(item.label)">
-                                        <span class="ps-group-name"><i x-show="options[0]?.name === 'Color'" class="ps-swatch" :style="{ background: swatchFor(item.label) || '#97a0af' }" aria-hidden="true"></i><span x-text="item.label"></span><span class="pe-count" x-text="item.count + (item.count === 1 ? ' variant' : ' variants')"></span></span>
+                                        <span class="ps-group-name"><span x-text="item.label"></span><span class="pe-count" x-text="item.count + (item.count === 1 ? ' variant' : ' variants')"></span></span>
                                         <span class="ps-group-stock" x-text="item.stock.toLocaleString() + ' available'"></span>
                                         <svg :class="collapsed.includes(item.label) ? '' : 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
                                     </button>
@@ -336,7 +339,6 @@
                                     <div class="ps-variant" :class="grouped && 'is-child'" x-show="! collapsed.includes(item.group)">
                                         <input type="hidden" :name="'variants[' + item.index + '][id]'" :value="item.row.id" :disabled="! item.row.id">
                                         <input type="hidden" :name="'variants[' + item.index + '][color]'" :value="item.row.color">
-                                        <input type="hidden" :name="'variants[' + item.index + '][color_hex]'" :value="swatchFor(item.row.color)" :disabled="! swatchFor(item.row.color)">
                                         <input type="hidden" :name="'variants[' + item.index + '][size]'" :value="item.row.size">
                                         <div class="ps-variant-line">
                                             <template x-if="isPhotoOwner(item)">
@@ -355,10 +357,11 @@
                                                     <span class="sr-only" x-text="item.row.color ? 'Uses the ' + item.row.color + ' photos' : 'Uses the product photos'"></span>
                                                 </span>
                                             </template>
-                                            <span class="ps-variant-name"><span class="inline-flex items-center gap-2"><i x-show="! grouped && item.row.color" class="ps-swatch" :style="{ background: swatchFor(item.row.color) || '#97a0af' }" aria-hidden="true"></i><span x-text="item.label"></span></span><button type="button" x-show="isPhotoOwner(item) && colorPhotos(item).length" @click="expanded = expanded.includes(item.key) ? expanded.filter(key => key !== item.key) : [...expanded, item.key]" class="ps-link" x-text="expanded.includes(item.key) ? 'Hide photos' : 'Manage photos'"></button></span>
-                                            <label class="ps-cell"><span class="ps-cell-label" aria-hidden="true">Price</span><span class="pe-affix"><span aria-hidden="true">₱</span><input type="number" :name="'variants[' + item.index + '][price]'" x-model="item.row.price" min="0.01" step="0.01" :placeholder="price || '0.00'" :aria-label="'Price for ' + item.fullLabel" class="pe-input"></span></label>
-                                            <label class="ps-cell"><span class="ps-cell-label" aria-hidden="true">Available</span><input type="number" :name="'variants[' + item.index + '][stock_quantity]'" x-model="item.row.stock_quantity" required min="0" @readonly($editing) :aria-label="'Available for ' + item.fullLabel" class="pe-input"></label>
-                                            <label class="ps-cell"><span class="ps-cell-label" aria-hidden="true">SKU</span><input :name="'variants[' + item.index + '][sku]'" x-model="item.row.sku" required maxlength="100" placeholder="SKU" :aria-label="'SKU for ' + item.fullLabel" class="pe-input"></label>
+                                            <span class="ps-variant-name"><span class="inline-flex items-center gap-2"><span x-text="item.label"></span></span><button type="button" x-show="isPhotoOwner(item) && colorPhotos(item).length" @click="expanded = expanded.includes(item.key) ? expanded.filter(key => key !== item.key) : [...expanded, item.key]" class="ps-link" x-text="expanded.includes(item.key) ? 'Hide photos' : 'Manage photos'"></button></span>
+                                            <label class="ps-cell is-price"><span class="ps-cell-label" aria-hidden="true">Price</span><span class="pe-affix"><span aria-hidden="true">₱</span><input type="number" :name="'variants[' + item.index + '][price]'" x-model="item.row.price" min="0.01" step="0.01" :placeholder="price || '0.00'" :aria-label="'Price for ' + item.fullLabel" class="pe-input"></span></label>
+                                            <label class="ps-cell is-units"><span class="ps-cell-label" aria-hidden="true">Units/pack</span><input type="number" :name="'variants[' + item.index + '][pack_units]'" x-model="item.row.pack_units" min="0.01" step="0.01" :placeholder="'e.g. ' + (parseFloat(item.row.size) || 10)" :aria-label="'Units per pack for ' + item.fullLabel" class="pe-input"></label>
+                                            <label class="ps-cell is-stock"><span class="ps-cell-label" aria-hidden="true">Available</span><input type="number" :name="'variants[' + item.index + '][stock_quantity]'" x-model="item.row.stock_quantity" min="0" readonly :aria-label="'Available for ' + item.fullLabel" class="pe-input"></label>
+                                            <label class="ps-cell is-sku"><span class="ps-cell-label" aria-hidden="true">SKU</span><input :name="'variants[' + item.index + '][sku]'" x-model="item.row.sku" required maxlength="100" placeholder="SKU" :aria-label="'SKU for ' + item.fullLabel" class="pe-input"></label>
                                             <button type="button" x-show="! item.row.id" @click="excluded.push(item.key); dirty = true" :aria-label="'Remove ' + item.fullLabel" class="ps-icon-button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
                                             <span x-show="item.row.id" class="ps-icon-spacer" aria-hidden="true"></span>
                                         </div>
@@ -389,6 +392,7 @@
                 <section class="ps-card" aria-labelledby="status-heading">
                     <div class="ps-card-head"><h2 id="status-heading">Status</h2><x-marketplace.product-status :status="$editing ? $product->status : 'draft'" /></div>
                     <p class="pe-hint">{{ $editing && $product->status === 'active' ? 'Changes go live as soon as you save.' : 'Saved as a draft. Publish it from Products when it’s ready.' }}</p>
+                    <p x-show="drugClass === 'dangerous'" x-cloak class="pe-hint text-danger" role="status">Dangerous drugs (S2) cannot be sold online. This listing stays a draft.</p>
                     {{-- Fills one segment per review requirement met. --}}
                     <div class="ps-meter">
                         <p x-show="! checks.every(check => check.done)"><span x-text="checks.filter(check => check.done).length + ' of ' + checks.length"></span> requirements met</p>
@@ -413,9 +417,20 @@
                 <section class="ps-card" aria-labelledby="organization-heading">
                     <div class="ps-card-head"><div><h2 id="organization-heading">Product organization</h2><p>Helps buyers find it in the marketplace.</p></div></div>
                     <div class="mt-4 grid gap-4">
+                        <div>
+                            <label for="drug_class" class="pe-label">Product type</label>
+                            <select id="drug_class" name="drug_class" x-model="drugClass" class="pe-input" aria-describedby="drug-class-hint">
+                                <option value="" @selected($listing['drugClass'] === '')>Not a medicine</option>
+                                @foreach (\App\Models\Product::DRUG_CLASSES as $value => $label)<option value="{{ $value }}" @selected($listing['drugClass'] === $value)>{{ $label }}</option>@endforeach
+                            </select>
+                            <p id="drug-class-hint" class="pe-hint" :class="drugClass === 'dangerous' && 'text-danger'" x-text="({ '': 'No senior citizen or PWD discount.', otc: 'Senior citizens and PWDs get their discount on it.', rx: 'Customers upload a prescription for a pharmacist to approve. Senior citizens and PWDs get their discount.', dangerous: 'Needs an S2 licence and a yellow prescription, so it can be saved for your records but never sold online.' })[drugClass]"></p>
+                            <x-input-error :messages="$errors->get('drug_class')" class="mt-2" />
+                        </div>
                         <div><label for="category_id" class="pe-label">Category</label><select id="category_id" name="category_id" x-model="categoryId" class="pe-input"><option value="">Uncategorized</option>@foreach ($categories as $category)<option value="{{ $category->id }}" @selected($listing['categoryId'] === (string) $category->id)>{{ $category->name }}</option>@endforeach</select></div>
                         <div><div class="flex items-baseline justify-between gap-2"><label for="brand" class="pe-label">Brand</label><span class="pe-optional" aria-hidden="true">Optional</span></div><input id="brand" name="brand" maxlength="100" value="{{ old('brand', $product?->brand) }}" placeholder="e.g. Unilab" class="pe-input"><x-input-error :messages="$errors->get('brand')" class="mt-2" /></div>
-                        <div><div class="flex items-baseline justify-between gap-2"><label for="generic_name" class="pe-label">Generic name</label><span class="pe-optional" aria-hidden="true">Optional</span></div><input id="generic_name" name="generic_name" maxlength="160" value="{{ old('generic_name', $product?->generic_name) }}" class="pe-input" placeholder="e.g. Paracetamol"><x-input-error :messages="$errors->get('generic_name')" class="mt-2" /></div>
+                        <div><div class="flex items-baseline justify-between gap-2"><label for="generic_name" class="pe-label">Generic name</label><span class="pe-optional" aria-hidden="true">Required for medicines</span></div><input id="generic_name" name="generic_name" maxlength="160" x-model="genericName" value="{{ $listing['genericName'] }}" class="pe-input" placeholder="e.g. Paracetamol" aria-describedby="generic-name-hint"><p id="generic-name-hint" class="pe-hint">Needed for every medicine and when reminder directions are set.</p><x-input-error :messages="$errors->get('generic_name')" class="mt-2" /></div>
+                        <div><div class="flex items-baseline justify-between gap-2"><label for="fda_registration_number" class="pe-label">FDA registration number</label><span class="pe-optional" aria-hidden="true">Required to publish medicines</span></div><input id="fda_registration_number" name="fda_registration_number" maxlength="40" x-model="fdaNumber" value="{{ $listing['fdaNumber'] }}" class="pe-input" placeholder="e.g. DR-XY12345" aria-describedby="fda-number-hint"><p id="fda-number-hint" class="pe-hint">The Certificate of Product Registration number printed on the box.</p><x-input-error :messages="$errors->get('fda_registration_number')" class="mt-2" /></div>
+                        <div><div class="flex items-baseline justify-between gap-2"><label for="storage_instructions" class="pe-label">Storage instructions</label><span class="pe-optional" aria-hidden="true">Optional</span></div><input id="storage_instructions" name="storage_instructions" maxlength="200" value="{{ old('storage_instructions', $product?->storage_instructions) }}" class="pe-input" placeholder="e.g. Store below 30°C. Refrigerate after opening."><x-input-error :messages="$errors->get('storage_instructions')" class="mt-2" /></div>
                         <div><div class="flex items-baseline justify-between gap-2"><label for="search_keywords" class="pe-label">Search keywords</label><span class="pe-optional" aria-hidden="true">Optional</span></div><input id="search_keywords" name="search_keywords" maxlength="400" value="{{ old('search_keywords', $product?->search_keywords) }}" class="pe-input" placeholder="e.g. lagnat, sakit ng ulo, fever" aria-describedby="search-keywords-hint"><p id="search-keywords-hint" class="pe-hint">Other words customers type for this product, separated by commas. Names for the active ingredient, like "vitamin c", go on the <a href="{{ route('seller.ingredient-aliases.index') }}" class="font-semibold text-brand">Other names</a> page instead, so every brand gets them.</p><x-input-error :messages="$errors->get('search_keywords')" class="mt-2" /></div>
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div><div class="flex items-baseline justify-between gap-2"><label for="dosage_form" class="pe-label">Dosage form</label><span class="pe-optional" aria-hidden="true">Optional</span></div><input id="dosage_form" name="dosage_form" maxlength="60" list="dosage-forms" value="{{ old('dosage_form', $product?->dosage_form) }}" placeholder="e.g. Tablet" class="pe-input"><datalist id="dosage-forms">@foreach (['Tablet', 'Capsule', 'Syrup', 'Suspension', 'Drops', 'Cream', 'Ointment', 'Inhaler', 'Injection'] as $form)<option value="{{ $form }}"></option>@endforeach</datalist><x-input-error :messages="$errors->get('dosage_form')" class="mt-2" /></div>
@@ -423,19 +438,14 @@
                         </div>
                         <div><div class="flex items-baseline justify-between gap-2"><label for="manufacturer" class="pe-label">Manufacturer</label><span class="pe-optional" aria-hidden="true">Optional</span></div><input id="manufacturer" name="manufacturer" maxlength="160" value="{{ old('manufacturer', $product?->manufacturer) }}" placeholder="e.g. United Laboratories" class="pe-input"><x-input-error :messages="$errors->get('manufacturer')" class="mt-2" /></div>
                         <div>
-                            <input type="hidden" name="requires_prescription" value="0">
-                            <label class="ps-check-card"><input type="checkbox" name="requires_prescription" value="1" @checked(old('requires_prescription', $product?->requires_prescription)) class="mt-0.5"><span><span class="pe-label !mb-0.5">Prescription required</span><span class="block text-xs leading-relaxed text-muted">Customers must upload a prescription for a pharmacist to approve before this is prepared.</span></span></label>
-                            <x-input-error :messages="$errors->get('requires_prescription')" class="mt-2" />
-                        </div>
-                        <div>
                             <input type="hidden" name="switch_with_care" value="0">
                             <label class="ps-check-card"><input type="checkbox" name="switch_with_care" value="1" @checked(old('switch_with_care', $product?->switch_with_care)) class="mt-0.5"><span><span class="pe-label !mb-0.5">Careful when switching brands</span><span class="block text-xs leading-relaxed text-muted">For medicines like levothyroxine, anti-seizure medicines or warfarin. Customers still see every brand, with a note to talk to their pharmacist or doctor before switching.</span></span></label>
                             <x-input-error :messages="$errors->get('switch_with_care')" class="mt-2" />
                         </div>
                         <fieldset class="grid gap-4" aria-describedby="medicine-directions-hint">
                             <legend class="pe-label">Directions for medicine reminders</legend>
-                            <p id="medicine-directions-hint" class="pe-hint">Buyers who turn on reminders start from these label directions and can change them. Leave as "Not a medicine" for anything else.</p>
-                            <div><label for="medicine_kind" class="pe-label">Kind</label><select id="medicine_kind" name="medicine_kind" class="pe-input">@foreach (['none' => 'Not a medicine', 'maintenance' => 'Taken every day (maintenance, vitamins)', 'course' => 'A course with an end (antibiotics)', 'as_needed' => 'Only when needed (fever, pain)'] as $value => $label)<option value="{{ $value }}" @selected(old('medicine_kind', $product?->medicine_kind ?? 'none') === $value)>{{ $label }}</option>@endforeach</select><x-input-error :messages="$errors->get('medicine_kind')" class="mt-2" /></div>
+                            <p id="medicine-directions-hint" class="pe-hint">Buyers who turn on reminders start from these label directions and can change them. Leave as "No reminders" for anything that is not taken on a schedule.</p>
+                            <div><label for="medicine_kind" class="pe-label">Kind</label><select id="medicine_kind" name="medicine_kind" class="pe-input">@foreach (['none' => 'No reminders', 'maintenance' => 'Taken every day (maintenance, vitamins)', 'course' => 'A course with an end (antibiotics)', 'as_needed' => 'Only when needed (fever, pain)'] as $value => $label)<option value="{{ $value }}" @selected(old('medicine_kind', $product?->medicine_kind ?? 'none') === $value)>{{ $label }}</option>@endforeach</select><x-input-error :messages="$errors->get('medicine_kind')" class="mt-2" /></div>
                             <div class="grid gap-4 sm:grid-cols-3">
                                 <div><div class="flex items-baseline justify-between gap-2"><label for="dose_quantity" class="pe-label">Dose</label></div><input id="dose_quantity" name="dose_quantity" inputmode="decimal" value="{{ old('dose_quantity', $product?->dose_quantity) }}" placeholder="e.g. 1 or 5" class="pe-input"><x-input-error :messages="$errors->get('dose_quantity')" class="mt-2" /></div>
                                 <div><div class="flex items-baseline justify-between gap-2"><label for="dose_unit" class="pe-label">Unit</label></div><input id="dose_unit" name="dose_unit" maxlength="20" value="{{ old('dose_unit', $product?->dose_unit) }}" placeholder="tablet, mL" class="pe-input"><x-input-error :messages="$errors->get('dose_unit')" class="mt-2" /></div>
@@ -448,15 +458,6 @@
                                 <div><div class="flex items-baseline justify-between gap-2"><label for="max_doses_per_day" class="pe-label">Most doses a day (as needed)</label></div><input id="max_doses_per_day" name="max_doses_per_day" inputmode="numeric" value="{{ old('max_doses_per_day', $product?->max_doses_per_day) }}" placeholder="e.g. 4" class="pe-input"><x-input-error :messages="$errors->get('max_doses_per_day')" class="mt-2" /></div>
                             </div>
                             <div><div class="flex items-baseline justify-between gap-2"><label for="directions_note" class="pe-label">Note for the buyer</label></div><input id="directions_note" name="directions_note" maxlength="200" value="{{ old('directions_note', $product?->directions_note) }}" placeholder="e.g. After meals" class="pe-input"><x-input-error :messages="$errors->get('directions_note')" class="mt-2" /></div>
-                        </fieldset>
-                        <fieldset>
-                            <legend class="pe-label">Condition</legend>
-                            <div class="pe-segmented ps-segmented">
-                                @foreach (['new' => 'New', 'refurbished' => 'Refurbished'] as $value => $label)
-                                    <label><input type="radio" name="condition" value="{{ $value }}" x-model="condition" @checked($listing['condition'] === $value)><span>{{ $label }}</span></label>
-                                @endforeach
-                            </div>
-                            <x-input-error :messages="$errors->get('condition')" class="mt-2" />
                         </fieldset>
                     </div>
                 </section>

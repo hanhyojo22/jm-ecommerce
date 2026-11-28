@@ -35,7 +35,7 @@ class PrototypeIntegrationTest extends TestCase
         ])->assertRedirect(route('seller.products.index'));
         $listing = Product::query()->where('sku', 'CAMERA')->with(['variants', 'images'])->sole();
         $this->assertSame('draft', $listing->status);
-        $this->assertSame(2, $listing->stock_quantity);
+        $this->assertSame(0, $listing->stock_quantity);
         $this->assertSame('120.35', $listing->variants[0]->price);
         $this->assertCount(1, $listing->colorPhotos('Black'));
         Storage::disk('product_images')->assertExists($listing->colorPhotos('Black')[0]->path);
@@ -94,7 +94,7 @@ class PrototypeIntegrationTest extends TestCase
         $listing = Product::query()->where('sku', 'HALF')->sole();
 
         $this->post(route('seller.products.submit', $listing))
-            ->assertSessionHasErrors(['status' => 'Add photos for every color or upload a shared product photo before publishing.']);
+            ->assertSessionHasErrors(['status' => 'Add photos for every flavor or type, or upload a shared product photo before publishing.']);
 
         $this->assertDatabaseHas('products', ['id' => $listing->id, 'status' => 'draft']);
     }
@@ -113,8 +113,8 @@ class PrototypeIntegrationTest extends TestCase
                 ['size' => 'L', 'sku' => 'CROWDED-L', 'stock_quantity' => 1, 'images' => $photos(1)],
             ],
         ])->assertSessionHasErrors([
-            'variants.1.images' => 'Each color can have no more than 4 photos. Remove a White photo to add another.',
-            'variants.2.images' => 'Only a variant with a color can have its own photos. Use the product photos instead.',
+            'variants.1.images' => 'Each flavor or type can have no more than 4 photos. Remove a White photo to add another.',
+            'variants.2.images' => 'Only a variant with a flavor or type can have its own photos. Use the product photos instead.',
         ]);
 
         $this->assertDatabaseMissing('products', ['sku' => 'CROWDED']);

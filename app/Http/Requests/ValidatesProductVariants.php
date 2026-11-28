@@ -15,13 +15,14 @@ trait ValidatesProductVariants
     public function attributes(): array
     {
         return [
-            'variants.*.color' => 'color for variant :position',
+            'variants.*.color' => 'flavor or type for variant :position',
             'variants.*.color_hex' => 'swatch for variant :position',
-            'variants.*.size' => 'size for variant :position',
+            'variants.*.size' => 'pack size for variant :position',
             'variants.*.sku' => 'SKU for variant :position',
             'variants.*.stock_quantity' => 'stock for variant :position',
             'variants.*.price' => 'price for variant :position',
             'variants.*.images' => 'photos for variant :position',
+            'variants.*.pack_units' => 'units per pack for variant :position',
             'variants.*.images.*' => 'photo for variant :position',
         ];
     }
@@ -32,8 +33,8 @@ trait ValidatesProductVariants
     public function messages(): array
     {
         return [
-            'variants.*.color.required_without' => 'Variant :position needs a color or a size.',
-            'variants.*.size.required_without' => 'Variant :position needs a color or a size.',
+            'variants.*.color.required_without' => 'Variant :position needs a pack size or a flavor or type.',
+            'variants.*.size.required_without' => 'Variant :position needs a pack size or a flavor or type.',
         ];
     }
 
@@ -65,14 +66,14 @@ trait ValidatesProductVariants
             }
             $combinations[$combination] = true;
             $skus[$sku] = true;
-            $totalStock += (int) $variant['stock_quantity'];
+            $totalStock += (int) ($variant['stock_quantity'] ?? 0);
 
             // Photos belong to the color, so every size of it counts toward the same four.
             $newPhotos = count((array) $this->file("variants.$index.images", []));
             if ($newPhotos > 0) {
                 $color = trim((string) ($variant['color'] ?? ''));
                 if ($color === '') {
-                    $validator->errors()->add("variants.$index.images", 'Only a variant with a color can have its own photos. Use the product photos instead.');
+                    $validator->errors()->add("variants.$index.images", 'Only a variant with a flavor or type can have its own photos. Use the product photos instead.');
 
                     continue;
                 }
@@ -81,7 +82,7 @@ trait ValidatesProductVariants
                     : 0;
                 $colorPhotoCounts[$color] += $newPhotos;
                 if ($colorPhotoCounts[$color] > 4) {
-                    $validator->errors()->add("variants.$index.images", "Each color can have no more than 4 photos. Remove a {$color} photo to add another.");
+                    $validator->errors()->add("variants.$index.images", "Each flavor or type can have no more than 4 photos. Remove a {$color} photo to add another.");
                 }
             }
         }

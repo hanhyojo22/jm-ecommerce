@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jmmart/src/models/models.dart';
+import 'package:jmmart/src/providers/auth_providers.dart';
+import 'package:jmmart/src/providers/catalog_providers.dart';
 import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/widgets/common.dart';
+import 'package:jmmart/src/widgets/product_feed.dart';
 
 void main() {
   testWidgets(
@@ -90,24 +94,27 @@ void main() {
     }
   });
 
-  testWidgets('discovery cards badge prescription medicines in clinical indigo, never COD', (
-    tester,
-  ) async {
-    await tester.pumpWidget(_card(discovery: true));
-    expect(find.text('Rx'), findsNothing);
-    expect(find.text('COD'), findsNothing);
+  testWidgets(
+    'discovery cards badge prescription medicines in clinical indigo, never COD',
+    (tester) async {
+      await tester.pumpWidget(_card(discovery: true));
+      expect(find.text('Rx'), findsNothing);
+      expect(find.text('COD'), findsNothing);
 
-    await tester.pumpWidget(_card(discovery: true, requiresPrescription: true));
-    final rxText = find.text('Rx');
-    expect(rxText, findsOneWidget);
-    final scheme = Theme.of(tester.element(rxText)).colorScheme;
-    final widget = tester.widget<Text>(rxText);
-    expect(widget.style?.color, scheme.onTertiaryContainer);
-    final box = tester.widget<DecoratedBox>(
-      find.ancestor(of: rxText, matching: find.byType(DecoratedBox)).first,
-    );
-    expect((box.decoration as BoxDecoration).color, scheme.tertiaryContainer);
-  });
+      await tester.pumpWidget(
+        _card(discovery: true, requiresPrescription: true),
+      );
+      final rxText = find.text('Rx');
+      expect(rxText, findsOneWidget);
+      final scheme = Theme.of(tester.element(rxText)).colorScheme;
+      final widget = tester.widget<Text>(rxText);
+      expect(widget.style?.color, scheme.onTertiaryContainer);
+      final box = tester.widget<DecoratedBox>(
+        find.ancestor(of: rxText, matching: find.byType(DecoratedBox)).first,
+      );
+      expect((box.decoration as BoxDecoration).color, scheme.tertiaryContainer);
+    },
+  );
 
   testWidgets('discovery cards label sold out stock', (tester) async {
     await tester.pumpWidget(_card(discovery: true, inStock: false));
@@ -138,6 +145,139 @@ void main() {
       Theme.of(tester.element(find.text('₱255.00'))).colorScheme.error,
     );
   });
+
+  testWidgets(
+    'masonry product feed lets neighboring cards hug their own heights without stretching whitespace',
+    (tester) async {
+      const store = StoreInfo(
+        id: 'store-1',
+        name: 'Everyday Branch',
+        slug: 'everyday',
+        city: 'Manila',
+      );
+      const shortProduct = Product(
+        id: 'p-short',
+        name: 'Bandage',
+        slug: 'bandage',
+        price: '25.00',
+        effectivePrice: '25.00',
+        inStock: true,
+        hasVariants: false,
+        requiresVariantSelection: false,
+        requiresPrescription: false,
+        freeShipping: false,
+        stockQuantity: 10,
+        soldQuantity: 0,
+        ratingAverage: 0,
+        ratingCount: 0,
+        store: store,
+      );
+      const tallProduct = Product(
+        id: 'p-tall',
+        name: 'Extra Strength Extended Release Multivitamin Complex With Zinc And Electrolytes 100 Tablets',
+        genericName: 'ASCORBIC ACID + ZINC SULFATE MONOHYDRATE',
+        slug: 'multivitamin',
+        price: '450.00',
+        effectivePrice: '399.00',
+        compareAtPrice: '450.00',
+        inStock: true,
+        hasVariants: false,
+        requiresVariantSelection: false,
+        requiresPrescription: false,
+        freeShipping: false,
+        stockQuantity: 10,
+        soldQuantity: 0,
+        ratingAverage: 4.9,
+        ratingCount: 24,
+        store: store,
+      );
+      const thirdProduct = Product(
+        id: 'p-third',
+        name: 'Alcohol 70%',
+        slug: 'alcohol',
+        price: '65.00',
+        effectivePrice: '65.00',
+        inStock: true,
+        hasVariants: false,
+        requiresVariantSelection: false,
+        requiresPrescription: false,
+        freeShipping: false,
+        stockQuantity: 10,
+        soldQuantity: 0,
+        ratingAverage: 0,
+        ratingCount: 0,
+        store: store,
+      );
+
+      final feed = ProductFeed(
+        filter: const CatalogFilter(),
+        products: const [shortProduct, tallProduct, thirdProduct],
+        page: 1,
+        lastPage: 1,
+        total: 3,
+      );
+
+      tester.view.physicalSize = const Size(390, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [isSignedInProvider.overrideWithValue(false)],
+          child: MaterialApp(
+            theme: buildAppTheme(),
+            home: Scaffold(
+              body: Consumer(
+                builder: (context, ref, _) => LayoutBuilder(
+                  builder: (context, constraints) {
+                    final grid = productGrid(context, constraints);
+                    final slivers = ProductFeedSlivers(
+                      context: context,
+                      ref: ref,
+                      gridDelegate: grid.delegate,
+                      cardWidth: grid.cardWidth,
+                      onClearFilters: () {},
+                      onBrowseCategory: (_) {},
+                      onBackToTop: () {},
+                    );
+                    return CustomScrollView(
+                      slivers: slivers.products(feed, const []),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final shortCard = find.ancestor(
+        of: find.text('Bandage'),
+        matching: find.byType(ProductCard),
+      );
+      final tallCard = find.ancestor(
+        of: find.textContaining('Multivitamin Complex'),
+        matching: find.byType(ProductCard),
+      );
+      final thirdCard = find.ancestor(
+        of: find.text('Alcohol 70%'),
+        matching: find.byType(ProductCard),
+      );
+
+      final shortRect = tester.getRect(shortCard);
+      final tallRect = tester.getRect(tallCard);
+      final thirdRect = tester.getRect(thirdCard);
+
+      // Side-by-side cards are allowed to differ in height instead of stretching.
+      expect(shortRect.height, lessThan(tallRect.height - 20));
+      // The next card in the left column packs directly below the short card (10dp gap),
+      // rather than waiting for the taller right card to end.
+      expect(thirdRect.top, closeTo(shortRect.bottom + 10, 1));
+      expect(thirdRect.top, lessThan(tallRect.bottom));
+    },
+  );
 }
 
 Widget _card({

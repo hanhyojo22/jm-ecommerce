@@ -22,7 +22,7 @@ class SellerProductTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_owner_can_create_a_product_for_their_active_store(): void
+    public function test_owner_creates_a_product_that_starts_with_no_stock(): void
     {
         [$owner, $tenant, $store] = $this->seller();
 
@@ -31,28 +31,34 @@ class SellerProductTest extends TestCase
             'brand' => 'Aurora', 'condition' => 'refurbished', 'price' => '299.00', 'compare_at_price' => '399.00', 'stock_quantity' => 12, 'status' => 'active',
         ])->assertRedirect(route('seller.products.index'));
 
-        $this->assertDatabaseHas('products', ['tenant_id' => $tenant->id, 'store_id' => $store->id, 'sku' => 'TOTE-001', 'brand' => 'Aurora', 'condition' => 'refurbished', 'compare_at_price' => '399.00', 'stock_quantity' => 12, 'status' => 'draft']);
-        $this->assertSame(12, BranchInventory::available($store->id, Product::query()->sole()->id, null));
+        $this->assertDatabaseHas('products', ['tenant_id' => $tenant->id, 'store_id' => $store->id, 'sku' => 'TOTE-001', 'brand' => 'Aurora', 'condition' => 'refurbished', 'compare_at_price' => '399.00', 'stock_quantity' => 0, 'status' => 'draft']);
+        // Stock is received on Branch stock with a lot number and expiry date, never typed in here.
+        $this->assertSame(0, BranchInventory::available($store->id, Product::query()->sole()->id, null));
+        $this->assertDatabaseCount('inventory_batches', 0);
+        $this->assertDatabaseCount('inventory_movements', 0);
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $owner->id, 'action' => 'product.created']);
     }
 
-    public function test_head_office_saves_medicine_details_and_can_clear_the_prescription_flag(): void
+    public function test_head_office_saves_medicine_details_and_the_drug_class_sets_the_prescription_flag(): void
     {
         [$owner, $tenant] = $this->seller();
 
         $this->actingAs($owner)->post(route('seller.products.store'), [
             'name' => 'Biogesic 500mg', 'sku' => 'BIO-500', 'price' => '6.50', 'stock_quantity' => 0,
             'generic_name' => 'Paracetamol', 'dosage_form' => 'Tablet', 'strength' => '500 mg', 'manufacturer' => 'Unilab',
-            'requires_prescription' => '1', 'switch_with_care' => '1',
+            'drug_class' => 'rx', 'fda_registration_number' => ' dr-xy12345 ', 'storage_instructions' => 'Store below 30 C', 'switch_with_care' => '1',
+            'requires_prescription' => '0',
         ])->assertRedirect(route('seller.products.index'));
 
+        // The prescription flag follows the drug class, never its own input.
         $product = $tenant->products()->where('sku', 'BIO-500')->sole();
-        $this->assertSame(['Paracetamol', 'Tablet', '500 mg', 'Unilab', true, true], [$product->generic_name, $product->dosage_form, $product->strength, $product->manufacturer, $product->requires_prescription, $product->switch_with_care]);
+        $this->assertSame(['Paracetamol', 'Tablet', '500 mg', 'Unilab', 'rx', true, true, 'DR-XY12345', 'Store below 30 C'], [$product->generic_name, $product->dosage_form, $product->strength, $product->manufacturer, $product->drug_class, $product->requires_prescription, $product->switch_with_care, $product->fda_registration_number, $product->storage_instructions]);
 
         $this->actingAs($owner)->patch(route('seller.products.update', $product), [
-            'name' => 'Biogesic 500mg', 'sku' => 'BIO-500', 'price' => '6.50', 'stock_quantity' => 0, 'status' => 'draft', 'requires_prescription' => '0', 'switch_with_care' => '0',
+            'name' => 'Biogesic 500mg', 'sku' => 'BIO-500', 'price' => '6.50', 'stock_quantity' => 0, 'status' => 'draft', 'generic_name' => 'Paracetamol', 'drug_class' => 'otc', 'switch_with_care' => '0',
         ])->assertSessionHasNoErrors();
 
+        $this->assertSame('otc', $product->fresh()->drug_class);
         $this->assertFalse($product->fresh()->requires_prescription);
         $this->assertFalse($product->fresh()->switch_with_care);
         $this->actingAs($owner)->get(route('seller.products.edit', $product))->assertSee('Careful when switching brands');
@@ -63,7 +69,7 @@ class SellerProductTest extends TestCase
         [$owner, $tenant] = $this->seller();
 
         $this->actingAs($owner)->post(route('seller.products.store'), [
-            'name' => 'Amlodipine 5 mg Tablet', 'sku' => 'AML-5', 'price' => '12.00', 'stock_quantity' => 0,
+            'name' => 'Amlodipine 5 mg Tablet', 'sku' => 'AML-5', 'price' => '12.00', 'stock_quantity' => 0, 'generic_name' => 'Amlodipine',
             'medicine_kind' => 'maintenance', 'pack_units' => '30', 'dose_quantity' => '1', 'dose_unit' => 'tablet', 'doses_per_day' => '1',
             'directions_note' => 'Same time every day',
         ])->assertRedirect(route('seller.products.index'));
@@ -85,6 +91,53 @@ class SellerProductTest extends TestCase
         $this->assertSame(0, $tenant->products()->count());
     }
 
+    public function test_every_medicine_or_product_with_reminder_directions_needs_a_generic_name(): void
+    {
+        [$owner, $tenant] = $this->seller();
+        $listing = ['name' => 'Amoxil 500 mg Capsule', 'sku' => 'AMX-500', 'price' => '18.00', 'stock_quantity' => 0];
+
+        $this->actingAs($owner)->post(route('seller.products.store'), [...$listing, 'drug_class' => 'rx'])->assertSessionHasErrors('generic_name');
+        $this->post(route('seller.products.store'), [...$listing, 'drug_class' => 'otc'])->assertSessionHasErrors('generic_name');
+        $this->post(route('seller.products.store'), [...$listing, 'medicine_kind' => 'as_needed', 'dose_quantity' => '1', 'dose_unit' => 'capsule', 'max_doses_per_day' => '3'])->assertSessionHasErrors('generic_name');
+        $this->post(route('seller.products.store'), [...$listing, 'name' => 'Cotton balls', 'sku' => 'COTTON', 'drug_class' => ''])->assertSessionHasNoErrors();
+        $this->assertSame(['COTTON'], $tenant->products()->pluck('sku')->all());
+
+        $product = $tenant->products()->sole();
+        $this->patch(route('seller.products.update', $product), ['name' => 'Cotton balls', 'sku' => 'COTTON', 'price' => '18.00', 'status' => 'draft', 'drug_class' => 'otc'])->assertSessionHasErrors('generic_name');
+        $this->assertNull($product->fresh()->drug_class);
+    }
+
+    public function test_a_medicine_needs_its_fda_number_to_publish_and_a_dangerous_drug_never_goes_on_sale(): void
+    {
+        [$owner, $tenant, $store] = $this->seller();
+        $category = Category::create(['name' => 'Pain & Fever', 'slug' => 'pain-fever', 'is_active' => true]);
+        $product = $store->products()->create(['tenant_id' => $tenant->id, 'category_id' => $category->id, 'name' => 'Paracetamol 500 mg', 'slug' => 'paracetamol', 'sku' => 'PARA', 'description' => 'For fever.', 'price' => '5.00', 'generic_name' => 'Paracetamol', 'drug_class' => 'otc', 'status' => 'draft']);
+        $product->images()->create(['path' => 'products/para.jpg', 'position' => 0]);
+
+        $this->actingAs($owner)->post(route('seller.products.submit', $product))->assertSessionHasErrors(['status' => 'Add the generic name and FDA registration number before publishing a medicine.']);
+        $product->update(['fda_registration_number' => 'DR-XY12345']);
+        $this->post(route('seller.products.submit', $product))->assertSessionHasNoErrors();
+        $this->assertSame('active', $product->fresh()->status);
+
+        // A live listing cannot become a dangerous drug; unlisted, it can, and then it stays off sale.
+        $listing = ['name' => 'Paracetamol 500 mg', 'sku' => 'PARA', 'price' => '5.00', 'stock_quantity' => 0, 'status' => 'draft', 'description' => 'For fever.', 'category_id' => $category->id, 'generic_name' => 'Paracetamol', 'drug_class' => 'dangerous'];
+        $this->patch(route('seller.products.update', $product), $listing)->assertSessionHasErrors('drug_class');
+        $this->assertSame('otc', $product->fresh()->drug_class);
+
+        $product->update(['status' => 'unlisted']);
+        $this->patch(route('seller.products.update', $product), $listing)->assertSessionHasNoErrors();
+        $this->assertTrue($product->fresh()->requires_prescription);
+        $this->post(route('seller.products.relist', $product))->assertSessionHasErrors(['status' => 'Dangerous drugs (S2) cannot be sold online. Keep this listing as a draft for your records.']);
+        $product->update(['status' => 'draft']);
+        $this->post(route('seller.products.submit', $product))->assertSessionHasErrors('status');
+
+        $product->update(['status' => 'inactive']);
+        $admin = User::factory()->administrator()->create();
+        $this->assertSame([], $product->fresh()->moderationOptions());
+        $this->actingAs($admin)->patch(route('admin.products.moderate', $product), ['status' => 'active'])->assertSessionHasErrors('status');
+        $this->assertSame('inactive', $product->fresh()->status);
+    }
+
     public function test_seller_can_create_color_and_size_options_with_multiple_photos(): void
     {
         Storage::fake('product_images');
@@ -100,8 +153,9 @@ class SellerProductTest extends TestCase
 
         $product = Product::query()->with(['variants', 'images'])->sole();
         $this->assertSame($tenant->id, $product->tenant_id);
-        $this->assertSame(5, $product->stock_quantity);
-        $this->assertSame(3, BranchInventory::available($product->store_id, $product->id, $product->variants->firstWhere('size', 'M')->id));
+        $this->assertSame(0, $product->stock_quantity);
+        $this->assertSame([0, 0], $product->variants->pluck('stock_quantity')->all());
+        $this->assertDatabaseCount('inventory_batches', 0);
         $this->assertCount(2, $product->variants);
         $this->assertCount(2, $product->images);
         foreach ($product->images as $image) {
@@ -112,7 +166,7 @@ class SellerProductTest extends TestCase
         $this->get(route('catalog.show', [$product->store->slug, $product->slug]))
             ->assertOk()
             ->assertSee('Choose a product image')
-            ->assertSeeInOrder(['Color:', 'Size:']);
+            ->assertSeeInOrder(['Flavor / type:', 'Pack size:']);
     }
 
     public function test_seller_can_create_variants_with_only_one_option(): void
@@ -129,6 +183,26 @@ class SellerProductTest extends TestCase
         $variants = Product::query()->sole()->variants;
         $this->assertEqualsCanonicalizing(['S', 'M'], $variants->map->label()->all());
         $this->assertSame('', $variants->first()->color);
+    }
+
+    public function test_each_pack_size_saves_its_own_units_per_pack(): void
+    {
+        [$owner] = $this->seller();
+        $listing = ['name' => 'Amlodipine 5 mg Tablet', 'sku' => 'AML-5', 'price' => '12.00', 'generic_name' => 'Amlodipine', 'drug_class' => 'rx'];
+        $this->actingAs($owner)->post(route('seller.products.store'), [...$listing, 'variants' => [
+            ['size' => '10s', 'sku' => 'AML-5-10', 'pack_units' => '10'],
+            ['size' => '100s', 'sku' => 'AML-5-100', 'pack_units' => '100'],
+        ]])->assertRedirect(route('seller.products.index'));
+
+        $product = Product::query()->sole();
+        $this->assertEquals(['10s' => '10.00', '100s' => '100.00'], $product->variants->pluck('pack_units', 'size')->sortKeys()->all());
+
+        [$strip, $box] = [$product->variants->firstWhere('size', '10s'), $product->variants->firstWhere('size', '100s')];
+        $this->patch(route('seller.products.update', $product), [...$listing, 'status' => 'draft', 'variants' => [
+            ['id' => $strip->id, 'size' => '10s', 'sku' => 'AML-5-10', 'stock_quantity' => 0, 'pack_units' => '10'],
+            ['id' => $box->id, 'size' => '100s', 'sku' => 'AML-5-100', 'stock_quantity' => 0, 'pack_units' => '90'],
+        ]])->assertSessionHasNoErrors();
+        $this->assertSame('90.00', $box->fresh()->pack_units);
     }
 
     public function test_seller_picks_a_swatch_for_a_color_variant(): void
@@ -159,7 +233,7 @@ class SellerProductTest extends TestCase
             'name' => 'Running socks', 'sku' => 'SOCK', 'price' => '149.00',
             'variants' => [['size' => 'S', 'sku' => 'SOCK-S', 'stock_quantity' => 1], ['stock_quantity' => 3]],
         ])->assertSessionHasErrors([
-            'variants.1.color' => 'Variant 2 needs a color or a size.',
+            'variants.1.color' => 'Variant 2 needs a pack size or a flavor or type.',
             'variants.1.sku' => 'The SKU for variant 2 field is required.',
         ]);
 

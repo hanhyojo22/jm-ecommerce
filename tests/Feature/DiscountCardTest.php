@@ -602,7 +602,7 @@ class DiscountCardTest extends TestCase
     {
         $product = Product::create([
             'tenant_id' => $this->branch->tenant_id, 'store_id' => $this->branch->id, 'name' => $name, 'slug' => str($name)->slug()->toString(),
-            'sku' => str($name)->slug()->upper()->toString(), 'price' => $price, 'stock_quantity' => 100, 'status' => 'active', 'generic_name' => $generic,
+            'sku' => str($name)->slug()->upper()->toString(), 'price' => $price, 'stock_quantity' => 100, 'status' => 'active', 'generic_name' => $generic, 'drug_class' => $generic === null ? null : 'otc',
         ]);
         BranchStock::create(['store_id' => $this->branch->id, 'product_id' => $product->id, 'variant_key' => 'default', 'quantity' => 100]);
 

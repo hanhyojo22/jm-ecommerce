@@ -79,6 +79,18 @@ class MedicationPlanApiTest extends TestCase
             ->assertJsonPath('data.product_name', 'Amlodipine 5 mg Tablet');
     }
 
+    public function test_a_pack_size_variant_counts_its_own_units_per_pack(): void
+    {
+        [$buyer, $item] = $this->deliveredItem(quantity: 2);
+        $box = $item->product->variants()->create(['size' => '100s', 'sku' => 'AML-100S', 'stock_quantity' => 0, 'pack_units' => 100]);
+        $item->update(['product_variant_id' => $box->id, 'variant_label' => '100s']);
+        $this->consent($buyer);
+
+        $this->postJson(route('api.v1.medication-plans.store'), $this->planBody($item))
+            ->assertCreated()
+            ->assertJsonPath('data.units_left', 200);
+    }
+
     public function test_a_repurchase_tops_up_the_active_plan_once(): void
     {
         [$buyer, $first] = $this->deliveredItem();

@@ -27,7 +27,8 @@ class ProductController extends Controller
             'category_id' => ['nullable', 'exists:categories,id'],
             'status' => ['nullable', 'in:active,draft,inactive,unlisted,pending,changes_required,rejected'],
             'edited' => ['nullable', 'boolean'],
-            'added' => ['nullable', 'in:last_30_days,last_90_days,this_year'],
+            'drug_class' => ['nullable', 'in:otc,rx,dangerous,none'],
+            'added' => ['nullable', 'in:last_7_days,last_30_days,last_90_days,this_year'],
             'sort' => ['nullable', 'in:newest,oldest,recently_updated,name'],
         ]);
 
@@ -46,8 +47,10 @@ class ProductController extends Controller
             ->when($filters['category_id'] ?? null, fn (Builder $query, string $categoryId): Builder => $query->where('category_id', $categoryId))
             ->when($filters['status'] ?? null, fn (Builder $query, string $status): Builder => $query->where('status', $status))
             ->when($filters['edited'] ?? false, fn (Builder $query): Builder => $query->whereNotNull('content_changed_at'))
+            ->when($filters['drug_class'] ?? null, fn (Builder $query, string $drugClass): Builder => $drugClass === 'none' ? $query->whereNull('drug_class') : $query->where('drug_class', $drugClass))
             ->when($filters['added'] ?? null, function (Builder $query, string $added): void {
                 match ($added) {
+                    'last_7_days' => $query->where('created_at', '>=', now()->subDays(7)),
                     'last_30_days' => $query->where('created_at', '>=', now()->subDays(30)),
                     'last_90_days' => $query->where('created_at', '>=', now()->subDays(90)),
                     'this_year' => $query->whereBetween('created_at', [now()->startOfYear(), now()->endOfYear()]),
@@ -111,6 +114,9 @@ class ProductController extends Controller
             }
             if ($data['status'] === 'active' && $oldStatus !== 'active' && (! filled($product->description) || $product->category_id === null || ! $product->images()->exists())) {
                 throw ValidationException::withMessages(['status' => 'Add a category, description, and product photo before activating this listing.']);
+            }
+            if ($data['status'] === 'active' && $product->publicationBlocker() !== null) {
+                throw ValidationException::withMessages(['status' => $product->publicationBlocker()]);
             }
             if ($data['status'] === 'active' && $product->hasVariantsWithoutPhotos()) {
                 throw ValidationException::withMessages(['status' => 'Each variant needs photos or a shared product photo before publication.']);

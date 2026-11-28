@@ -395,7 +395,7 @@ class CheckoutTest extends TestCase
 
         $this->actingAs($customer)->get(route('catalog.show', [$product->store->slug, $product->slug]))
             ->assertOk()
-            ->assertSeeInOrder(['Color:', 'Size:'])
+            ->assertSeeInOrder(['Flavor / type:', 'Pack size:'])
             ->assertSee($navy->id);
 
         $this->actingAs($customer)->post(route('cart.store', $product), ['quantity' => 1])

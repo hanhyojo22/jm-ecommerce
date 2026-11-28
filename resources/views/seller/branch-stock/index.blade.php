@@ -113,7 +113,8 @@
                 },
                 stepCount(rowKey, delta) {
                     const current = Number(this.counts[rowKey] ?? 0);
-                    const next = Math.max(0, Math.min(1000000, (Number.isFinite(current) ? current : 0) + delta));
+                    {{-- A count only lowers stock; new units come in through Receive a batch. --}}
+                    const next = Math.max(0, Math.min(Number(this.savedCounts[rowKey] ?? 0), (Number.isFinite(current) ? current : 0) + delta));
                     this.counts[rowKey] = next;
                 },
                 rowDelta(rowKey) {
@@ -483,7 +484,7 @@
                         </span>
                         <div>
                             <h2 id="counts-title" class="sc-card-title">Physical stock counts</h2>
-                            <p class="sc-card-note">Update shelf quantities for {{ $branch->name }} · Low stock flags items with 5 or fewer units</p>
+                            <p class="sc-card-note">Lower shelf quantities for {{ $branch->name }} after a count · To add units, receive a batch with its lot number and expiry date · Low stock flags items with 5 or fewer units</p>
                         </div>
                     </div>
                     @if ($products->isNotEmpty())
@@ -562,11 +563,11 @@
                                                         </button>
                                                         <label for="stock-{{ $product->id }}-{{ $key }}" class="sr-only">Units of {{ $product->name }} {{ $variant?->label() }} on hand</label>
                                                         <input id="stock-{{ $product->id }}-{{ $key }}" name="stock[{{ $product->id }}][{{ $key }}]"
-                                                            type="number" inputmode="numeric" min="0" max="1000000" required
+                                                            type="number" inputmode="numeric" min="0" max="{{ (int) ($counts[$key] ?? 0) }}" required
                                                             value="{{ $currentVal }}"
                                                             x-model.number="counts[@js($rowKey)]"
                                                             class="field-control sc-stepper-input">
-                                                        <button type="button" @click="stepCount(@js($rowKey), 1)" class="sc-stepper-btn" aria-label="Increase {{ $product->name }} {{ $variant?->label() }} quantity">
+                                                        <button type="button" @click="stepCount(@js($rowKey), 1)" :disabled="Number(counts[@js($rowKey)] ?? 0) >= Number(savedCounts[@js($rowKey)] ?? 0)" class="sc-stepper-btn disabled:opacity-40" aria-label="Increase {{ $product->name }} {{ $variant?->label() }} quantity">
                                                             <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
                                                         </button>
                                                     </div>

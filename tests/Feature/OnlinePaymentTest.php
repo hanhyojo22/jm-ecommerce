@@ -216,7 +216,7 @@ class OnlinePaymentTest extends TestCase
     {
         config()->set('marketplace.senior_pwd.vat_registered', true);
         $product = $this->product();
-        $product->update(['generic_name' => 'Cotton']);
+        $product->update(['generic_name' => 'Cotton', 'drug_class' => 'otc']);
         $buyer = $this->buyerWithCart($product, 2);
 
         // ₱40.00 is ₱28.57 with a card; the fee follows the total the order will charge.
@@ -232,7 +232,7 @@ class OnlinePaymentTest extends TestCase
         config()->set('marketplace.senior_pwd.vat_registered', true);
         Storage::fake('chat_attachments');
         $product = $this->product();
-        $product->update(['generic_name' => 'Cotton']);
+        $product->update(['generic_name' => 'Cotton', 'drug_class' => 'otc']);
         $buyer = $this->buyerWithCart($product, 2);
 
         // 2 × ₱20.00 = ₱40.00 → ₱35.71 without VAT → less ₱7.14 → pays ₱28.57.

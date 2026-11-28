@@ -187,16 +187,15 @@ test('seller adds color and size options in the product form at each viewport', 
         await page.locator('#name').fill('Variant QA Shirt');
         await page.locator('#sku').fill(`VARIANT-QA-${testInfo.project.name}`);
         await page.locator('#price').fill('199.00');
-        await page.getByRole('button', { name: 'Add options like size or color' }).click();
-        await page.getByLabel('Color value 1').fill('Navy');
+        await page.getByRole('button', { name: 'Add pack sizes or flavors' }).click();
+        await page.getByLabel('Flavor / type value 1').fill('Navy');
         await page.getByRole('button', { name: 'Done', exact: true }).click();
         await page.getByRole('button', { name: 'Add another option' }).click();
-        await page.getByLabel('Size value 1').fill('Medium');
-        await page.getByLabel('Size value 2').fill('Large');
+        await page.getByLabel('Pack size value 1').fill('Medium');
+        await page.getByLabel('Pack size value 2').fill('Large');
         await page.getByRole('button', { name: 'Done', exact: true }).click();
         await expect(page.locator('input[name="variants[1][sku]"]')).toHaveValue(`VARIANT-QA-${testInfo.project.name}-NAVY-LARGE`.toUpperCase());
         await page.getByRole('button', { name: 'Remove Navy / Large' }).click();
-        await page.getByLabel('Available for Navy / Medium').fill('3');
         await expect(page.locator('input[name="variants[1][sku]"]')).toHaveCount(0);
         await expect(page.getByRole('region', { name: 'Unsaved changes' })).toHaveCount(0);
         // Saving opens a collapsed group so the browser can point at its empty required field.

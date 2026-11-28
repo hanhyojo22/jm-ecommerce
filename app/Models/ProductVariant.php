@@ -11,7 +11,7 @@ class ProductVariant extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['product_id', 'color', 'color_hex', 'size', 'sku', 'stock_quantity', 'price'];
+    protected $fillable = ['product_id', 'color', 'color_hex', 'size', 'sku', 'stock_quantity', 'price', 'pack_units'];
 
     /**
      * Swatches guessed from common color names until the seller picks one.
@@ -29,7 +29,7 @@ class ProductVariant extends Model
 
     protected function casts(): array
     {
-        return ['price' => 'decimal:2'];
+        return ['price' => 'decimal:2', 'pack_units' => 'decimal:2'];
     }
 
     public function product(): BelongsTo

@@ -164,19 +164,11 @@ class BranchInventory
             ->where('variant_key', $key)->where('status', 'active')->orderByRaw('expires_at IS NULL')->orderBy('expires_at')
             ->lockForUpdate()->get();
         $current = (int) $batches->sum('remaining_quantity');
+        // New units need a lot number and expiry date, so they arrive through ReceiveBranchStock, never a count.
         if ($count > $current) {
-            $quantity = $count - $current;
-            $batch = InventoryBatch::query()->create([
-                'store_id' => $storeId, 'product_id' => $product->id, 'product_variant_id' => $variant?->id,
-                'variant_key' => $key, 'lot_number' => 'COUNT-'.(string) Str::ulid(),
-                'received_quantity' => $quantity, 'remaining_quantity' => $quantity, 'status' => 'active',
-            ]);
-            InventoryMovement::query()->create([
-                'inventory_batch_id' => $batch->id, 'store_id' => $storeId, 'product_id' => $product->id,
-                'actor_user_id' => $actor->id, 'type' => 'adjustment', 'reason' => 'count',
-                'quantity_change' => $quantity, 'quantity_before' => 0, 'quantity_after' => $quantity,
-            ]);
-        } elseif ($count < $current) {
+            throw ValidationException::withMessages(['stock' => "A count can only lower stock. To add units of {$product->name}, receive a batch with its lot number and expiry date."]);
+        }
+        if ($count < $current) {
             $remove = $current - $count;
             foreach ($batches as $batch) {
                 if ($remove === 0) {

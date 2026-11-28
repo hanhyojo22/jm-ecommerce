@@ -173,7 +173,9 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
           ],
         ),
         child: Material(
-          color: dark ? scheme.surfaceContainerLow : scheme.surfaceContainerLowest,
+          color: dark
+              ? scheme.surfaceContainerLow
+              : scheme.surfaceContainerLowest,
           elevation: 0,
           shadowColor: Colors.transparent,
           shape: StadiumBorder(
@@ -472,8 +474,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                             child: EmptyState(
                               icon: Icons.storefront_outlined,
                               title: 'Choose your branch',
-                              message:
-                                  'We show the medicines your branch has in stock.',
+                              message: 'We show the medicines your branch has in stock.',
                               action: FilledButton(
                                 onPressed: () =>
                                     showBranchSelectorSheet(context),
@@ -745,33 +746,29 @@ class _TopDeals extends StatelessWidget {
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                // Same height for every card in the rail, buttons on one line.
-                child: IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      for (final deal in deals.take(10))
-                        Padding(
-                          padding: const EdgeInsetsDirectional.only(end: 10),
-                          child: SizedBox(
-                            width: _railCardWidth,
-                            child: ProductCard(
-                              product: deal.product,
-                              discovery: true,
-                              showAddToCart: true,
-                              fillHeight: true,
-                              stackCartControls: ProductCard.stacksCartAt(
-                                context,
-                                _railCardWidth,
-                              ),
-                              onTap: () => context.push(
-                                '/product/${deal.product.store?.slug ?? ''}/${deal.product.slug}',
-                              ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final deal in deals.take(10))
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(end: 10),
+                        child: SizedBox(
+                          width: _railCardWidth,
+                          child: ProductCard(
+                            product: deal.product,
+                            discovery: true,
+                            showAddToCart: true,
+                            stackCartControls: ProductCard.stacksCartAt(
+                              context,
+                              _railCardWidth,
+                            ),
+                            onTap: () => context.push(
+                              '/product/${deal.product.store?.slug ?? ''}/${deal.product.slug}',
                             ),
                           ),
                         ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
               ),
             ],
@@ -791,11 +788,7 @@ List<_QuickActionItem> _buildQuickActionItems({
   required VoidCallback onReorder,
 }) => [
   (label: 'Deals', icon: PhosphorIconsDuotone.sealPercent, onTap: onDeals),
-  (
-    label: 'Branches',
-    icon: PhosphorIconsDuotone.storefront,
-    onTap: onBranches,
-  ),
+  (label: 'Branches', icon: PhosphorIconsDuotone.storefront, onTap: onBranches),
   (label: 'Saved', icon: PhosphorIconsDuotone.heart, onTap: onSaved),
   (
     label: 'Reorder',
@@ -979,7 +972,10 @@ class _QuickActionsHeaderDelegate extends SliverPersistentHeaderDelegate {
                             child: Opacity(
                               opacity: expandedOpacity,
                               child: Transform.translate(
-                                offset: Offset(0, reducedMotion ? 0 : -12.0 * t),
+                                offset: Offset(
+                                  0,
+                                  reducedMotion ? 0 : -12.0 * t,
+                                ),
                                 child: Padding(
                                   padding: const EdgeInsets.fromLTRB(
                                     16,
@@ -1204,12 +1200,7 @@ class _ActiveFilterBar extends StatelessWidget {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(minHeight: 48),
                   child: Padding(
-                    padding: const EdgeInsetsDirectional.fromSTEB(
-                      12,
-                      0,
-                      14,
-                      0,
-                    ),
+                    padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 14, 0),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -1468,77 +1459,70 @@ class _ProductRail extends StatelessWidget {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            // Same height for every card in the rail, buttons on one line.
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final (index, product) in products.indexed)
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(end: 10),
-                      child: SizedBox(
-                        width: _railCardWidth,
-                        // Passthrough keeps the rail's equal heights reaching the card.
-                        child: Stack(
-                          fit: StackFit.passthrough,
-                          children: [
-                            ProductCard(
-                              product: product,
-                              discovery: true,
-                              showAddToCart: true,
-                              fillHeight: true,
-                              // Same rule as the Popular products grid: cart beside the price.
-                              stackCartControls: ProductCard.stacksCartAt(
-                                context,
-                                _railCardWidth,
-                              ),
-                              onTap: () => context.push(
-                                '/product/${product.store?.slug ?? ''}/${product.slug}',
-                              ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final (index, product) in products.indexed)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 10),
+                    child: SizedBox(
+                      width: _railCardWidth,
+                      child: Stack(
+                        children: [
+                          ProductCard(
+                            product: product,
+                            discovery: true,
+                            showAddToCart: true,
+                            // Same rule as the Popular products grid: cart beside the price.
+                            stackCartControls: ProductCard.stacksCartAt(
+                              context,
+                              _railCardWidth,
                             ),
-                            if (ranked)
-                              PositionedDirectional(
-                                start: 8,
-                                top: 8,
-                                child: Semantics(
-                                  label: 'Number ${index + 1}',
-                                  excludeSemantics: true,
-                                  child: Container(
-                                    constraints: const BoxConstraints(
-                                      minWidth: 28,
-                                      minHeight: 28,
+                            onTap: () => context.push(
+                              '/product/${product.store?.slug ?? ''}/${product.slug}',
+                            ),
+                          ),
+                          if (ranked)
+                            PositionedDirectional(
+                              start: 8,
+                              top: 8,
+                              child: Semantics(
+                                label: 'Number ${index + 1}',
+                                excludeSemantics: true,
+                                child: Container(
+                                  constraints: const BoxConstraints(
+                                    minWidth: 28,
+                                    minHeight: 28,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                  ),
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: index < 3
+                                        ? scheme.primary
+                                        : scheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(
+                                      appDetailRadius,
                                     ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                    ),
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
+                                  ),
+                                  child: Text(
+                                    '${index + 1}',
+                                    style: theme.textTheme.labelLarge?.copyWith(
                                       color: index < 3
-                                          ? scheme.primary
-                                          : scheme.surfaceContainerHighest,
-                                      borderRadius: BorderRadius.circular(
-                                        appDetailRadius,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      '${index + 1}',
-                                      style: theme.textTheme.labelLarge
-                                          ?.copyWith(
-                                            color: index < 3
-                                                ? scheme.onPrimary
-                                                : scheme.onSurface,
-                                            fontWeight: FontWeight.w800,
-                                          ),
+                                          ? scheme.onPrimary
+                                          : scheme.onSurface,
+                                      fontWeight: FontWeight.w800,
                                     ),
                                   ),
                                 ),
                               ),
-                          ],
-                        ),
+                            ),
+                        ],
                       ),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
           ),
         ],
@@ -1625,7 +1609,10 @@ List<({String name, String slug})> _sortedCategoryOptions(
 }
 
 class _CategoryCirclesStrip extends StatelessWidget {
-  const _CategoryCirclesStrip({required this.options, required this.onSelected});
+  const _CategoryCirclesStrip({
+    required this.options,
+    required this.onSelected,
+  });
 
   final List<({String name, String slug})> options;
   final ValueChanged<String?> onSelected;

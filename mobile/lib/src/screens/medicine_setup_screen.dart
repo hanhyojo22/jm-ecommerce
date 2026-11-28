@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:phosphor_icons/phosphor_icons.dart';
 
 import '../core/api_exception.dart';
 import '../models/medication.dart';
 import '../providers/auth_providers.dart';
 import '../providers/medication_providers.dart';
+import '../theme.dart';
+import '../widgets/grouped_list_card.dart';
+import '../widgets/medicine_ui.dart';
 import '../widgets/status_notice.dart';
-import 'medicines_screen.dart';
 
 /// Spreads the label's doses a day over waking hours; the buyer can change them.
 List<String> defaultDoseTimes(int? dosesPerDay) => switch (dosesPerDay) {
@@ -55,9 +58,8 @@ class _MedicineSetupScreenState extends ConsumerState<MedicineSetupScreen> {
     super.initState();
     final directions = _directions;
     _kind = directions?.medicineKind ?? 'maintenance';
-    String number(double? value) => value == null
-        ? ''
-        : (value == value.roundToDouble() ? '${value.toInt()}' : '$value');
+    String number(double? value) =>
+        value == null ? '' : formatMedicineNumber(value);
     _dose = TextEditingController(text: number(directions?.doseQuantity));
     _unit = TextEditingController(text: directions?.doseUnit ?? 'tablet');
     _courseDays = TextEditingController(
@@ -76,9 +78,17 @@ class _MedicineSetupScreenState extends ConsumerState<MedicineSetupScreen> {
     super.dispose();
   }
 
+  String get _kindHint => switch (_kind) {
+    'course' => 'Fixed reminders for the length of the course, then finished.',
+    'as_needed' =>
+      'No fixed alarms — log doses as you take them, with label safety checks.',
+    _ => 'Daily reminders plus run-out and refill heads-up.',
+  };
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final profiles = ref.watch(careProfilesProvider).value ?? const [];
     final directions = _directions;
     final needsCount = directions?.packUnits == null;
@@ -87,161 +97,309 @@ class _MedicineSetupScreenState extends ConsumerState<MedicineSetupScreen> {
       appBar: AppBar(title: const Text('Set up reminders')),
       body: Form(
         key: _form,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+        child: Column(
           children: [
-            Text(
-              widget.suggestion.productName,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              directions == null
-                  ? "The pharmacy hasn't added directions for this product. Enter the dose from the box or your doctor."
-                  : 'Filled in from the pharmacy label. Change anything your doctor told you differently.',
-              style: theme.textTheme.bodySmall,
-            ),
-            if (directions?.directionsNote != null) ...[
-              const SizedBox(height: 6),
-              Text(directions!.directionsNote!),
-            ],
-            const SizedBox(height: 20),
-            DropdownButtonFormField<String?>(
-              initialValue: _profileId,
-              decoration: const InputDecoration(labelText: 'Who is it for?'),
-              items: [
-                const DropdownMenuItem(value: null, child: Text('Me')),
-                for (final profile in profiles)
-                  DropdownMenuItem(
-                    value: profile.id,
-                    child: Text(profile.name),
-                  ),
-              ],
-              onChanged: (value) => setState(() => _profileId = value),
-            ),
-            const SizedBox(height: 16),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'maintenance', label: Text('Every day')),
-                ButtonSegment(value: 'course', label: Text('Course')),
-                ButtonSegment(value: 'as_needed', label: Text('As needed')),
-              ],
-              selected: {_kind},
-              onSelectionChanged: (value) =>
-                  setState(() => _kind = value.first),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _dose,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(labelText: 'Dose'),
-                    validator: (value) =>
-                        (double.tryParse(value?.trim() ?? '') ?? 0) <= 0
-                        ? 'Enter the dose'
-                        : null,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _unit,
-                    decoration: const InputDecoration(
-                      labelText: 'Unit',
-                      hintText: 'tablet, mL, capsule',
-                    ),
-                    validator: (value) =>
-                        (value?.trim().isEmpty ?? true) ? 'Enter a unit' : null,
-                  ),
-                ),
-              ],
-            ),
-            if (_kind != 'as_needed') ...[
-              const SizedBox(height: 16),
-              Text('Times', style: theme.textTheme.titleSmall),
-              Wrap(
-                spacing: 8,
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
                 children: [
-                  for (final time in _times)
-                    InputChip(
-                      label: Text(_label(time)),
-                      onPressed: () => _pickTime(time),
-                      onDeleted: _times.length == 1
-                          ? null
-                          : () => setState(() => _times.remove(time)),
+                  MedicineCardShell(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            GroupedIconBadge(
+                              icon: PhosphorIconsRegular.pill,
+                              tone: directions != null
+                                  ? GroupedIconTone.teal
+                                  : GroupedIconTone.primary,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.suggestion.productName,
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(
+                                          fontSize: 16.5,
+                                          fontWeight: FontWeight.w800,
+                                          height: 1.25,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  GroupedStatusPill(
+                                    label: directions != null
+                                        ? 'Prefilled from pharmacy label'
+                                        : 'Enter from box or doctor',
+                                    tone: directions != null
+                                        ? GroupedPillTone.teal
+                                        : GroupedPillTone.primary,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          directions == null
+                              ? "The pharmacy hasn't added directions for this product. Enter the dose from the box or your doctor."
+                              : 'Filled in from the pharmacy label. Change anything your doctor told you differently.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: 12.5,
+                            height: 1.45,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                        if (directions?.directionsNote != null &&
+                            directions!.directionsNote!.trim().isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          MedicineInlineAlert(
+                            icon: PhosphorIconsRegular.prescription,
+                            tone: MedicineAlertTone.teal,
+                            title: 'Pharmacy note',
+                            text: directions.directionsNote!,
+                          ),
+                        ],
+                      ],
                     ),
-                  ActionChip(
-                    avatar: const Icon(Icons.add, size: 18),
-                    label: const Text('Add time'),
-                    onPressed: () => _pickTime(null),
                   ),
+                  const SizedBox(height: 20),
+                  const MedicineSectionHeader(title: 'Person & schedule'),
+                  MedicineCardShell(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        DropdownButtonFormField<String?>(
+                          initialValue: _profileId,
+                          decoration: const InputDecoration(
+                            labelText: 'Who is it for?',
+                          ),
+                          items: [
+                            const DropdownMenuItem(
+                              value: null,
+                              child: Text('Me'),
+                            ),
+                            for (final profile in profiles)
+                              DropdownMenuItem(
+                                value: profile.id,
+                                child: Text(profile.name),
+                              ),
+                          ],
+                          onChanged: (value) =>
+                              setState(() => _profileId = value),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Schedule type',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        SegmentedButton<String>(
+                          showSelectedIcon: false,
+                          segments: const [
+                            ButtonSegment(
+                              value: 'maintenance',
+                              label: Text('Every day'),
+                            ),
+                            ButtonSegment(
+                              value: 'course',
+                              label: Text('Course'),
+                            ),
+                            ButtonSegment(
+                              value: 'as_needed',
+                              label: Text('As needed'),
+                            ),
+                          ],
+                          selected: {_kind},
+                          onSelectionChanged: (value) =>
+                              setState(() => _kind = value.first),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _kindHint,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: 12,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const MedicineSectionHeader(title: 'Dose & timing'),
+                  MedicineCardShell(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _dose,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                decoration: const InputDecoration(
+                                  labelText: 'Dose',
+                                ),
+                                validator: (value) =>
+                                    (double.tryParse(value?.trim() ?? '') ??
+                                            0) <=
+                                        0
+                                    ? 'Enter the dose'
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _unit,
+                                decoration: const InputDecoration(
+                                  labelText: 'Unit',
+                                  hintText: 'tablet, mL, capsule',
+                                ),
+                                validator: (value) =>
+                                    (value?.trim().isEmpty ?? true)
+                                    ? 'Enter a unit'
+                                    : null,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_kind != 'as_needed') ...[
+                          const SizedBox(height: 16),
+                          Text(
+                            'Reminder times',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (final time in _times)
+                                InputChip(
+                                  avatar: Icon(
+                                    PhosphorIconsRegular.clock,
+                                    size: 16,
+                                    color: scheme.primary,
+                                  ),
+                                  label: Text(
+                                    formatMedicineTime(time),
+                                    style: const TextStyle(
+                                      fontFamily: appFontFamily,
+                                      fontFeatures: [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                    ),
+                                  ),
+                                  onPressed: () => _pickTime(time),
+                                  onDeleted: _times.length == 1
+                                      ? null
+                                      : () =>
+                                            setState(() => _times.remove(time)),
+                                ),
+                              ActionChip(
+                                avatar: const Icon(
+                                  PhosphorIconsRegular.plus,
+                                  size: 16,
+                                ),
+                                label: const Text('Add time'),
+                                onPressed: () => _pickTime(null),
+                              ),
+                            ],
+                          ),
+                        ],
+                        if (_kind == 'course') ...[
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _courseDays,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'How many days?',
+                            ),
+                            validator: (value) =>
+                                (int.tryParse(value ?? '') ?? 0) < 1
+                                ? 'Enter the number of days'
+                                : null,
+                          ),
+                        ],
+                        if (needsCount) ...[
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _onHand,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'How many did you receive?',
+                              helperText: 'For example 30 tablets or 60 mL',
+                            ),
+                            validator: (value) =>
+                                double.tryParse(value?.trim() ?? '') == null
+                                ? 'Enter how many you received'
+                                : null,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  GroupedSection(
+                    label: 'Lock screen privacy',
+                    children: [
+                      GroupedSwitchTile(
+                        icon: PhosphorIconsRegular.eyeSlash,
+                        tone: GroupedIconTone.neutral,
+                        title: 'Show the medicine name on the lock screen',
+                        subtitle:
+                            'Off: reminders just say "Time for your medicine".',
+                        value: _showName,
+                        onChanged: (value) => setState(() => _showName = value),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const MedicineDisclaimerNote(),
                 ],
               ),
-            ],
-            if (_kind == 'course') ...[
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _courseDays,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'How many days?'),
-                validator: (value) => (int.tryParse(value ?? '') ?? 0) < 1
-                    ? 'Enter the number of days'
-                    : null,
-              ),
-            ],
-            if (needsCount) ...[
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _onHand,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: 'How many did you receive?',
-                  helperText: 'For example 30 tablets or 60 mL',
-                ),
-                validator: (value) =>
-                    double.tryParse(value?.trim() ?? '') == null
-                    ? 'Enter how many you received'
-                    : null,
-              ),
-            ],
-            const SizedBox(height: 8),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Show the medicine name on the lock screen'),
-              subtitle: const Text(
-                'Off: reminders just say "Time for your medicine".',
-              ),
-              value: _showName,
-              onChanged: (value) => setState(() => _showName = value),
             ),
-            const SizedBox(height: 8),
-            Text(directionsDisclaimer, style: theme.textTheme.bodySmall),
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: _saving ? null : _save,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
+            MedicineBottomBar(
+              child: FilledButton(
+                onPressed: _saving ? null : _save,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                ),
+                child: _saving
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          color: scheme.onPrimary,
+                        ),
+                      )
+                    : const Text('Save reminders'),
               ),
-              child: const Text('Save reminders'),
             ),
           ],
         ),
       ),
     );
-  }
-
-  String _label(String hhmm) {
-    final parts = hhmm.split(':');
-    return DateFormat('h:mm a')
-        .format(DateTime(2000, 1, 1, int.parse(parts[0]), int.parse(parts[1])));
   }
 
   Future<void> _pickTime(String? current) async {
