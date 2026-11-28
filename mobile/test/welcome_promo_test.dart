@@ -99,7 +99,7 @@ void main() {
     },
   );
 
-  for (final dismissal in ['close', 'back', 'outside']) {
+  for (final dismissal in ['close', 'back', 'outside', 'continue browsing']) {
     testWidgets('$dismissal dismisses the promo permanently', (tester) async {
       await _pumpApp(tester, signedIn: false);
       expect(shown, isTrue);
@@ -110,6 +110,9 @@ void main() {
           await tester.binding.handlePopRoute();
         case 'outside':
           await tester.tapAt(const Offset(5, 5));
+        case 'continue browsing':
+          await tester.ensureVisible(find.text('Continue browsing'));
+          await tester.tap(find.text('Continue browsing'));
       }
       await tester.pumpAndSettle();
       expect(find.byType(WelcomePromoDialog), findsNothing);
@@ -161,10 +164,12 @@ void main() {
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
       expect(find.byType(WelcomePromoDialog), findsOneWidget);
+      expect(find.byTooltip('Close promotion').hitTestable(), findsOneWidget);
       expect(
         tester.getSize(find.byType(FilledButton)).height,
         greaterThanOrEqualTo(48),
       );
+      expect(find.byType(FilledButton).hitTestable(), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.tap(find.byTooltip('Close promotion'));
       await tester.pumpAndSettle();
