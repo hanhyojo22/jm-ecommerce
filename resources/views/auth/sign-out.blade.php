@@ -7,7 +7,7 @@
             await window.unsubscribeWebPush?.();
             const secure = window.location.protocol === 'https:' ? '; Secure' : '';
             document.cookie = `__session=; Max-Age=0; path=/${secure}; SameSite=Lax`;
-            window.clerk.signOut({ redirectUrl: '/' });
+            window.clerk.signOut({ redirectUrl: @js($redirect ?? '/') });
         }, { once: true });
     </script>
 </x-guest-layout>

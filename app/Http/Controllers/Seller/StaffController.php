@@ -55,7 +55,7 @@ class StaffController extends Controller
         } catch (Throwable $exception) {
             $reporter->report($exception, $request);
 
-            return to_route('seller.staff.index')->with('status', "Added {$email}, but the invitation email could not be sent. Ask them to sign in with that email within ".TenantMember::INVITATION_DAYS.' days.');
+            return to_route('seller.staff.index')->with('status', "Added {$email}, but the invitation email could not be sent. Remove them and add them again to resend it.");
         }
 
         return to_route('seller.staff.index')->with('status', "Invitation sent to {$email}. They have ".TenantMember::INVITATION_DAYS.' days to sign in with that email.');

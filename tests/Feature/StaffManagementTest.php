@@ -34,14 +34,16 @@ class StaffManagementTest extends TestCase
         $this->actingAs($owner)->post(route('seller.staff.store'), ['email' => 'New.Clerk@Example.com', 'role' => 'staff', 'store_id' => $branch->id])
             ->assertSessionHas('status', 'Invitation sent to new.clerk@example.com. They have 14 days to sign in with that email.');
 
+        // The link opens the sign-up form, which is what accepts Clerk's invitation ticket.
         Http::assertSent(fn ($request): bool => $request['email_address'] === 'new.clerk@example.com'
+            && $request['redirect_url'] === url('/sign-up')
             && $request['expires_in_days'] === TenantMember::INVITATION_DAYS
             && $request['ignore_existing'] === true);
 
         // Clerk being down never loses the employee; the owner is told to pass the word on.
         $this->clerkInvitationStatus = 500;
         $this->actingAs($owner)->post(route('seller.staff.store'), ['email' => 'second@example.com', 'role' => 'staff', 'store_id' => $branch->id])
-            ->assertSessionHas('status', fn (string $status): bool => str_contains($status, 'could not be sent'));
+            ->assertSessionHas('status', 'Added second@example.com, but the invitation email could not be sent. Remove them and add them again to resend it.');
         $this->assertDatabaseHas('tenant_members', ['user_id' => User::query()->where('email', 'second@example.com')->value('id')]);
     }
 
