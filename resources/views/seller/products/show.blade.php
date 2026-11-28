@@ -58,7 +58,9 @@
                             <div><dt>{{ $branch ? 'Stock at '.$branch->name : 'Company inventory' }}</dt><dd>{{ number_format($branch ? $product->branchStocks->sum('quantity') : $product->stock_quantity) }} in stock</dd></div>
                             <div><dt>SKU</dt><dd class="break-all">{{ $product->sku }}</dd></div>
                             <div><dt>Category</dt><dd>{{ $product->category?->name ?? 'Uncategorized' }}</dd></div>
-                            <div><dt>Condition</dt><dd>{{ ucfirst($product->condition ?? 'new') }}</dd></div>
+                            <div><dt>Product type</dt><dd>{{ \App\Models\Product::DRUG_CLASSES[$product->drug_class] ?? 'Not a medicine' }}</dd></div>
+                            @if ($product->fda_registration_number)<div><dt>FDA reg. no.</dt><dd class="break-all">{{ $product->fda_registration_number }}</dd></div>@endif
+                            @if ($product->storage_instructions)<div><dt>Storage</dt><dd>{{ $product->storage_instructions }}</dd></div>@endif
                             @if ($product->brand)<div><dt>Brand</dt><dd>{{ $product->brand }}</dd></div>@endif
                             @if ($product->variants->isNotEmpty())<div><dt>Options</dt><dd>{{ $product->variants->count() }} {{ Str::plural('option', $product->variants->count()) }}</dd></div>@endif
                         </dl>
@@ -67,7 +69,7 @@
                             @if ($product->description)
                                 <p class="pd-description">{{ $product->description }}</p>
                             @else
-                                <p class="pe-empty">No description yet. Buyers look for materials, size and what is in the box.</p>
+                                <p class="pe-empty">No description yet. Buyers look for what it is for, directions, warnings and what is in the pack.</p>
                             @endif
                         </div>
                     </div>

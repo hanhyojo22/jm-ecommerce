@@ -14,11 +14,11 @@ class SeniorPwdDiscount
     public const CARD_TYPES = ['senior' => 'Senior citizen', 'pwd' => 'PWD'];
 
     /**
-     * Medicines are what the law discounts; a product with a generic name is a medicine here.
+     * Medicines are what the law discounts; the seller's drug class says whether a product is one.
      */
     public static function appliesTo(Product $product): bool
     {
-        return filled($product->generic_name);
+        return $product->isMedicine();
     }
 
     /**

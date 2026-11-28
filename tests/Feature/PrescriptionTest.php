@@ -335,7 +335,7 @@ class PrescriptionTest extends TestCase
 
     public function test_combined_prescription_and_discount_documents_keep_their_reviews_separate(): void
     {
-        $this->medicine->update(['generic_name' => 'Amoxicillin']);
+        $this->medicine->update(['generic_name' => 'Amoxicillin', 'drug_class' => 'rx']);
         $order = $this->checkOut([
             'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-5501', 'name' => 'Patient'],
             'discount_document' => UploadedFile::fake()->image('pwd.jpg'),

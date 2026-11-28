@@ -45,7 +45,7 @@ class PharmacySeeder extends Seeder
                     'dosage_form' => $form,
                     'strength' => $strength,
                     'manufacturer' => 'Sample Laboratories',
-                    'requires_prescription' => $rx,
+                    'drug_class' => $rx ? 'rx' : 'otc',
                     'sku' => 'RX-'.str_pad((string) ($index + 1), 3, '0', STR_PAD_LEFT),
                     'description' => "{$name}. Sample medicine for the Everyday Pharmacy test server.",
                     'price' => number_format($price, 2, '.', ''),

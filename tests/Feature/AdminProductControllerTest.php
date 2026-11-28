@@ -36,6 +36,23 @@ class AdminProductControllerTest extends TestCase
             ->assertDontSee($otherProduct->name);
     }
 
+    public function test_administrator_finds_new_prescription_listings_by_type(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $store = $this->store('Northwind Pharmacy');
+        $this->product($store, 'Amoxicillin 500 mg', 'AMX-500', 'active')->update(['drug_class' => 'rx', 'generic_name' => 'Amoxicillin']);
+        $this->product($store, 'Old Losartan', 'LOS-50', 'active')->forceFill(['drug_class' => 'rx', 'created_at' => now()->subDays(20)])->save();
+        $this->product($store, 'Paracetamol 500 mg', 'PARA-500', 'active')->update(['drug_class' => 'otc']);
+
+        $this->actingAs($administrator)->get(route('admin.products.index', ['drug_class' => 'rx', 'added' => 'last_7_days']))
+            ->assertOk()
+            ->assertSee('Amoxicillin 500 mg')
+            ->assertSee('>Rx</span>', false)
+            ->assertDontSee('Old Losartan')
+            ->assertDontSee('Paracetamol 500 mg');
+        $this->get(route('admin.products.index', ['drug_class' => 'none']))->assertDontSee('Amoxicillin 500 mg');
+    }
+
     public function test_administrator_can_view_product_details_and_recorded_listing_history(): void
     {
         $administrator = User::factory()->administrator()->create();

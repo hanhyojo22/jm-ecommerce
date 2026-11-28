@@ -37,6 +37,11 @@ class OrderItem extends Model
         return $this->belongsTo(Product::class);
     }
 
+    public function variant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+    }
+
     public function sellerOrder(): BelongsTo
     {
         return $this->belongsTo(SellerOrder::class);
@@ -49,13 +54,17 @@ class OrderItem extends Model
 
     /**
      * The directions a reminder for this purchase starts from: the pharmacist's override from the
-     * prescription review, otherwise the product's current label directions.
+     * prescription review, otherwise the product's current label directions. A pack-size variant's
+     * own units per pack win, since a box of 30 holds more than a box of 10.
      *
      * @return array<string, mixed>|null
      */
     public function medicationDirections(): ?array
     {
-        return $this->medication_directions ?? $this->product?->medicationDirections();
+        $directions = $this->medication_directions ?? $this->product?->medicationDirections();
+        $variantPackUnits = $this->product_variant_id === null ? null : $this->variant?->pack_units;
+
+        return $directions === null || $variantPackUnits === null ? $directions : [...$directions, 'pack_units' => $variantPackUnits];
     }
 
     public function medicationPlans(): BelongsToMany

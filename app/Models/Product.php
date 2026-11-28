@@ -18,12 +18,62 @@ class Product extends Model
     public const STATUSES = ['draft' => 'Draft', 'pending' => 'Pending review', 'active' => 'Published', 'changes_required' => 'Changes required', 'rejected' => 'Rejected', 'inactive' => 'Suspended', 'unlisted' => 'Unlisted'];
 
     /** Fields buyers read as the listing's claims; editing them on a live listing asks an administrator to re-check it. */
-    public const REVIEWED_FIELDS = ['name', 'description', 'category_id', 'brand', 'condition'];
+    public const REVIEWED_FIELDS = ['name', 'description', 'category_id', 'brand', 'condition', 'drug_class', 'generic_name', 'strength', 'fda_registration_number'];
+
+    /**
+     * Drug classes; a product with none is not a medicine. Prescription and dangerous drugs need a
+     * prescription, and a dangerous drug (S2 licence, yellow prescription) is never sold online.
+     */
+    public const DRUG_CLASSES = ['otc' => 'Over-the-counter medicine', 'rx' => 'Prescription medicine', 'dangerous' => 'Dangerous drug (S2)'];
 
     protected $fillable = [
         'tenant_id', 'store_id', 'category_id', 'name', 'generic_name', 'search_keywords', 'dosage_form', 'strength', 'slug', 'sku', 'description', 'price', 'compare_at_price', 'brand', 'manufacturer', 'requires_prescription', 'switch_with_care', 'condition', 'free_shipping', 'stock_quantity', 'status', 'moderation_reason', 'content_changed_at',
         'medicine_kind', 'pack_units', 'dose_quantity', 'dose_unit', 'doses_per_day', 'course_days', 'min_hours_between', 'max_doses_per_day', 'directions_note',
+        'drug_class', 'fda_registration_number', 'storage_instructions',
     ];
+
+    /**
+     * Drug class decides whether a prescription is needed, so the flag is never set on its own.
+     */
+    protected function drugClass(): Attribute
+    {
+        return Attribute::make(set: fn (?string $value): array => [
+            'drug_class' => blank($value) ? null : $value,
+            'requires_prescription' => in_array($value, ['rx', 'dangerous'], true),
+        ]);
+    }
+
+    /**
+     * FDA registration numbers are stored trimmed and uppercase ("DR-XY12345"). Formats vary by
+     * product type, so only the length is checked.
+     */
+    protected function fdaRegistrationNumber(): Attribute
+    {
+        return Attribute::make(set: fn (?string $value): ?string => blank($value) ? null : mb_strtoupper(preg_replace('/\s+/u', ' ', trim($value))));
+    }
+
+    public function isMedicine(): bool
+    {
+        return $this->drug_class !== null;
+    }
+
+    public function isDangerousDrug(): bool
+    {
+        return $this->drug_class === 'dangerous';
+    }
+
+    /**
+     * Why this listing cannot go on sale, or null when it can. Every path to "active" (publish, relist,
+     * an administrator's restore or approval) asks this.
+     */
+    public function publicationBlocker(): ?string
+    {
+        if ($this->isDangerousDrug()) {
+            return 'Dangerous drugs (S2) cannot be sold online. Keep this listing as a draft for your records.';
+        }
+
+        return null;
+    }
 
     /**
      * Keywords are stored lowercase, trimmed and without repeats ("lagnat, sakit ng ulo"), so search
@@ -76,7 +126,7 @@ class Product extends Model
             'pending' => ['active' => 'Approve and publish', 'changes_required' => 'Request changes', 'rejected' => 'Reject listing'],
             'active' => [...($this->content_changed_at ? ['active' => 'Approve edits'] : []), 'inactive' => 'Suspend listing'],
             'unlisted' => [...($this->content_changed_at ? ['unlisted' => 'Approve edits'] : []), 'inactive' => 'Suspend listing'],
-            'inactive' => ['active' => 'Restore publication'],
+            'inactive' => $this->publicationBlocker() === null ? ['active' => 'Restore publication'] : [],
             default => [],
         };
     }

@@ -341,6 +341,7 @@ class BranchAccessTest extends TestCase
         [$tenant, $makati, $cebu] = $this->pharmacy();
         $product = $this->product($tenant, $makati, 'Paracetamol 500mg');
         $staff = $this->member($tenant, 'staff', $makati);
+        $makati->branchStocks()->create(['product_id' => $product->id, 'variant_key' => 'default', 'quantity' => 50]);
 
         // The branch in the request is ignored for branch staff: the count lands on their own branch.
         $this->actingAs($staff)
@@ -355,6 +356,22 @@ class BranchAccessTest extends TestCase
             ->assertOk()
             ->assertSee('Stock at Botika Plus Makati')
             ->assertSee('value="40"', false);
+    }
+
+    public function test_a_stock_count_cannot_add_units_without_a_lot_and_expiry(): void
+    {
+        [$tenant, $makati] = $this->pharmacy();
+        $product = $this->product($tenant, $makati, 'Paracetamol 500mg');
+        $staff = $this->member($tenant, 'staff', $makati);
+        $makati->branchStocks()->create(['product_id' => $product->id, 'variant_key' => 'default', 'quantity' => 10]);
+
+        $this->actingAs($staff)
+            ->patch(route('seller.branch-stock.update'), ['stock' => [$product->id => ['default' => 25]]])
+            ->assertSessionHasErrors('stock');
+
+        $this->assertSame(10, $makati->branchStocks()->sole()->quantity);
+        $this->assertDatabaseMissing('inventory_batches', ['product_id' => $product->id, 'received_quantity' => 15]);
+        $this->assertDatabaseMissing('audit_logs', ['action' => 'branch_stock.counted']);
     }
 
     public function test_branch_stock_receiving_and_adjustments_are_scoped_and_audited(): void
@@ -396,6 +413,7 @@ class BranchAccessTest extends TestCase
         $otherBranch = $this->otherCompanyBranch();
         $otherProduct = $this->product($otherBranch->tenant, $otherBranch, 'Foreign Syrup');
         $headOffice = $this->member($tenant, 'manager');
+        $cebu->branchStocks()->create(['product_id' => $product->id, 'variant_key' => 'default', 'quantity' => 20]);
 
         $this->actingAs($headOffice)
             ->patch(route('seller.branch-stock.update', ['branch' => $cebu->id]), ['stock' => [$product->id => ['default' => 12]]])

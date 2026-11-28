@@ -23,6 +23,9 @@ class ProductResource extends ProductSummaryResource
             ...parent::toArray($request),
             'description' => $this->description,
             'sku' => $this->sku,
+            'drug_class' => $this->drug_class,
+            'fda_registration_number' => $this->fda_registration_number,
+            'storage_instructions' => $this->storage_instructions,
             'images' => $this->whenLoaded('images', fn (): array => $this->images
                 ->map(fn (ProductImage $image): array => [
                     'url' => Storage::disk('product_images')->url($image->path),

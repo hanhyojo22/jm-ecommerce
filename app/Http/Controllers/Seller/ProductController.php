@@ -12,7 +12,6 @@ use App\Models\Category;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductImage;
-use App\Models\Store;
 use App\Models\Tenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -112,9 +111,9 @@ class ProductController extends Controller
         $data = $request->validated();
         $variants = $data['variants'] ?? [];
         unset($data['image'], $data['images'], $data['variants']);
-        if ($variants !== []) {
-            $data['stock_quantity'] = array_sum(array_column($variants, 'stock_quantity'));
-        }
+        // A new product starts at zero everywhere; branches receive it on Branch stock with a lot number and expiry date.
+        $data['stock_quantity'] = 0;
+        $variants = array_map(fn (array $variant): array => [...$variant, 'stock_quantity' => 0], $variants);
         $imagePaths = [];
         $variantImagePaths = [];
 
@@ -146,10 +145,6 @@ class ProductController extends Controller
                     foreach ($variantImagePaths[$index] ?? [] as $path) {
                         $product->images()->create(['path' => $path, 'position' => $position++, 'color' => $savedVariant->color]);
                     }
-                    $this->openingStock($store, $product, $savedVariant->id, (int) $variant['stock_quantity']);
-                }
-                if ($variants === []) {
-                    $this->openingStock($store, $product, null, (int) $data['stock_quantity']);
                 }
 
                 AuditLog::query()->create([
@@ -157,7 +152,7 @@ class ProductController extends Controller
                     'action' => 'product.created',
                     'entity_type' => Product::class,
                     'entity_id' => $product->id,
-                    'new_values' => $product->only(['name', 'generic_name', 'search_keywords', 'strength', 'requires_prescription', 'switch_with_care', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']),
+                    'new_values' => $product->only(['name', 'generic_name', 'search_keywords', 'strength', 'requires_prescription', 'drug_class', 'fda_registration_number', 'switch_with_care', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']),
                     'ip_address' => $request->ip(),
                 ]);
 
@@ -224,11 +219,14 @@ class ProductController extends Controller
                 $isLive = in_array($product->status, ['active', 'unlisted'], true);
                 $detailsWereComplete = filled($product->description) && $product->category_id !== null;
                 $photosWereComplete = $product->images()->exists() && ! $product->hasVariantsWithoutPhotos();
+                if ($product->status === 'active' && (array_key_exists('drug_class', $data) ? $data['drug_class'] : $product->drug_class) === 'dangerous') {
+                    throw ValidationException::withMessages(['drug_class' => 'Dangerous drugs (S2) cannot be sold online. Unlist this listing before you change its type.']);
+                }
                 if ($isLive && $detailsWereComplete && (! filled($data['description'] ?? null) || empty($data['category_id']))) {
                     throw ValidationException::withMessages(['status' => 'A published listing needs a category, description, and product photo.']);
                 }
 
-                $oldValues = $product->only(['name', 'generic_name', 'search_keywords', 'strength', 'requires_prescription', 'switch_with_care', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']);
+                $oldValues = $product->only(['name', 'generic_name', 'search_keywords', 'strength', 'requires_prescription', 'drug_class', 'fda_registration_number', 'switch_with_care', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']);
                 $sharedPhotoOrder = $product->images()->whereNull('color')->pluck('id')->all();
                 $data['status'] = in_array($product->status, ['active', 'unlisted', 'inactive'], true) ? $product->status : 'draft';
                 $product->fill($data);
@@ -280,7 +278,7 @@ class ProductController extends Controller
                     'entity_type' => Product::class,
                     'entity_id' => $product->id,
                     'old_values' => $oldValues,
-                    'new_values' => $product->only(['name', 'generic_name', 'search_keywords', 'strength', 'requires_prescription', 'switch_with_care', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']),
+                    'new_values' => $product->only(['name', 'generic_name', 'search_keywords', 'strength', 'requires_prescription', 'drug_class', 'fda_registration_number', 'switch_with_care', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']),
                     'ip_address' => $request->ip(),
                 ]);
             });
@@ -315,7 +313,13 @@ class ProductController extends Controller
                 throw ValidationException::withMessages(['status' => 'Add a category, description, and product photo before publishing.']);
             }
             if ($product->hasVariantsWithoutPhotos()) {
-                throw ValidationException::withMessages(['status' => 'Add photos for every color or upload a shared product photo before publishing.']);
+                throw ValidationException::withMessages(['status' => 'Add photos for every flavor or type, or upload a shared product photo before publishing.']);
+            }
+            if ($product->publicationBlocker() !== null) {
+                throw ValidationException::withMessages(['status' => $product->publicationBlocker()]);
+            }
+            if ($product->isMedicine() && (! filled($product->generic_name) || ! filled($product->fda_registration_number))) {
+                throw ValidationException::withMessages(['status' => 'Add the generic name and FDA registration number before publishing a medicine.']);
             }
             $oldStatus = $product->status;
             $product->update(['status' => 'active', 'moderation_reason' => null]);
@@ -353,6 +357,9 @@ class ProductController extends Controller
             $product = Product::query()->lockForUpdate()->findOrFail($product->id);
             if ($product->status !== 'unlisted') {
                 throw ValidationException::withMessages(['status' => 'Only an unlisted listing can be relisted.']);
+            }
+            if ($product->publicationBlocker() !== null) {
+                throw ValidationException::withMessages(['status' => $product->publicationBlocker()]);
             }
             $product->update(['status' => 'active']);
             AuditLog::query()->create(['actor_user_id' => $request->user()->id, 'action' => 'product.relisted', 'entity_type' => Product::class, 'entity_id' => $product->id, 'old_values' => ['status' => 'unlisted'], 'new_values' => ['status' => 'active'], 'ip_address' => $request->ip()]);
@@ -419,16 +426,6 @@ class ProductController extends Controller
         $this->authorize('update', $product);
 
         return $product;
-    }
-
-    /**
-     * Puts a new product's starting count at the first branch; later counts are made per branch.
-     */
-    private function openingStock(Store $branch, Product $product, ?string $variantId, int $quantity): void
-    {
-        if ($quantity > 0) {
-            app(BranchInventory::class)->put($branch->id, $product, $variantId === null ? null : $product->variants()->find($variantId), $quantity);
-        }
     }
 
     private function canManageProducts(Request $request, Tenant $tenant): bool

@@ -43,7 +43,7 @@ test('variant photos are shared by every size of their color, from the seller fo
         await seller.page.getByLabel('Price', { exact: true }).fill('20');
         await seller.page.getByLabel('SKU (Stock Keeping Unit)').fill('QA-SHIRT');
         await seller.page.getByLabel('Category', { exact: true }).selectOption({ index: 1 });
-        await seller.page.getByRole('button', { name: 'Add options like size or color' }).click();
+        await seller.page.getByRole('button', { name: 'Add pack sizes or flavors' }).click();
         await addOption(seller.page, ['White', 'Black']);
         await seller.page.getByRole('button', { name: 'Add another option' }).click();
         await addOption(seller.page, ['S', 'M']);
@@ -55,9 +55,6 @@ test('variant photos are shared by every size of their color, from the seller fo
         await variantRow(seller.page, 'Black / S').locator('input[type="file"]').setInputFiles(blackPhoto);
         await expect(variantRow(seller.page, 'White / M').locator('.ps-variant-media img')).toHaveAttribute('src', /^blob:/);
         await expect(seller.page.locator('.ps-checks li.is-done').filter({ hasText: 'At least one photo' })).toHaveCount(1);
-        for (const label of ['White / S', 'White / M', 'Black / S', 'Black / M']) {
-            await seller.page.getByLabel(`Available for ${label}`, { exact: true }).fill('3');
-        }
         await seller.page.locator('.ps-footer').getByRole('button').last().click();
         await expect(seller.page).toHaveURL(/\/seller\/products$/);
 
@@ -66,6 +63,11 @@ test('variant photos are shared by every size of their color, from the seller fo
         await expect(variantRow(seller.page, 'White / M').locator('.ps-variant-media img')).toHaveAttribute('src', /\/products\//);
         await expect(variantRow(seller.page, 'Black / M').locator('.ps-variant-media img')).toHaveAttribute('src', /\/products\//);
         await expect(seller.page.getByRole('button', { name: 'Manage photos' })).toHaveCount(2);
+
+        // A new listing starts at zero; the branch receives each option with a lot number and expiry date.
+        for (const option of ['White / S', 'White / M', 'Black / S', 'Black / M']) {
+            await receiveStock(seller.page, productName, option);
+        }
 
         // No shared photo, but every color has one, so the listing can be submitted.
         await seller.page.goto(`/seller/products?search=${encodeURIComponent(productName)}`);
@@ -105,15 +107,25 @@ test('variant photos are shared by every size of their color, from the seller fo
     }
 });
 
+async function receiveStock(page, product, option) {
+    await page.goto('/seller/branch-stock');
+    await page.locator('#receive-product').selectOption({ label: product });
+    await page.locator('#receive-variant').selectOption({ label: option });
+    await page.locator('#receive-lot').fill(`QA-${option.replace(/\W+/g, '')}`);
+    await page.locator('#receive-quantity').fill('3');
+    await page.locator('#receive-expiry').fill(new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10));
+    await page.getByRole('button', { name: 'Receive stock' }).click();
+    await expect(page.getByText('Stock batch received.')).toBeVisible();
+}
+
 async function createColorOnlyProduct(page, name, sku) {
     await page.goto('/seller/products/create');
     await dismissCookies(page);
     await page.getByLabel('Title', { exact: true }).fill(name);
     await page.getByLabel('Price', { exact: true }).fill('20');
     await page.getByLabel('SKU (Stock Keeping Unit)').fill(sku);
-    await page.getByRole('button', { name: 'Add options like size or color' }).click();
+    await page.getByRole('button', { name: 'Add pack sizes or flavors' }).click();
     await addOption(page, ['Black', 'White']);
-    await page.getByLabel('Available for Black', { exact: true }).fill('2');
     await page.getByLabel('SKU for Black', { exact: true }).fill(`${sku}-BLACK`);
     await page.locator('.ps-footer').getByRole('button').last().click();
     await expect(page).toHaveURL(/\/seller\/products$/);
@@ -130,10 +142,10 @@ test('sizes can be added to a saved color-only product, and saved variants keep 
         // Pressing Done moves each saved color onto its first new size.
         await createColorOnlyProduct(seller.page, 'QA Adopt Done', 'QA-DONE');
         await seller.page.getByRole('button', { name: 'Add another option' }).click();
-        await expect(seller.page.getByText('Each saved variant becomes the first size you add')).toBeVisible();
+        await expect(seller.page.getByText('Each saved variant becomes the first pack size you add')).toBeVisible();
         await addOption(seller.page, ['M', 'L', 'XL']);
         await expect(seller.page.getByLabel('SKU for Black / M', { exact: true })).toHaveValue('QA-DONE-BLACK');
-        await expect(seller.page.getByLabel('Available for Black / M', { exact: true })).toHaveValue('2');
+        await expect(seller.page.getByLabel('Available for Black / M', { exact: true })).toHaveValue('0');
         await seller.page.getByRole('button', { name: 'Remove White / XL', exact: true }).click();
         await seller.page.locator('.ps-footer').getByRole('button').last().click();
         await expect(seller.page).toHaveURL(/\/seller\/products$/);
@@ -169,14 +181,13 @@ test('a color cannot take more than four photos across its sizes', async ({ brow
         await seller.page.getByLabel('Title', { exact: true }).fill('QA Crowded Shirt');
         await seller.page.getByLabel('Price', { exact: true }).fill('20');
         await seller.page.getByLabel('SKU (Stock Keeping Unit)').fill('QA-CROWDED');
-        await seller.page.getByRole('button', { name: 'Add options like size or color' }).click();
+        await seller.page.getByRole('button', { name: 'Add pack sizes or flavors' }).click();
         await addOption(seller.page, ['White']);
         await variantRow(seller.page, 'White').locator('input[type="file"]').setInputFiles([whitePhoto, whitePhoto, whitePhoto, whitePhoto, whitePhoto]);
 
         // The fifth file is dropped before upload, so the save goes through with four.
         await expect(variantRow(seller.page, 'White').locator('.ps-variant-media-count')).toHaveText('4');
-        await expect(seller.page.getByText('Each color can have up to 4 photos. 4 photos were added for White.')).toBeVisible();
-        await seller.page.getByLabel('Available for White', { exact: true }).fill('1');
+        await expect(seller.page.getByText('Each flavor or type can have up to 4 photos. 4 photos were added for White.')).toBeVisible();
         await seller.page.locator('.ps-footer').getByRole('button').last().click();
 
         await expect(seller.page).toHaveURL(/\/seller\/products$/);

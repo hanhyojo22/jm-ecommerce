@@ -80,7 +80,7 @@ class PlaywrightQaSeeder extends Seeder
         }
 
         $product = $this->product($tenant, $store, $category, 'QA Canvas Tote', 'qa-canvas-tote', 'QA-TOTE-001', '19.99', 25);
-        $this->product($tenant, $store, $category, 'QA Amoxicillin 500 mg', 'qa-amoxicillin', 'QA-RX-001', '15.00', 30)->update(['requires_prescription' => true, 'generic_name' => 'Amoxicillin', 'dosage_form' => 'Capsule', 'strength' => '500 mg']);
+        $this->product($tenant, $store, $category, 'QA Amoxicillin 500 mg', 'qa-amoxicillin', 'QA-RX-001', '15.00', 30)->update(['drug_class' => 'rx', 'generic_name' => 'Amoxicillin', 'dosage_form' => 'Capsule', 'strength' => '500 mg']);
         $chatProduct = $this->product($tenant, $store, $category, 'QA Chat Sample', 'qa-chat-sample', 'QA-CHAT-001', '24.99', 10);
         $this->product($otherTenant, $otherStore, $category, 'Other Seller QA Product', 'other-qa-product', 'QA-OTHER-001', '39.99', 10);
         $historyProduct = $this->product($otherTenant, $otherStore, $category, 'QA History Sample', 'qa-history-sample', 'QA-HISTORY-001', '29.99', 10);

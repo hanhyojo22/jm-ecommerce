@@ -31,6 +31,20 @@ trait ValidatesMedicineDirections
         ];
     }
 
+    /**
+     * Medicines show their generic name (Generics Act labelling), so every medicine, and anything
+     * with reminder directions, needs it.
+     *
+     * @return list<mixed>
+     */
+    protected function genericNameRules(): array
+    {
+        return [
+            Rule::requiredIf(fn (): bool => filled($this->input('drug_class')) || in_array($this->input('medicine_kind'), ['maintenance', 'course', 'as_needed'], true)),
+            'nullable', 'string', 'max:160',
+        ];
+    }
+
     public static function validateMedicineDirections(Validator $validator): void
     {
         $data = $validator->getData();

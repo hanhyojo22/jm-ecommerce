@@ -683,7 +683,7 @@ select.pe-input { padding-right: 36px; }
 .ps-link:hover { text-decoration: underline; }
 
 .ps-variants { margin-top: 20px; border-top: 1px solid var(--ps-card-line); }
-.ps-variant-head, .ps-variant-line { display: grid; grid-template-columns: 44px minmax(0, 1fr) 128px 92px 150px 36px; align-items: center; gap: 10px; padding: 0 24px; }
+.ps-variant-head, .ps-variant-line { display: grid; grid-template-columns: 44px minmax(0, 1fr) 116px 84px 84px 140px 36px; align-items: center; gap: 10px; padding: 0 24px; }
 .ps-variant-head { min-height: 40px; color: #7a8ba3; font-size: 12.5px; font-weight: 600; }
 .ps-variant-head > :first-child { grid-column: span 2; }
 .ps-variant { border-top: 1px solid var(--sc-line-soft); transition: background-color .15s; }
@@ -711,14 +711,15 @@ select.pe-input { padding-right: 36px; }
 .ps-variant-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--ps-card-line); background: var(--ps-field); padding: 14px 24px; color: var(--sc-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 @media (max-width: 767px) {
     .ps-variant-head { display: none; }
-    .ps-variant-line { grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) 36px; grid-template-areas: 'media name name remove' 'price price stock stock' 'sku sku sku sku'; row-gap: 8px; }
+    .ps-variant-line { grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) 36px; grid-template-areas: 'media name name remove' 'price price units units' 'stock stock sku sku'; row-gap: 8px; }
     .ps-cell-label { display: block; margin-bottom: 4px; color: var(--sc-muted); font-size: 12px; font-weight: 600; }
-    .ps-variant-line > :nth-child(1) { grid-area: media; }
-    .ps-variant-line > :nth-child(2) { grid-area: name; }
-    .ps-variant-line > :nth-child(3) { grid-area: price; }
-    .ps-variant-line > :nth-child(4) { grid-area: stock; }
-    .ps-variant-line > :nth-child(5) { grid-area: sku; }
-    .ps-variant-line > :nth-child(n + 6) { grid-area: remove; }
+    .ps-variant-line > .ps-variant-media { grid-area: media; }
+    .ps-variant-line > .ps-variant-name { grid-area: name; }
+    .ps-variant-line > .is-price { grid-area: price; }
+    .ps-variant-line > .is-units { grid-area: units; }
+    .ps-variant-line > .is-stock { grid-area: stock; }
+    .ps-variant-line > .is-sku { grid-area: sku; }
+    .ps-variant-line > .ps-icon-button, .ps-variant-line > .ps-icon-spacer { grid-area: remove; }
     .ps-variant.is-child .ps-variant-line { padding-left: 16px; }
     .ps-variant-photos { padding-left: 16px; }
     .ps-card { padding: 18px 16px 20px; border-radius: 8px; }
