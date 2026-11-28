@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\BranchStock;
+use App\Models\InventoryBatch;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -25,9 +26,9 @@ class PharmacySeederTest extends TestCase
         $branches = Store::query()->get();
         $this->assertCount(4, $branches);
         $this->assertTrue($branches->every(fn (Store $branch): bool => $branch->status === 'active' && $branch->latitude !== null));
-        $this->assertSame(20, Product::query()->count());
-        $this->assertSame(6, Product::query()->where('requires_prescription', true)->count());
-        foreach (Product::query()->with('images')->get() as $product) {
+        $this->assertSame(23, Product::query()->count());
+        $this->assertSame(8, Product::query()->where('requires_prescription', true)->count());
+        foreach (Product::query()->where('sku', 'like', 'RX-%')->with('images')->get() as $product) {
             $this->assertCount(1, $product->images);
             $path = 'products/catalog/pharmacy/'.$product->slug.'.webp';
             $this->assertSame($path, $product->images->sole()->path);
@@ -43,10 +44,35 @@ class PharmacySeederTest extends TestCase
         $this->seed(PharmacySeeder::class);
 
         $this->assertSame(4, Store::query()->count());
-        $this->assertSame(20, Product::query()->count());
+        $this->assertSame(23, Product::query()->count());
         $this->assertDatabaseCount('product_images', 20);
         Storage::disk('product_images')->assertExists($cefalexin->images()->sole()->path);
         $this->assertSame(5, (int) BranchStock::query()->where('product_id', $cefalexin->id)->value('quantity'));
+    }
+
+    public function test_samples_show_every_product_type_pack_sizes_flavors_and_dated_batches(): void
+    {
+        Storage::fake('product_images');
+        $this->seed(PharmacySeeder::class);
+
+        $types = Product::query()->pluck('drug_class', 'name');
+        $this->assertSame('rx', $types['Insulin Glargine 100 IU/mL Pen']);
+        $this->assertSame('dangerous', $types['Diazepam 5 mg Tablet']);
+        $this->assertNull($types['Digital Thermometer']);
+        $this->assertSame('draft', Product::query()->where('name', 'Diazepam 5 mg Tablet')->value('status'));
+        $this->assertFalse(Product::query()->whereNotNull('drug_class')->where('drug_class', '!=', 'dangerous')->whereNull('fda_registration_number')->exists());
+
+        $amlodipine = Product::query()->where('slug', 'amlodipine-5-mg-tablet')->with('variants')->sole();
+        $this->assertEquals(['10s' => '10.00', '30s' => '30.00'], $amlodipine->variants->pluck('pack_units', 'size')->sortKeys()->all());
+        $this->assertSame(87, $amlodipine->stock_quantity);
+        $this->assertEqualsCanonicalizing(['Orange', 'Grape'], Product::query()->where('slug', 'paracetamol-120-mg5-ml-syrup')->sole()->variants->pluck('color')->all());
+        $this->assertFalse(InventoryBatch::query()->whereNull('expires_at')->exists());
+        $batches = InventoryBatch::query()->count();
+
+        $this->seed(PharmacySeeder::class);
+
+        $this->assertSame(2, $amlodipine->variants()->count());
+        $this->assertSame($batches, InventoryBatch::query()->count());
     }
 
     public function test_sample_images_preserve_uploaded_photos_and_do_not_match_other_tenants(): void
