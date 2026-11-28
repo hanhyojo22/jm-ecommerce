@@ -8,6 +8,7 @@ import './web-push';
 import './cart';
 import './address-places';
 import { clerkComponentAppearance, clerkUserProfileAppearance } from './clerk-appearance';
+import { renderInvitationSignOut, signedInEmailForInvitation } from './clerk-invitation';
 
 window.marketplaceSuggestions = (initialQuery, url, resultsUrl, clearUrl = null) => ({
     query: initialQuery,
@@ -1673,6 +1674,18 @@ if (clerkComponents.length > 0 || clerkHandoff) {
             });
 
             document.querySelectorAll('[data-clerk-component="sign-up"]').forEach((element) => {
+                const signedInEmail = signedInEmailForInvitation(clerk, window.location.search);
+
+                if (signedInEmail !== null) {
+                    renderInvitationSignOut(element, signedInEmail, async () => {
+                        const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+                        document.cookie = `__session=; Max-Age=0; path=/${secure}; SameSite=Lax`;
+                        await clerk.signOut({ redirectUrl: window.location.href });
+                    });
+
+                    return;
+                }
+
                 clerk.mountSignUp(element, {
                     forceRedirectUrl: element.dataset.afterAuthUrl,
                     appearance: clerkAuthAppearance,
